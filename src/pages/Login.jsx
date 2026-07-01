@@ -24,17 +24,17 @@ export default function Login() {
       setIsLoading(true);
 
       const data = await authService.login(email, password);
-      const token = data?.token || data?.access_token || data?.data?.token || data?.data?.access_token || data?.session?.access_token;
+      const token = data?.token || data?.access_token || data?.data?.token || data?.data?.access_token;
       if (token) {
         localStorage.setItem('access_token', token);
       }
-      const loggedInUser = data.user || data.data || data.session?.user || data || {};
+      const loggedInUser = data.user || data.data || {};
       loginAction({
         ...loggedInUser,
         id: loggedInUser.id || loggedInUser._id || loggedInUser.user_id,
         user_id: loggedInUser.id || loggedInUser._id || loggedInUser.user_id
       });
-
+      
       toast.success('เข้าสู่ระบบสำเร็จ!');
       navigate('/explore');
     } catch (error) {
