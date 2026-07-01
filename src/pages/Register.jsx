@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { Mail, Lock, User, Loader2, BookOpen } from 'lucide-react';
+import { Mail, Lock, User, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { authService } from '@/services/auth.service';
 import useAuthStore from '@/store/authStore';
@@ -30,16 +30,12 @@ export default function Register() {
 
   const handleRegister = async (e) => {
     e.preventDefault();
-    if (!username || !email || !educationLevel || !password || !confirmPassword) {
+    if (!username || !email || !password || !confirmPassword) {
       return toast.error('กรุณากรอกข้อมูลให้ครบถ้วนทุกช่อง');
     }
 
     if (password !== confirmPassword) {
       return toast.error('รหัสผ่านไม่ตรงกัน');
-    }
-
-    if (!/[a-zA-Z]/.test(password)) {
-      return toast.error('รหัสผ่านต้องมีตัวอักษรภาษาอังกฤษอย่างน้อย 1 ตัว');
     }
 
     if (isAuthenticated || user) {
@@ -57,18 +53,18 @@ export default function Register() {
         username,
         nickname: username,
         full_name: username,
-        education_level: educationLevel, // ให้ผู้ใช้เลือกจากหน้าฟอร์ม
+        education_level: "MIDDLE_SCHOOL", // ค่าเริ่มต้นเพื่อให้ผ่าน validation ของ Backend
         age: 0, // ค่าเริ่มต้น
         bio: "ยังไม่ได้ระบุ" // ค่าเริ่มต้นชั่วคราวเพื่อให้ผ่าน validation ของ Backend
       };
 
       const data = await authService.register(payload);
       
-      let token = data?.token || data?.access_token || data?.data?.token || data?.data?.access_token || data?.session?.access_token;
+      let token = data?.token || data?.access_token || data?.data?.token || data?.data?.access_token;
       if (!token) {
         try {
           const loginRes = await authService.login(email, password);
-          token = loginRes?.token || loginRes?.access_token || loginRes?.data?.token || loginRes?.data?.access_token || loginRes?.session?.access_token;
+          token = loginRes?.token || loginRes?.access_token || loginRes?.data?.token || loginRes?.data?.access_token;
         } catch (e) {
           console.log("Auto login after register info:", e);
         }
@@ -78,7 +74,7 @@ export default function Register() {
       }
 
       // เข้าสู่ระบบใน state ทันที
-      const registeredUser = data?.user || data?.data || data?.session?.user || data || {};
+      const registeredUser = data?.user || data?.data || {};
       loginAction({
         ...registeredUser,
         id: registeredUser.id || registeredUser._id || registeredUser.user_id || 'new_user',
@@ -87,7 +83,7 @@ export default function Register() {
         name: username,
         display_name: username,
         username,
-        education_level: educationLevel,
+        education_level: "MIDDLE_SCHOOL",
         age: 0,
         bio: "ยังไม่ได้ระบุ"
       });
