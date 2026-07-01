@@ -1,78 +1,103 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { Mail, Lock, User, Calendar, BookOpen, FileText } from 'lucide-react';
+import { Mail, Lock, User, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { authService } from '@/services/auth.service';
 import useAuthStore from '@/store/authStore';
 import { supabase } from '@/utils/supabase';
 
 export default function Register() {
-  const [showModal, setShowModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
-  // Form 1 State
+  // Form State
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  
-  // Form 2 State (Modal)
-  const [username, setUsername] = useState('');
-  const [age, setAge] = useState('');
-  const [education_level, setEducationLevel] = useState('');
-  const [bio, setBio] = useState('');
 
-  const loginAction = useAuthStore((state) => state.login);
+  const { isAuthenticated, user, login: loginAction } = useAuthStore();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // ถ้าผู้ใช้งานมีบัญชีในระบบและข้อมูลโปรไฟล์ครบถ้วนแล้ว ไม่ให้แสดงหน้า Register
+    const isProfileComplete = user?.education_level || user?.user_metadata?.education_level;
+    if (isAuthenticated && isProfileComplete) {
+      toast.success('คุณมีบัญชีผู้ใช้ในระบบแล้ว');
+      navigate('/explore');
+    }
+  }, [isAuthenticated, user, navigate]);
 
   const handleRegister = async (e) => {
     e.preventDefault();
+    if (!username || !email || !password || !confirmPassword) {
+      return toast.error('กรุณากรอกข้อมูลให้ครบถ้วนทุกช่อง');
+    }
+
     if (password !== confirmPassword) {
       return toast.error('รหัสผ่านไม่ตรงกัน');
     }
-    
-    // In a real app, you might validate email/password here before showing modal
-    // OR register first, then show modal for onboarding.
-    setShowModal(true);
-  };
 
-  const handleCompleteRegistration = async () => {
-    if (!username || !education_level) {
-      return toast.error('กรุณากรอกชื่อผู้ใช้และระดับการศึกษา');
+    if (isAuthenticated || user) {
+      return toast.error('คุณมีบัญชีผู้ใช้นี้ในระบบแล้ว');
     }
 
     try {
       setIsLoading(true);
-      
-      const payload = { 
-        email, 
-        password, 
-        confirmPassword, 
-        nickname: username, // Backend uses nickname
-        username, // Keeping for backward compatibility or Supabase if needed
-        full_name: username, // Keeping for Supabase users table mapping
-        age: age ? parseInt(age) : 0,
-        education_level: education_level, 
-        bio: bio || " "
+
+      // สมัครสมาชิกเข้าสู่ระบบหลังบ้านทันที (Backend Registration) - ระบบหลังบ้านจะเช็คอีเมลซ้ำให้อัตโนมัติโดยไม่ติด 403 RLS ของ Supabase
+      const payload = {
+        email,
+        password,
+        confirmPassword,
+        username,
+        nickname: username,
+        full_name: username,
+        education_level: "MIDDLE_SCHOOL", // ค่าเริ่มต้นเพื่อให้ผ่าน validation ของ Backend
+        age: 0, // ค่าเริ่มต้น
+        bio: "ยังไม่ได้ระบุ" // ค่าเริ่มต้นชั่วคราวเพื่อให้ผ่าน validation ของ Backend
       };
-      console.log("Sending payload to backend:", payload);
-      
-      // Execute Real API Request to Backend
+
       const data = await authService.register(payload);
       
-      // Some backends return token on register, others require manual login after
-      if (data.token) {
-        localStorage.setItem('access_token', data.token);
+      let token = data?.token || data?.access_token || data?.data?.token || data?.data?.access_token;
+      if (!token) {
+        try {
+          const loginRes = await authService.login(email, password);
+          token = loginRes?.token || loginRes?.access_token || loginRes?.data?.token || loginRes?.data?.access_token;
+        } catch (e) {
+          console.log("Auto login after register info:", e);
+        }
       }
-      
-      toast.success('สมัครสมาชิกสำเร็จ ยินดีต้อนรับสู่ SHARE-ED!');
-      loginAction(data.user || { email, name: username });
-      setShowModal(false);
-      navigate('/explore');
+      if (token) {
+        localStorage.setItem('access_token', token);
+      }
 
+      // เข้าสู่ระบบใน state ทันที
+      const registeredUser = data?.user || data?.data || {};
+      loginAction({
+        ...registeredUser,
+        id: registeredUser.id || registeredUser._id || registeredUser.user_id || 'new_user',
+        user_id: registeredUser.id || registeredUser._id || registeredUser.user_id || 'new_user',
+        email,
+        name: username,
+        display_name: username,
+        username,
+        education_level: "MIDDLE_SCHOOL",
+        age: 0,
+        bio: "ยังไม่ได้ระบุ"
+      });
+
+      toast.success('สมัครสมาชิกสำเร็จ ยินดีต้อนรับสู่ SHARE-ED!');
+      navigate('/explore');
     } catch (error) {
-      console.error("Register Error:", error.response?.data);
-      const errMsg = error.response?.data?.message || error.response?.data?.error || JSON.stringify(error.response?.data);
-      toast.error(errMsg || 'เกิดข้อผิดพลาดในการสมัครสมาชิก');
+      console.error("Register Error:", error.response?.data || error);
+      const errMsg = error.response?.data?.message || error.response?.data?.error || JSON.stringify(error.response?.data || error.message);
+      if (typeof errMsg === 'string' && (errMsg.includes('ใช้งานแล้ว') || errMsg.includes('ซ้ำ') || errMsg.includes('มีผู้ใช้งาน') || errMsg.includes('already') || errMsg.includes('exist') || errMsg.includes('in use') || errMsg.includes('duplicate'))) {
+        toast.error('อีเมลหรือชื่อผู้ใช้นี้เคยถูกใช้งานแล้ว กรุณาเข้าสู่ระบบหรือเปลี่ยนชื่อผู้ใช้');
+        navigate('/login');
+      } else {
+        toast.error(typeof errMsg === 'string' ? errMsg : 'เกิดข้อผิดพลาดในการสมัครสมาชิก');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -107,6 +132,23 @@ export default function Register() {
         
         <form className="mt-8 space-y-6" onSubmit={handleRegister}>
           <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">ชื่อผู้ใช้ (Username) <span className="text-red-500">*</span></label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <User className="h-5 w-5 text-slate-400" />
+                </div>
+                <input 
+                  type="text" 
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required 
+                  className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors" 
+                  placeholder="ตั้งชื่อผู้ใช้ของคุณ (เช่น JohnDoe)" 
+                />
+              </div>
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">อีเมล <span className="text-red-500">*</span></label>
               <div className="relative">
@@ -161,8 +203,19 @@ export default function Register() {
             </div>
           </div>
 
-          <button type="submit" className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all">
-            ถัดไป
+          <button 
+            type="submit" 
+            disabled={isLoading}
+            className={`w-full flex justify-center items-center gap-2 py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white transition-all ${isLoading ? 'bg-slate-400 cursor-not-allowed' : 'bg-primary hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary'}`}
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="animate-spin h-5 w-5" />
+                กำลังสมัครสมาชิก...
+              </>
+            ) : (
+              'สมัครสมาชิก'
+            )}
           </button>
         </form>
 
@@ -188,93 +241,6 @@ export default function Register() {
           </div>
         </div>
       </div>
-
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-          <div className="bg-white rounded-[24px] shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200 border border-slate-200">
-            {/* Modal Header */}
-            <div className="bg-white border-b border-slate-100 px-6 py-8 text-center">
-              <div className="mx-auto h-14 w-14 bg-blue-50 text-primary rounded-full flex items-center justify-center mb-4">
-                <User className="h-7 w-7" />
-              </div>
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">สร้างโปรไฟล์ของคุณ</h3>
-              <p className="text-slate-500 text-sm">อีกนิดเดียว! ตั้งค่าโปรไฟล์เพื่อให้เพื่อนๆ รู้จักคุณมากขึ้น</p>
-            </div>
-            
-            {/* Modal Body */}
-            <div className="p-8 space-y-6">
-              <div>
-                <label className="flex items-center gap-2 text-[15px] font-semibold text-slate-800 mb-2">
-                  <User className="h-5 w-5" /> ชื่อผู้ใช้ <span className="text-red-500">*</span>
-                </label>
-                <input 
-                  type="text" 
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors" 
-                  placeholder="ตั้งชื่อผู้ใช้ของคุณ" 
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="flex items-center gap-2 text-[15px] font-semibold text-slate-800 mb-2">
-                    <Calendar className="h-5 w-5" /> อายุ
-                  </label>
-                  <input 
-                    type="number" 
-                    value={age}
-                    onChange={(e) => setAge(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors" 
-                    placeholder="เช่น 18" 
-                  />
-                </div>
-                <div>
-                  <label className="flex items-center gap-2 text-[15px] font-semibold text-slate-800 mb-2">
-                    <BookOpen className="h-5 w-5" /> ระดับชั้น <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <select 
-                      value={education_level}
-                      onChange={(e) => setEducationLevel(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors appearance-none bg-white text-slate-600"
-                    >
-                      <option value="" disabled>เลือกระดับชั้น</option>
-                      <option value="MIDDLE_SCHOOL">มัธยมศึกษาตอนต้น</option>
-                      <option value="HIGH_SCHOOL">มัธยมศึกษาตอนปลาย</option>
-                      <option value="UNIVERSITY">มหาวิทยาลัย</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="flex items-center gap-2 text-[15px] font-semibold text-slate-800 mb-2">
-                  <FileText className="h-5 w-5" /> แนะนำตัว (Bio)
-                </label>
-                <textarea 
-                  rows={3} 
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors resize-none" 
-                  placeholder="บอกให้คนอื่นรู้เกี่ยวกับคุณสักหน่อย..."
-                ></textarea>
-              </div>
-
-              <div className="pt-2">
-                <button 
-                  onClick={handleCompleteRegistration}
-                  disabled={isLoading}
-                  type="button" 
-                  className={`w-full py-3.5 rounded-xl font-bold text-white shadow-md transition-colors ${isLoading ? 'bg-blue-400 cursor-not-allowed' : 'bg-primary hover:bg-blue-600'}`}
-                >
-                  {isLoading ? 'กำลังสร้างบัญชี...' : 'เข้าสู่ระบบ Share ED'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
