@@ -1,16 +1,13 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router';
-import { FileText, Download, Heart, Share2, Tag, ChevronLeft, Calendar, Eye, Bookmark, X, Edit3, Trash2, Send, MessageSquare } from 'lucide-react';
+import { useParams, Link } from 'react-router';
+import { FileText, Download, Heart, MessageCircle, Share2, Tag, ChevronLeft, Calendar, Eye, Bookmark, X, Edit3 } from 'lucide-react';
 import { postService } from '@/services/post.service';
 import useAuthStore from '@/store/authStore';
 import api from '@/utils/api';
 import toast from 'react-hot-toast';
-import Swal from 'sweetalert2';
-import { supabase } from '@/utils/supabase';
 
 export default function PostDetails() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const { isAuthenticated, user } = useAuthStore();
   const [isLiked, setIsLiked] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
@@ -47,12 +44,10 @@ export default function PostDetails() {
         setIsLoading(true);
         const data = await postService.getPostById(id);
         setPost(data);
-        if (data) {
-          setComments(data.comments || []);
-          if (user) {
-            const userLiked = data.rawLikes?.some(l => l.user_id === user.id);
-            setIsLiked(!!userLiked);
-          }
+        
+        if (data && user) {
+          const userLiked = data.rawLikes?.some(l => l.user_id === user.id);
+          setIsLiked(!!userLiked);
         }
       } catch (error) {
         console.error('Error loading post details:', error);
@@ -73,47 +68,28 @@ export default function PostDetails() {
       }
     };
 
-    if (id && isAuthenticated) {
+    if (id) {
       fetchPost();
-      checkBookmarkStatus();
+      if (isAuthenticated) {
+        checkBookmarkStatus();
+      }
     }
   }, [id, user, isAuthenticated]);
 
-  // Subscribe to Supabase Realtime Broadcast for comments
-  useEffect(() => {
-    if (!id || !isAuthenticated) return;
-
-    const channel = supabase.channel(`post-comments:${id}`);
-
-    channel
-      .on('broadcast', { event: 'new-comment' }, ({ payload }) => {
-        console.log('Received real-time comment:', payload);
-        setComments(prev => {
-          if (prev.some(c => c.id === payload.id)) return prev;
-          return [payload, ...prev];
-        });
-      })
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log(`Subscribed to real-time comments broadcast channel for post ${id}`);
-        }
-      });
-
-    return () => {
-      channel.unsubscribe();
-    };
-  }, [id, isAuthenticated]);
-
-  const isAuthor = user && post && post.author && (user.id === post.author.id || user.user_id === post.author.id);
+  if (isLoading) {
+    return <div className="text-center py-20 text-slate-500 font-medium">กำลังโหลดข้อมูล...</div>;
+  }
+  
+  if (!post) {
+    return <div className="text-center py-20 text-slate-500 font-medium">ไม่พบโพสต์ที่คุณต้องการ</div>;
+  }
 
   const handleLike = async () => {
     if (!isAuthenticated) {
       toast.error('กรุณาสมัครสมาชิกเพื่อกดถูกใจ');
       return;
     }
-    if (isLiking) return;
     try {
-      setIsLiking(true);
       const response = await postService.likePost(post.id);
       setIsLiked(response.isLiked);
       setPost(prev => ({
@@ -128,8 +104,6 @@ export default function PostDetails() {
     } catch (error) {
       console.error('Error liking post:', error);
       toast.error('เกิดข้อผิดพลาดในการกดถูกใจ');
-    } finally {
-      setIsLiking(false);
     }
   };
 
@@ -138,9 +112,7 @@ export default function PostDetails() {
       toast.error('กรุณาสมัครสมาชิกเพื่อบันทึกโพสต์');
       return;
     }
-    if (isBookmarking) return;
     try {
-      setIsBookmarking(true);
       const response = await postService.bookmarkPost(post.id);
       setIsBookmarked(response.isBookmarked);
       if (response.isBookmarked) {
@@ -151,111 +123,8 @@ export default function PostDetails() {
     } catch (error) {
       console.error('Error bookmarking post:', error);
       toast.error('เกิดข้อผิดพลาดในการบันทึกโพสต์');
-    } finally {
-      setIsBookmarking(false);
     }
   };
-
-  const handleDelete = async () => {
-    const result = await Swal.fire({
-      title: 'คุณต้องการลบโพสต์นี้ใช่หรือไม่?',
-      text: 'การดำเนินการนี้จะทำการลบโพสต์แบบ Soft Delete (ซ่อนโพสต์ชั่วคราว)',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#ef4444',
-      cancelButtonColor: '#64748b',
-      confirmButtonText: 'ใช่, ลบเลย',
-      cancelButtonText: 'ยกเลิก'
-    });
-
-    if (result.isConfirmed) {
-      try {
-        Swal.fire({
-          title: 'กำลังลบโพสต์...',
-          allowOutsideClick: false,
-          didOpen: () => {
-            Swal.showLoading();
-          }
-        });
-
-        const response = await postService.deletePost(id);
-        Swal.close();
-
-        if (response && (response.success || response.status === 200)) {
-          await Swal.fire({
-            icon: 'success',
-            title: 'ลบสำเร็จ!',
-            text: 'โพสต์ของคุณถูกลบเรียบร้อยแล้ว',
-            confirmButtonColor: '#3b82f6'
-          });
-          navigate('/explore');
-        } else {
-          throw new Error(response?.message || 'เกิดข้อผิดพลาดในการลบโพสต์');
-        }
-      } catch (error) {
-        Swal.close();
-        console.error('Error deleting post:', error);
-        Swal.fire({
-          icon: 'error',
-          title: 'เกิดข้อผิดพลาด',
-          text: error.response?.data?.message || error.message || 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้',
-          confirmButtonColor: '#3b82f6'
-        });
-      }
-    }
-  };
-
-  const handleSubmitComment = async (e) => {
-    e.preventDefault();
-    if (!newCommentText.trim()) return;
-
-    try {
-      setIsSubmittingComment(true);
-      const response = await postService.createComment(post.id, newCommentText.trim());
-
-      if (response && response.success) {
-        const commentData = response.data;
-        const newComment = {
-          id: commentData.id,
-          content: commentData.content,
-          createdAt: new Date(commentData.created_at).toLocaleDateString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' - ' + new Date(commentData.created_at).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }),
-          user: {
-            id: user.id,
-            username: user.username || 'ผู้ใช้งาน',
-            avatar: user.avatar || user.profile_image || 'https://ui-avatars.com/api/?name=' + (user.username || 'User')
-          }
-        };
-
-        // Update local state
-        setComments(prev => [newComment, ...prev]);
-        setNewCommentText('');
-        toast.success('ส่งความคิดเห็นเรียบร้อยแล้ว');
-
-        // Broadcast to other clients in real-time
-        const channel = supabase.channel(`post-comments:${id}`);
-        channel.send({
-          type: 'broadcast',
-          event: 'new-comment',
-          payload: newComment
-        });
-      } else {
-        toast.error(response?.message || 'เกิดข้อผิดพลาดในการส่งความคิดเห็น');
-      }
-    } catch (error) {
-      console.error('Error submitting comment:', error);
-      toast.error('ไม่สามารถส่งความคิดเห็นได้ในขณะนี้');
-    } finally {
-      setIsSubmittingComment(false);
-    }
-  };
-
-  if (isLoading) {
-    return <div className="text-center py-20 text-slate-500 font-medium">กำลังโหลดข้อมูล...</div>;
-  }
-  
-  if (!post) {
-    return <div className="text-center py-20 text-slate-500 font-medium">ไม่พบโพสต์ที่คุณต้องการ</div>;
-  }
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
@@ -265,22 +134,11 @@ export default function PostDetails() {
         <Link to="/home" className="inline-flex items-center gap-2 text-slate-500 hover:text-primary transition-colors font-medium">
           <ChevronLeft className="h-5 w-5" /> กลับไปหน้าหลัก
         </Link>
-        <div className="flex items-center gap-2">
-          {isAuthenticated && user?.id === post.author?.id && (
-            <>
-              <Link to={`/post/edit/${post.id}`} className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-primary border border-blue-100 rounded-xl text-sm font-bold shadow-sm transition-all">
-                <Edit3 className="h-4 w-4" /> แก้ไขโพสต์
-              </Link>
-              <button
-                onClick={handleDelete}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-100 rounded-xl text-sm font-bold shadow-sm transition-all cursor-pointer"
-                title="ลบโพสต์"
-              >
-                <Trash2 className="h-4 w-4" /> ลบโพสต์
-              </button>
-            </>
-          )}
-        </div>
+        {isAuthenticated && user?.id === post.author?.id && (
+          <Link to={`/post/edit/${post.id}`} className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-primary border border-blue-100 rounded-xl text-sm font-bold shadow-sm transition-all">
+            <Edit3 className="h-4 w-4" /> แก้ไขโพสต์
+          </Link>
+        )}
       </div>
 
       <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 overflow-hidden">
@@ -441,18 +299,19 @@ export default function PostDetails() {
           <div className="flex items-center gap-3 w-full sm:w-auto">
             <button
               onClick={handleLike}
-              disabled={isLiking}
-              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold transition-colors shadow-sm border ${isLiked ? 'bg-rose-50 text-rose-500 border-rose-100' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'} ${isLiking ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold transition-colors shadow-sm border ${isLiked ? 'bg-rose-50 text-rose-500 border-rose-100' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'}`}
             >
-              <Heart className={`h-5 w-5 ${isLiked ? 'fill-rose-500' : ''}`} /> {post ? post.likes : 0}
+              <Heart className={`h-5 w-5 ${isLiked ? 'fill-rose-500' : ''}`} /> {post.likes}
+            </button>
+            <button className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-100 transition-colors shadow-sm">
+              <MessageCircle className="h-5 w-5" /> 12
             </button>
           </div>
 
           <div className="flex items-center gap-3 w-full sm:w-auto">
             <button
               onClick={handleBookmark}
-              disabled={isBookmarking}
-              className={`flex items-center justify-center p-3 rounded-xl font-bold transition-colors shadow-sm border ${isBookmarked ? 'bg-amber-50 text-amber-500 border-amber-100' : 'bg-white text-slate-400 border-slate-200 hover:bg-slate-100'} ${isBookmarking ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`flex items-center justify-center p-3 rounded-xl font-bold transition-colors shadow-sm border ${isBookmarked ? 'bg-amber-50 text-amber-500 border-amber-100' : 'bg-white text-slate-400 border-slate-200 hover:bg-slate-100'}`}
               title="บันทึก"
             >
               <Bookmark className={`h-5 w-5 ${isBookmarked ? 'fill-amber-500' : ''}`} />

@@ -16,6 +16,7 @@ import Profile from './pages/Profile';
 import Notifications from './pages/Notifications';
 import Achievements from './pages/Achievements';
 import PostDetails from './pages/PostDetails';
+import EditPost from './pages/EditPost';
 import { supabase } from './utils/supabase';
 import api from './utils/api';
 import { authService } from './services/auth.service';
@@ -310,7 +311,6 @@ function App() {
               </ProtectedRoute>
             } 
           />
-
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/reset-password" element={<ResetPassword />} />
