@@ -60,11 +60,11 @@ export default function Register() {
 
       const data = await authService.register(payload);
       
-      let token = data?.token || data?.access_token || data?.data?.token || data?.data?.access_token;
+      let token = data?.token || data?.access_token || data?.data?.token || data?.data?.access_token || data?.session?.access_token;
       if (!token) {
         try {
           const loginRes = await authService.login(email, password);
-          token = loginRes?.token || loginRes?.access_token || loginRes?.data?.token || loginRes?.data?.access_token;
+          token = loginRes?.token || loginRes?.access_token || loginRes?.data?.token || loginRes?.data?.access_token || loginRes?.session?.access_token;
         } catch (e) {
           console.log("Auto login after register info:", e);
         }
@@ -74,7 +74,7 @@ export default function Register() {
       }
 
       // เข้าสู่ระบบใน state ทันที
-      const registeredUser = data?.user || data?.data || {};
+      const registeredUser = data?.user || data?.data || data?.session?.user || data || {};
       loginAction({
         ...registeredUser,
         id: registeredUser.id || registeredUser._id || registeredUser.user_id || 'new_user',
