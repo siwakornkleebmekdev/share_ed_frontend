@@ -38,53 +38,6 @@ export const postService = {
       console.error('Error creating post:', error);
       throw error;
     }
-  },
-
-  // Update an existing post
-  updatePost: async (id, formData) => {
-    try {
-      const response = await api.put(`/posts/${id}`, formData);
-      return response.data;
-    } catch (error) {
-      console.error(`Error updating post ${id}:`, error);
-      throw error;
-    }
-  },
-
-  // Toggle like status for a post
-  likePost: async (postId) => {
-    try {
-      const response = await api.post(`/likes/${postId}`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error liking post ${postId}:`, error);
-      throw error;
-    }
-  },
-
-  // Toggle bookmark status for a post
-  bookmarkPost: async (postId) => {
-    try {
-      const response = await api.post(`/bookmarks/${postId}`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error bookmarking post ${postId}:`, error);
-      throw error;
-    }
-  },
-
-  // Fetch general system statistics (total posts, total users)
-  getSystemStats: async () => {
-    try {
-      const response = await api.get('/posts/stats');
-      if (response.data.success) {
-        return response.data.data;
-      }
-      return null;
-    } catch (error) {
-      console.error('Error fetching system stats:', error);
-      return null;
-    }
   }
 };
 
