@@ -51,6 +51,7 @@ export default function PostCard({ post, viewMode, rank = null }) {
       navigate('/register');
     } else {
       toast.success('กำลังเปิดเนื้อหา...', { icon: '📄' });
+      navigate(`/post/${post.id}`);
     }
   };
 

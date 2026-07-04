@@ -30,18 +30,27 @@ export default function Home() {
   };
 
   useEffect(() => {
-    const fetchPosts = async () => {
+    const fetchPostsAndStats = async () => {
       try {
         setIsLoading(true);
-        const fetchedPosts = await postService.getAllPosts();
+        const [fetchedPosts, statsData] = await Promise.all([
+          postService.getAllPosts(),
+          postService.getSystemStats()
+        ]);
         setPosts(fetchedPosts);
+        if (statsData) {
+          setStats({
+            totalUsers: statsData.totalSharers || 0,
+            totalPosts: statsData.totalPosts || 0
+          });
+        }
       } catch (error) {
-        console.error('Error loading posts:', error);
+        console.error('Error loading home data:', error);
       } finally {
         setIsLoading(false);
       }
     };
-    fetchPosts();
+    fetchPostsAndStats();
   }, []);
 
   useEffect(() => {

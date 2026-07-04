@@ -1,10 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router';
-import { FileText, Download, Heart, MessageCircle, Share2, Tag, ChevronLeft, Calendar, Eye, Bookmark, X } from 'lucide-react';
+import { FileText, Download, Heart, MessageCircle, Share2, Tag, ChevronLeft, Calendar, Eye, Bookmark, X, Edit3 } from 'lucide-react';
 import { postService } from '@/services/post.service';
+import useAuthStore from '@/store/authStore';
+import api from '@/utils/api';
+import toast from 'react-hot-toast';
 
 export default function PostDetails() {
   const { id } = useParams();
+  const { isAuthenticated, user } = useAuthStore();
   const [isLiked, setIsLiked] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
 
@@ -23,16 +27,37 @@ export default function PostDetails() {
         setIsLoading(true);
         const data = await postService.getPostById(id);
         setPost(data);
+        
+        if (data && user) {
+          const userLiked = data.rawLikes?.some(l => l.user_id === user.id);
+          setIsLiked(!!userLiked);
+        }
       } catch (error) {
         console.error('Error loading post details:', error);
       } finally {
         setIsLoading(false);
       }
     };
+
+    const checkBookmarkStatus = async () => {
+      try {
+        const response = await api.get('/bookmarks');
+        if (response.data.success) {
+          const bookmarked = response.data.data.some(b => b.post_id === id);
+          setIsBookmarked(bookmarked);
+        }
+      } catch (err) {
+        console.error('Error fetching bookmark status:', err);
+      }
+    };
+
     if (id) {
       fetchPost();
+      if (isAuthenticated) {
+        checkBookmarkStatus();
+      }
     }
-  }, [id]);
+  }, [id, user, isAuthenticated]);
 
   if (isLoading) {
     return <div className="text-center py-20 text-slate-500 font-medium">กำลังโหลดข้อมูล...</div>;
@@ -42,13 +67,62 @@ export default function PostDetails() {
     return <div className="text-center py-20 text-slate-500 font-medium">ไม่พบโพสต์ที่คุณต้องการ</div>;
   }
 
+  const handleLike = async () => {
+    if (!isAuthenticated) {
+      toast.error('กรุณาสมัครสมาชิกเพื่อกดถูกใจ');
+      return;
+    }
+    try {
+      const response = await postService.likePost(post.id);
+      setIsLiked(response.isLiked);
+      setPost(prev => ({
+        ...prev,
+        likes: response.isLiked ? prev.likes + 1 : Math.max(0, prev.likes - 1)
+      }));
+      if (response.isLiked) {
+        toast.success('ถูกใจโพสต์แล้ว');
+      } else {
+        toast('ยกเลิกการถูกใจ', { icon: '💔' });
+      }
+    } catch (error) {
+      console.error('Error liking post:', error);
+      toast.error('เกิดข้อผิดพลาดในการกดถูกใจ');
+    }
+  };
+
+  const handleBookmark = async () => {
+    if (!isAuthenticated) {
+      toast.error('กรุณาสมัครสมาชิกเพื่อบันทึกโพสต์');
+      return;
+    }
+    try {
+      const response = await postService.bookmarkPost(post.id);
+      setIsBookmarked(response.isBookmarked);
+      if (response.isBookmarked) {
+        toast.success('เพิ่มบุ๊คมาร์กเรียบร้อย');
+      } else {
+        toast('นำบุ๊คมาร์กออกแล้ว', { icon: '🗑️' });
+      }
+    } catch (error) {
+      console.error('Error bookmarking post:', error);
+      toast.error('เกิดข้อผิดพลาดในการบันทึกโพสต์');
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
 
-      {/* Back Button */}
-      <Link to="/home" className="inline-flex items-center gap-2 text-slate-500 hover:text-primary transition-colors mb-6 font-medium">
-        <ChevronLeft className="h-5 w-5" /> กลับไปหน้าหลัก
-      </Link>
+      {/* Header Actions */}
+      <div className="flex items-center justify-between mb-6">
+        <Link to="/home" className="inline-flex items-center gap-2 text-slate-500 hover:text-primary transition-colors font-medium">
+          <ChevronLeft className="h-5 w-5" /> กลับไปหน้าหลัก
+        </Link>
+        {isAuthenticated && user?.id === post.author?.id && (
+          <Link to={`/post/edit/${post.id}`} className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-primary border border-blue-100 rounded-xl text-sm font-bold shadow-sm transition-all">
+            <Edit3 className="h-4 w-4" /> แก้ไขโพสต์
+          </Link>
+        )}
+      </div>
 
       <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 overflow-hidden">
 
@@ -146,10 +220,10 @@ export default function PostDetails() {
         <div className="bg-slate-50 border-t border-slate-100 p-6 sm:px-10 sm:py-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3 w-full sm:w-auto">
             <button
-              onClick={() => setIsLiked(!isLiked)}
+              onClick={handleLike}
               className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold transition-colors shadow-sm border ${isLiked ? 'bg-rose-50 text-rose-500 border-rose-100' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'}`}
             >
-              <Heart className={`h-5 w-5 ${isLiked ? 'fill-rose-500' : ''}`} /> {isLiked ? post.likes + 1 : post.likes}
+              <Heart className={`h-5 w-5 ${isLiked ? 'fill-rose-500' : ''}`} /> {post.likes}
             </button>
             <button className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-100 transition-colors shadow-sm">
               <MessageCircle className="h-5 w-5" /> 12
@@ -158,7 +232,7 @@ export default function PostDetails() {
 
           <div className="flex items-center gap-3 w-full sm:w-auto">
             <button
-              onClick={() => setIsBookmarked(!isBookmarked)}
+              onClick={handleBookmark}
               className={`flex items-center justify-center p-3 rounded-xl font-bold transition-colors shadow-sm border ${isBookmarked ? 'bg-amber-50 text-amber-500 border-amber-100' : 'bg-white text-slate-400 border-slate-200 hover:bg-slate-100'}`}
               title="บันทึก"
             >
