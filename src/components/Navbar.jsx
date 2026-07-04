@@ -227,7 +227,8 @@ export default function Navbar() {
                 )}
               </div>
             ) : (
-              <Link to="/login" className="flex items-center gap-2 bg-primary text-white rounded-full font-bold hover:bg-blue-600 shadow-sm hover:shadow-md transition-all px-4 py-2 sm:px-5 sm:py-2.5 text-sm">
+              <Link to="/login" className="flex items-center justify-center gap-2 bg-primary text-white rounded-full font-bold hover:bg-blue-600 shadow-sm hover:shadow-md transition-all px-3 py-2 sm:px-5 sm:py-2.5 text-sm">
+                <User className="h-4 w-4 sm:hidden" />
                 <span className="hidden sm:inline">เข้าสู่ระบบ</span>
               </Link>
             )}
