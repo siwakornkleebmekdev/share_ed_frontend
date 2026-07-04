@@ -1,25 +1,30 @@
-import { useState } from 'react';
-import { UploadCloud, File, X, GraduationCap, Tag, AlignLeft, BookOpen, PenTool, Save, Image as ImageIcon, Plus, Eye } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { useNavigate } from 'react-router';
+import { UploadCloud, File, X, GraduationCap, Tag, AlignLeft, BookOpen, PenTool, Save, Image as ImageIcon, Plus, Eye, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
+import { postService } from '../services/post.service';
 
 const SUGGESTED_TAGS = ['#AI', '#เรียนรู้ไปด้วยกัน', '#เตรียมสอบ', '#TCAS67', '#สรุปย่อ', '#แชร์ความรู้', '#เด็กซิ่ว', '#สรุปชีท'];
 
 export default function CreatePost() {
+  const navigate = useNavigate();
   const [coverImage, setCoverImage] = useState(null);
   const [pdfFile, setPdfFile] = useState(null);
   const [images, setImages] = useState([]);
 
   const [title, setTitle] = useState('');
-  const [details, setDetails] = useState('');
+  const [summary, setSummary] = useState('');
+  const [content, setContent] = useState('');
 
   const [category, setCategory] = useState('');
   const [level, setLevel] = useState('');
 
   const [hashtags, setHashtags] = useState([]);
   const [hashtagInput, setHashtagInput] = useState('');
+  const tagInputRef = useRef(null);
 
   const [showModal, setShowModal] = useState(false);
   const [previewFile, setPreviewFile] = useState(null); // { type: 'image' | 'pdf', url: string }
@@ -104,22 +109,35 @@ export default function CreatePost() {
   };
 
   // Hashtag Handlers
-  const handleAddHashtag = (e) => {
-    e.preventDefault();
-    if (hashtagInput.trim() !== '') {
-      let tag = hashtagInput.trim();
-      if (!tag.startsWith('#')) tag = '#' + tag;
-      if (!hashtags.includes(tag)) {
-        setHashtags([...hashtags, tag]);
+  const handleAddHashtag = (customValue = null) => {
+    const valueToAdd = customValue !== null ? customValue : hashtagInput;
+    if (!valueToAdd || valueToAdd.trim() === '') return;
+
+    // Split by commas, spaces, or semicolons
+    const rawTags = valueToAdd.split(/[\s,;]+/);
+    const newTags = [...hashtags];
+
+    rawTags.forEach(rawTag => {
+      let tag = rawTag.trim();
+      if (!tag) return;
+      if (!tag.startsWith('#')) {
+        tag = '#' + tag;
       }
-      setHashtagInput('');
-    }
+      if (!newTags.includes(tag)) {
+        newTags.push(tag);
+      }
+    });
+
+    setHashtags(newTags);
+    setHashtagInput('');
   };
 
   const handleKeyDownHashtag = (e) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' || e.key === ',' || e.key === 'Tab') {
       e.preventDefault();
-      handleAddHashtag(e);
+      handleAddHashtag();
+    } else if (e.key === 'Backspace' && hashtagInput === '' && hashtags.length > 0) {
+      handleRemoveHashtag(hashtags[hashtags.length - 1]);
     }
   };
 
@@ -127,18 +145,98 @@ export default function CreatePost() {
     setHashtags(hashtags.filter(tag => tag !== tagToRemove));
   };
 
-  const addSuggestedTag = (tag) => {
-    if (!hashtags.includes(tag)) {
+  const toggleSuggestedTag = (tag) => {
+    if (hashtags.includes(tag)) {
+      setHashtags(hashtags.filter(t => t !== tag));
+    } else {
       setHashtags([...hashtags, tag]);
     }
   };
 
-  const handlePublish = () => {
-    if (!title || !category || !level || !pdfFile) {
-      toast.error('กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน (รวมถึงไฟล์ PDF)');
+  const handleSubmit = async (status = 'ACTIVE') => {
+    const token = localStorage.getItem('access_token');
+    console.log('--- Submitting Post Diagnostic ---');
+    console.log('Token in localStorage:', token);
+    console.log('Token Type:', token ? (token.split('.').length === 3 ? 'JWT' : 'Other') : 'None');
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        console.log('Token Payload:', payload);
+        const expTime = payload.exp * 1000;
+        console.log('Token Expired:', Date.now() > expTime ? 'YES' : 'NO', 'Expires at:', new Date(expTime).toLocaleString());
+      } catch (e) {
+        console.log('Failed to decode token payload:', e.message);
+      }
+    }
+
+    if (!title.trim() || !category || !level || !summary.trim()) {
+      toast.error('กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน (ชื่อหัวข้อ, หมวดหมู่, ระดับชั้น, และบทสรุปย่อ)');
       return;
     }
-    toast.success('โพสต์สรุปความรู้เรียบร้อยแล้ว!');
+
+    try {
+      Swal.fire({
+        title: status === 'ACTIVE' ? 'กำลังโพสต์สรุปความรู้...' : 'กำลังบันทึกแบบร่าง...',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      const formData = new FormData();
+      formData.append('title', title.trim());
+      formData.append('summary', summary.trim());
+      formData.append('content', content);
+      formData.append('category', category);
+      
+      let backendLevel = 'UNIVERSITY';
+      if (level === 'มัธยมศึกษาตอนต้น') backendLevel = 'MIDDLE_SCHOOL';
+      else if (level === 'มัธยมศึกษาตอนปลาย') backendLevel = 'HIGH_SCHOOL';
+      formData.append('education_level', backendLevel);
+      
+      formData.append('post_status', status);
+
+      if (coverImage) {
+        formData.append('cover_image', coverImage);
+      }
+
+      if (pdfFile) {
+        formData.append('media_files', pdfFile);
+      }
+
+      if (images && images.length > 0) {
+        images.forEach(img => {
+          formData.append('media_files', img);
+        });
+      }
+
+      formData.append('tags', JSON.stringify(hashtags));
+
+      const result = await postService.createPost(formData);
+      Swal.close();
+
+      if (result.success) {
+        Swal.fire({
+          icon: 'success',
+          title: status === 'ACTIVE' ? 'โพสต์สำเร็จ!' : 'บันทึกสำเร็จ!',
+          text: status === 'ACTIVE' ? 'โพสต์สรุปความรู้เรียบร้อยแล้ว' : 'บันทึกแบบร่างเรียบร้อยแล้ว',
+          confirmButtonColor: '#3b82f6'
+        }).then(() => {
+          navigate('/explore');
+        });
+      } else {
+        throw new Error(result.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+      }
+    } catch (error) {
+      Swal.close();
+      console.error('Error submitting post:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'เกิดข้อผิดพลาด',
+        text: error.response?.data?.message || error.message || 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้',
+        confirmButtonColor: '#3b82f6'
+      });
+    }
   };
 
   return (
@@ -194,65 +292,83 @@ export default function CreatePost() {
               />
 
               <div className="mt-6">
-                <button
-                  onClick={() => setShowModal(true)}
-                  className="w-full px-5 py-4 rounded-xl border border-dashed border-primary bg-blue-50 text-primary font-bold hover:bg-blue-100 transition-colors flex items-center justify-center gap-2"
+                <label className="flex items-center gap-2 text-base font-bold text-slate-800 mb-3">
+                  <GraduationCap className="h-5 w-5 text-slate-400" /> ระดับชั้น <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={level}
+                  onChange={(e) => setLevel(e.target.value)}
+                  className="w-full px-5 py-4 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors bg-white font-medium text-slate-700 text-base"
                 >
-                  <BookOpen className="h-5 w-5" />
-                  {category && level ? `วิชา: ${category} | ระดับ: ${level}` : 'เลือกหมวดหมู่และระดับชั้น *'}
-                </button>
+                  <option value="" disabled>เลือกระดับชั้น</option>
+                  <option value="มัธยมศึกษาตอนต้น">มัธยมศึกษาตอนต้น</option>
+                  <option value="มัธยมศึกษาตอนปลาย">มัธยมศึกษาตอนปลาย</option>
+                  <option value="มหาวิทยาลัย">มหาวิทยาลัย</option>
+                </select>
               </div>
             </div>
           </div>
 
-          {/* Hashtags */}
+          {/* Summary */}
+          <div>
+            <label className="flex items-center justify-between text-base font-bold text-slate-800 mb-3">
+              <span className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-slate-400" /> บทสรุปย่อ (Summary) <span className="text-rose-500">*</span>
+              </span>
+              <span className={`text-xs font-semibold ${summary.length >= 200 ? 'text-rose-500' : 'text-slate-400'}`}>
+                {summary.length}/200 ตัวอักษร
+              </span>
+            </label>
+            <textarea
+              value={summary}
+              onChange={(e) => setSummary(e.target.value.slice(0, 200))}
+              className="w-full px-5 py-4 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors text-base min-h-[100px] resize-y bg-white"
+              placeholder="อธิบายสั้นๆ เกี่ยวกับไฟล์สรุปนี้ (จะนำไปแสดงบนการ์ดในหน้ารายการ) เช่น สรุปฟิสิกส์ ม.4 เทอม 1 เหมาะกับทบทวนสอบกลางภาค..."
+              rows={3}
+            />
+          </div>
+
+          {/* Subject & Hashtags Section */}
           <div>
             <label className="flex items-center gap-2 text-base font-bold text-slate-800 mb-3">
-              <Tag className="h-5 w-5 text-slate-400" /> แฮชแท็ก
+              <Tag className="h-5 w-5 text-slate-400" /> หมวดหมู่วิชาและแฮชแท็ก <span className="text-rose-500">*</span>
             </label>
-            <div className="flex flex-wrap gap-2 mb-3">
-              {hashtags.map(tag => (
-                <span key={tag} className="px-3 py-1.5 bg-blue-50 text-primary rounded-full text-sm font-semibold flex items-center gap-1.5 border border-blue-100 animate-in zoom-in-95 duration-200">
-                  {tag}
-                  <button onClick={() => handleRemoveHashtag(tag)} className="hover:text-rose-500 transition-colors">
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={hashtagInput}
-                onChange={(e) => setHashtagInput(e.target.value)}
-                onKeyDown={handleKeyDownHashtag}
-                className="flex-1 px-5 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors text-base"
-                placeholder="พิมพ์แฮชแท็กแล้วกด Enter..."
-              />
-              <button
-                onClick={handleAddHashtag}
-                className="px-6 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors flex-shrink-0"
-              >
-                เพิ่มแท็ก
-              </button>
-            </div>
+            <div
+              onClick={() => setShowModal(true)}
+              className="p-5 border border-dashed border-slate-200 hover:border-primary rounded-2xl bg-white hover:bg-blue-50/10 cursor-pointer transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+            >
+              <div className="flex flex-col gap-2">
+                {category ? (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-bold text-slate-400">วิชาที่เลือก:</span>
+                    <span className="px-3 py-1 bg-primary/10 text-primary font-bold text-xs rounded-full">{category}</span>
+                  </div>
+                ) : (
+                  <span className="text-sm text-rose-500 font-medium">กรุณาเลือกหมวดหมู่วิชา *</span>
+                )}
 
-            {/* Suggested Tags Area */}
-            <div className="mt-4 pt-4 border-t border-slate-100">
-              <label className="flex items-center gap-2 text-sm font-bold text-slate-500 mb-3">
-                แท็กยอดนิยม (คลิกเพื่อเพิ่ม)
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {SUGGESTED_TAGS.map(tag => (
-                  <button
-                    key={tag}
-                    onClick={() => addSuggestedTag(tag)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${hashtags.includes(tag) ? 'bg-primary text-white border-primary shadow-sm' : 'bg-white text-slate-500 border-slate-200 hover:border-primary hover:text-primary'}`}
-                  >
-                    {tag}
-                  </button>
-                ))}
+                {hashtags.length > 0 ? (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-bold text-slate-400">แฮชแท็ก:</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {hashtags.map(tag => (
+                        <span key={tag} className="px-2.5 py-0.5 bg-slate-100 text-slate-600 rounded-md text-xs font-semibold border border-slate-200">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <span className="text-sm text-slate-400">ยังไม่มีแฮชแท็ก (สามารถเพิ่มแท็กช่วยให้ค้นหาง่ายขึ้น)</span>
+                )}
               </div>
+              <button
+                type="button"
+                className="px-5 py-2.5 bg-primary/10 hover:bg-primary/20 text-primary font-bold rounded-xl text-sm transition-colors flex items-center gap-2 self-start sm:self-auto cursor-pointer"
+              >
+                <Plus className="h-4 w-4" />
+                ตั้งค่าวิชาและแท็ก
+              </button>
             </div>
           </div>
 
@@ -264,8 +380,8 @@ export default function CreatePost() {
             <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
               <ReactQuill
                 theme="snow"
-                value={details}
-                onChange={setDetails}
+                value={content}
+                onChange={setContent}
                 className="h-48 pb-10"
                 placeholder="อธิบายเพิ่มเติมเกี่ยวกับเนื้อหา เทคนิคการจำ หรือที่มา..."
               />
@@ -277,7 +393,7 @@ export default function CreatePost() {
             {/* Left: PDF */}
             <div>
               <label className="flex items-center justify-between text-base font-bold text-slate-800 mb-3">
-                <span>ไฟล์เอกสาร PDF <span className="text-rose-500">*</span></span>
+                <span>ไฟล์เอกสาร PDF (ถ้ามี)</span>
                 <span className="text-xs font-normal text-slate-500">ไม่เกิน 20 MB</span>
               </label>
               {!pdfFile ? (
@@ -318,8 +434,8 @@ export default function CreatePost() {
                       className="w-full h-full object-cover rounded-xl cursor-pointer"
                       onClick={() => openPreview(img, 'image')}
                     />
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); removeImage(idx); }} 
+                    <button
+                      onClick={(e) => { e.stopPropagation(); removeImage(idx); }}
                       className="absolute -top-2 -left-2 p-1 bg-white text-slate-500 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-all z-10 shadow-sm border border-slate-200 hover:border-rose-200"
                       title="ลบรูปภาพ"
                     >
@@ -360,57 +476,45 @@ export default function CreatePost() {
 
         {/* Actions */}
         <div className="sticky bottom-0 z-40 bg-slate-50 p-6 sm:px-12 sm:py-8 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4 rounded-b-[24px] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-          <button className="w-full sm:w-auto px-6 py-4 rounded-xl font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-colors shadow-sm">
+          <button onClick={() => navigate('/explore')} className="w-full sm:w-auto px-6 py-4 rounded-xl font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-colors shadow-sm cursor-pointer">
             ยกเลิก
           </button>
           <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-            <button onClick={() => toast.success('บันทึกแบบร่างเรียบร้อยแล้ว')} className="w-full sm:w-auto px-6 py-4 rounded-xl font-bold text-primary bg-blue-50 border border-blue-100 hover:bg-blue-100 transition-colors flex items-center justify-center gap-2">
+            <button onClick={() => handleSubmit('DRAFT')} className="w-full sm:w-auto px-6 py-4 rounded-xl font-bold text-primary bg-blue-50 border border-blue-100 hover:bg-blue-100 transition-colors flex items-center justify-center gap-2 cursor-pointer">
               <Save className="h-5 w-5" />
               บันทึกแบบร่าง
             </button>
-            <button onClick={handlePublish} className="w-full sm:w-auto px-8 py-4 rounded-xl font-bold text-white bg-primary hover:bg-blue-600 transition-colors shadow-md hover:shadow-lg hover:-translate-y-0.5">
+            <button onClick={() => handleSubmit('ACTIVE')} className="w-full sm:w-auto px-8 py-4 rounded-xl font-bold text-white bg-primary hover:bg-blue-600 transition-colors shadow-md hover:shadow-lg hover:-translate-y-0.5 cursor-pointer">
               โพสต์สรุปความรู้
             </button>
           </div>
         </div>
       </div>
 
-      {/* MODAL: Category & Level */}
+      {/* MODAL: Category & Tags */}
       {showModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-              <h2 className="text-xl font-extrabold text-slate-900">รายละเอียดหมวดหมู่</h2>
+              <h2 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
+                <Tag className="h-6 w-6 text-primary" />
+                ตั้งค่าวิชาและแท็ก
+              </h2>
               <button onClick={() => setShowModal(false)} className="p-2 text-slate-400 hover:bg-slate-200 hover:text-slate-800 rounded-full transition-colors">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <div className="p-6 flex flex-col gap-6">
+            <div className="p-6 flex flex-col gap-6 overflow-y-auto max-h-[70vh]">
+              {/* Category Select */}
               <div>
                 <label className="flex items-center gap-2 text-base font-bold text-slate-800 mb-3">
-                  <GraduationCap className="h-5 w-5 text-primary" /> ระดับชั้น
-                </label>
-                <select
-                  value={level}
-                  onChange={(e) => setLevel(e.target.value)}
-                  className="w-full px-5 py-3.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors bg-white font-medium text-slate-700"
-                >
-                  <option value="" disabled>เลือกระดับชั้น</option>
-                  <option value="มัธยมศึกษาตอนต้น">มัธยมศึกษาตอนต้น</option>
-                  <option value="มัธยมศึกษาตอนปลาย">มัธยมศึกษาตอนปลาย</option>
-                  <option value="มหาวิทยาลัย">มหาวิทยาลัย</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="flex items-center gap-2 text-base font-bold text-slate-800 mb-3">
-                  <BookOpen className="h-5 w-5 text-primary" /> หมวดหมู่วิชา
+                  <BookOpen className="h-5 w-5 text-primary" /> หมวดหมู่วิชา <span className="text-rose-500">*</span>
                 </label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-5 py-3.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors bg-white font-medium text-slate-700"
+                  className="w-full px-5 py-3.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors bg-white font-medium text-slate-700 text-base"
                 >
                   <option value="" disabled>เลือกวิชา</option>
                   <option value="คณิตศาสตร์">คณิตศาสตร์</option>
@@ -423,14 +527,74 @@ export default function CreatePost() {
                   <option value="ภาษาไทย">ภาษาไทย</option>
                 </select>
               </div>
+
+              {/* Hashtags Input */}
+              <div>
+                <label className="flex items-center gap-2 text-base font-bold text-slate-800 mb-3">
+                  <Tag className="h-5 w-5 text-primary" /> แฮชแท็ก (Hashtags)
+                </label>
+
+                {/* Tag Container acting like an input field */}
+                <div
+                  onClick={() => tagInputRef.current?.focus()}
+                  className="flex flex-wrap items-center gap-1.5 p-1.5 px-2.5 border border-slate-200 rounded-xl focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-colors min-h-[44px] bg-white cursor-text"
+                >
+                  {hashtags.map(tag => (
+                    <span key={tag} className="px-2 py-0.5 bg-blue-50 text-primary rounded-lg text-xs font-semibold flex items-center gap-1 border border-blue-100/50 animate-in zoom-in-95 duration-200">
+                      {tag}
+                      <button type="button" onClick={(e) => { e.stopPropagation(); handleRemoveHashtag(tag); }} className="hover:text-rose-500 transition-colors cursor-pointer">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                  <input
+                    ref={tagInputRef}
+                    type="text"
+                    value={hashtagInput}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      // If the user pastes/types a comma, space, or semicolon, handle it immediately
+                      if (val.endsWith(',') || val.endsWith(' ') || val.endsWith(';')) {
+                        handleAddHashtag(val);
+                      } else {
+                        setHashtagInput(val);
+                      }
+                    }}
+                    onKeyDown={handleKeyDownHashtag}
+                    onBlur={() => handleAddHashtag()}
+                    className="flex-1 min-w-[120px] outline-none border-none py-0.5 px-1.5 text-sm bg-transparent text-slate-800 placeholder-slate-400 focus:ring-0 focus:outline-none"
+                    placeholder={hashtags.length === 0 ? "พิมพ์แท็กที่ต้องการแล้วกด Enter หรือ Space..." : "เพิ่มแฮชแท็ก..."}
+                  />
+                </div>
+
+                {/* Suggested Tags Area */}
+                <div className="mt-4 pt-4 border-t border-slate-100">
+                  <label className="flex items-center gap-2 text-xs font-bold text-slate-500 mb-2">
+                    แท็กยอดนิยม (คลิกเพื่อเลือก)
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {SUGGESTED_TAGS.map(tag => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => toggleSuggestedTag(tag)}
+                        className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition-all cursor-pointer ${hashtags.includes(tag) ? 'bg-primary text-white border-primary shadow-sm' : 'bg-white text-slate-500 border-slate-200 hover:border-primary hover:text-primary'}`}
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-end">
               <button
+                type="button"
                 onClick={() => setShowModal(false)}
-                className="px-6 py-3 bg-primary text-white rounded-xl font-bold hover:bg-blue-600 transition-all shadow-md hover:shadow-lg"
+                className="px-6 py-3 bg-primary text-white rounded-xl font-bold hover:bg-blue-600 transition-all shadow-md hover:shadow-lg cursor-pointer"
               >
-                บันทึกและปิด
+                ตกลง
               </button>
             </div>
           </div>

@@ -66,27 +66,18 @@ export default function Register() {
 
       const data = await authService.register(payload);
       
-      // Register/Login with Supabase Auth to establish session
-      try {
-        const { data: supAuthData } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              username,
-              display_name: username,
-              full_name: username
-            }
-          }
-        });
-        if (!supAuthData?.session) {
-          await supabase.auth.signInWithPassword({ email, password });
+      let token = data?.token || data?.access_token || data?.data?.token || data?.data?.access_token || data?.session?.access_token;
+      if (!token) {
+        try {
+          const loginRes = await authService.login(email, password);
+          token = loginRes?.token || loginRes?.access_token || loginRes?.data?.token || loginRes?.data?.access_token || loginRes?.session?.access_token;
+        } catch (e) {
+          console.log("Auto login after register info:", e);
         }
-      } catch (sErr) {
-        console.log("Supabase auth sync notice:", sErr);
       }
 
-      const registeredUser = data?.user || data?.data || {};
+      // เข้าสู่ระบบใน state ทันที
+      const registeredUser = data?.user || data?.data || data?.session?.user || data || {};
       loginAction({
         ...registeredUser,
         id: registeredUser.id || registeredUser._id || registeredUser.user_id || 'new_user',

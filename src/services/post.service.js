@@ -14,7 +14,7 @@ export const postService = {
       throw error;
     }
   },
-  
+
   // Fetch a single post by ID
   getPostById: async (id) => {
     try {
@@ -25,6 +25,17 @@ export const postService = {
       return null;
     } catch (error) {
       console.error(`Error fetching post ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Create a new post
+  createPost: async (formData) => {
+    try {
+      const response = await api.post('/posts', formData);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating post:', error);
       throw error;
     }
   }

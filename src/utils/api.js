@@ -10,19 +10,29 @@ const api = axios.create({
 
 // Request Interceptor: Attach token automatically from Supabase session
 api.interceptors.request.use(
-  async (config) => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.access_token) {
-        config.headers.Authorization = `Bearer ${session.access_token}`;
-      } else {
-        const fallbackToken = localStorage.getItem('access_token');
-        if (fallbackToken && fallbackToken !== 'undefined' && fallbackToken !== 'null') {
-          config.headers.Authorization = `Bearer ${fallbackToken}`;
+  (config) => {
+    // If the data is FormData, remove the default Content-Type header
+    // so Axios can set it automatically with the correct boundary parameter.
+    if (config.data instanceof FormData) {
+      if (config.headers) {
+        if (typeof config.headers.delete === 'function') {
+          config.headers.delete('Content-Type');
+        } else {
+          delete config.headers['Content-Type'];
+          delete config.headers['content-type'];
         }
       }
-    } catch (err) {
-      console.error('Error fetching Supabase session in API interceptor:', err);
+    }
+
+    const token = localStorage.getItem('access_token');
+    if (token && token !== 'undefined' && token !== 'null') {
+      if (config.headers && typeof config.headers.set === 'function') {
+        config.headers.set('Authorization', `Bearer ${token}`);
+      } else {
+        if (!config.headers) config.headers = {};
+        config.headers['Authorization'] = `Bearer ${token}`;
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
     return config;
   },
