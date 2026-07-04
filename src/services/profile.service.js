@@ -63,6 +63,7 @@ function formatPosts(data) {
     likes: post._count?.likes || post.likes || 0,
     image: post.cover_image || 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=500&q=80',
     author: post.author?.username || 'ผู้ใช้งาน',
+    created_at: post.created_at,
   }));
 }
 
