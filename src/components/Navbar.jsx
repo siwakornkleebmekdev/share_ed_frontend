@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router';
-import { BookOpen, Search, Bell, User, Heart, MessageSquare, Info, LogOut, Settings, FileText, Trophy } from 'lucide-react';
+import { BookOpen, Search, Bell, User, Heart, MessageSquare, Info, LogOut, Settings, FileText } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import useNotificationStore from '@/store/notificationStore';
 import useAuthStore from '@/store/authStore';

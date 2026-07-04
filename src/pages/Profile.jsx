@@ -300,6 +300,24 @@ export default function Profile() {
               {user?.bio || 'ยังไม่มีคำอธิบายตัวเอง...'}
             </p>
           </div>
+
+          {(() => {
+            const profileWidgets = (user?.user_metadata?.widgets || []).filter((w) => w.options?.insideProfileCard !== false);
+            if (profileWidgets.length === 0) return null;
+            const widgetCardTheme = { ...DEFAULT_THEME, ...theme };
+            return (
+              <div className="mt-8 pt-8 border-t border-white/10">
+                <h3 className="font-bold text-white mb-3">วิดเจ็ต</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {profileWidgets.map((w) => {
+                    const platform = getPlatformConfig(w.platformId);
+                    if (!platform) return null;
+                    return <WidgetCard key={w.id} platform={platform} url={w.url} options={w.options} cardTheme={widgetCardTheme} />;
+                  })}
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Tabs */}
