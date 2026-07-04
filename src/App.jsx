@@ -18,7 +18,7 @@ import { supabase } from './utils/supabase';
 import api from './utils/api';
 import { authService } from './services/auth.service';
 
-// Route Guardian Component (Disabled temporarily)
+// Route Guardian Component
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated } = useAuthStore();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
@@ -256,6 +256,7 @@ function App() {
               </ProtectedRoute>
             } 
           />
+
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route 
