@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router';
-import { Toaster } from 'react-hot-toast';
+import toast, { Toaster } from 'react-hot-toast';
 import { useEffect, useRef } from 'react';
 import useAuthStore from './store/authStore';
 import MainLayout from './layouts/MainLayout';
@@ -48,154 +48,178 @@ function App() {
   useEffect(() => {
     const syncAccountWithDatabase = async (session) => {
       if (!session || !session.user) return;
-      const userEmail = session.user.email;
-      const meta = session.user.user_metadata || {};
+      if (isSyncingRef.current) return;
+      isSyncingRef.current = true;
 
-      // เก็บ Token ของ Supabase ลง localStorage เพื่อใช้เป็น Header สำหรับส่งไป Backend
-      if (session.access_token) {
-        const curToken = localStorage.getItem('access_token');
-        if (!curToken || curToken === 'undefined' || curToken === 'null') {
+      try {
+        const userEmail = session.user.email;
+        const meta = session.user.user_metadata || {};
+
+        // เก็บ Token ของ Supabase ลง localStorage เพื่อใช้เป็น Header สำหรับส่งไป Backend
+        if (session.access_token) {
           localStorage.setItem('access_token', session.access_token);
         }
-      }
 
-      // เบื้องต้นใส่ข้อมูลจาก session ลง store ก่อนเพื่อความรวดเร็ว
-      loginAction({
-        id: session.user.id,
-        email: userEmail,
-        name: meta.display_name || meta.full_name || meta.username || userEmail,
-        avatar: meta.avatar_url,
-        display_name: meta.display_name || meta.full_name || meta.username,
-        username: meta.username || meta.display_name || meta.full_name,
-        education_level: meta.education_level,
-        age: meta.age,
-        bio: meta.bio,
-        user_metadata: meta
-      });
+        // เบื้องต้นใส่ข้อมูลจาก session ลง store ก่อนเพื่อความรวดเร็ว
+        loginAction({
+          id: session.user.id,
+          email: userEmail,
+          name: meta.display_name || meta.full_name || meta.username || userEmail,
+          avatar: meta.avatar_url,
+          display_name: meta.display_name || meta.full_name || meta.username,
+          username: meta.username || meta.display_name || meta.full_name,
+          education_level: meta.education_level,
+          age: meta.age,
+          bio: meta.bio,
+          user_metadata: meta
+        });
 
-      // ตรวจสอบกับระบบหลังบ้านผ่าน API โดยตรง (เพื่อให้อีเมลที่สมัครไว้แล้วใช้บัญชีเดียวกัน และไม่ติด 403 RLS ของ Supabase)
-      try {
-        const res = await authService.getMe();
-        if (res && (res.data || res.user)) {
-          const dbUser = res.data || res.user;
-          const mergedEdu = dbUser.education_level || meta.education_level;
-          const mergedAge = dbUser.age || meta.age;
-          const mergedBio = dbUser.bio || meta.bio;
-          const mergedUsername = dbUser.username || dbUser.nickname || meta.display_name || meta.username || meta.full_name || userEmail?.split('@')[0];
+        // ตรวจสอบกับระบบหลังบ้านผ่าน API โดยตรง (เพื่อให้อีเมลที่สมัครไว้แล้วใช้บัญชีเดียวกัน และไม่ติด 403 RLS ของ Supabase)
+        try {
+          const res = await authService.getMe();
+          if (res) {
+            const dbUser = res.data || res.user || res;
+            const mergedEdu = dbUser.education_level || meta.education_level;
+            const mergedAge = dbUser.age || meta.age;
+            const mergedBio = dbUser.bio || meta.bio;
+            const mergedUsername = dbUser.username || dbUser.nickname || meta.display_name || meta.username || meta.full_name || userEmail?.split('@')[0];
 
-          loginAction({
-            ...dbUser,
-            id: dbUser.id || dbUser._id || session.user.id,
-            user_id: dbUser.id || dbUser._id || session.user.id,
-            email: userEmail,
-            name: mergedUsername,
-            avatar: dbUser.avatar_url || meta.avatar_url,
-            display_name: mergedUsername,
-            username: mergedUsername,
-            education_level: mergedEdu,
-            age: mergedAge,
-            bio: mergedBio,
-            user_metadata: {
-              ...meta,
+            loginAction({
               ...dbUser,
+              id: dbUser.id || dbUser._id || session.user.id,
+              user_id: dbUser.id || dbUser._id || session.user.id,
+              email: userEmail,
+              name: mergedUsername,
+              avatar: dbUser.avatar_url || meta.avatar_url,
+              display_name: mergedUsername,
+              username: mergedUsername,
               education_level: mergedEdu,
               age: mergedAge,
               bio: mergedBio,
-              username: mergedUsername
-            }
-          });
-
-          // อัปเดต sync ทั้งในตาราง users และใน Supabase auth
-          if (mergedEdu) {
-            supabase.from('users').update({
-              education_level: mergedEdu,
-              age: mergedAge || null,
-              bio: mergedBio || null,
-              updated_at: new Date()
-            }).eq('id', session.user.id).catch(() => {});
-
-            supabase.auth.updateUser({
-              data: {
+              user_metadata: {
+                ...meta,
+                ...dbUser,
                 education_level: mergedEdu,
-                age: mergedAge || 0,
-                bio: mergedBio || " ",
+                age: mergedAge,
+                bio: mergedBio,
                 username: mergedUsername
               }
-            }).catch(() => {});
-          }
-          return;
-        }
-      } catch (err) {
-        // ถ้าดึง getMe() ไม่ได้ เช่น เข้าด้วย Google ครั้งแรก หรือ token ยังไม่ตรงกันกับระบบหลังบ้าน
-        if (session.user.app_metadata?.provider === 'google' || session.user.user_metadata?.iss?.includes('google') || session.user.app_metadata?.providers?.includes('google')) {
-          try {
-            // ลองเรียก /auth/google ของระบบหลังบ้านก่อน (ถ้ามี)
-            const gRes = await api.post('/auth/google', {
-              email: userEmail,
-              name: meta.display_name || meta.full_name || meta.name || userEmail?.split('@')[0],
-              avatar: meta.avatar_url
             });
-            const gToken = gRes.data?.token || gRes.data?.access_token || gRes.data?.data?.token || gRes.data?.data?.access_token;
-            if (gToken) {
-              localStorage.setItem('access_token', gToken);
-              loginAction(gRes.data.user || gRes.data.data);
-              return;
+
+            // อัปเดต sync ทั้งในตาราง users และใน Supabase auth
+            if (mergedEdu) {
+              supabase.from('users').update({
+                education_level: mergedEdu,
+                age: mergedAge || null,
+                bio: mergedBio || null,
+                updated_at: new Date()
+              }).eq('id', session.user.id).catch(() => {});
+
+              supabase.auth.updateUser({
+                data: {
+                  education_level: mergedEdu,
+                  age: mergedAge || 0,
+                  bio: mergedBio || " ",
+                  username: mergedUsername
+                }
+              }).catch(() => {});
             }
-          } catch (gErr) {
-            // ถ้าไม่มี endpoint /auth/google ให้ใช้ authService.register ลงทะเบียนเข้า Node.js backend ทันที เพื่อไม่ให้ติด 401 เมื่อไปหน้า Profile
+            return;
+          }
+        } catch (err) {
+          // ถ้าดึง getMe() ไม่ได้ เช่น เข้าด้วย Google ครั้งแรก หรือ token ยังไม่ตรงกันกับระบบหลังบ้าน
+          if (session.user.app_metadata?.provider === 'google' || session.user.user_metadata?.iss?.includes('google') || session.user.app_metadata?.providers?.includes('google')) {
             try {
-              const fixedPassword = "Google_OAuth_" + userEmail + "_Secret#2024!";
-              const uname = meta.display_name || meta.full_name || meta.name || userEmail?.split('@')[0];
-              const regData = await authService.register({
+              // ลองเรียก /auth/google ของระบบหลังบ้านก่อน (ถ้ามี)
+              const gRes = await api.post('/auth/google', {
                 email: userEmail,
-                password: fixedPassword,
-                confirmPassword: fixedPassword,
-                username: uname,
-                nickname: uname,
-                full_name: uname,
-                education_level: "MIDDLE_SCHOOL",
-                age: 0,
-                bio: "ยังไม่ได้ระบุ"
+                name: meta.display_name || meta.full_name || meta.name || userEmail?.split('@')[0],
+                avatar: meta.avatar_url
               });
-              const regToken = regData?.token || regData?.access_token || regData?.data?.token || regData?.data?.access_token;
-              if (regToken) {
-                localStorage.setItem('access_token', regToken);
-                loginAction(regData.user || regData.data || {
+              const gToken = gRes.data?.token || gRes.data?.access_token || gRes.data?.data?.token || gRes.data?.data?.access_token;
+              if (gToken) {
+                localStorage.setItem('access_token', gToken);
+                loginAction(gRes.data.user || gRes.data.data);
+                return;
+              }
+            } catch (gErr) {
+              // ถ้าไม่มี endpoint /auth/google ให้ใช้ authService.register ลงทะเบียนเข้า Node.js backend ทันที เพื่อไม่ให้ติด 401 เมื่อไปหน้า Profile
+              try {
+                const fixedPassword = "Google_OAuth_" + userEmail.toLowerCase() + "_Secret#2024!";
+                const uname = meta.display_name || meta.full_name || meta.name || userEmail?.split('@')[0];
+                const regData = await authService.register({
                   email: userEmail,
-                  name: uname,
-                  display_name: uname,
+                  password: fixedPassword,
+                  confirmPassword: fixedPassword,
                   username: uname,
+                  nickname: uname,
+                  full_name: uname,
                   education_level: "MIDDLE_SCHOOL",
                   age: 0,
                   bio: "ยังไม่ได้ระบุ"
                 });
-                return;
-              }
-            } catch (regErr) {
-              console.log("Google auto-register notice:", regErr?.response?.data || regErr.message);
-              try {
-                const fixedPassword = "Google_OAuth_" + userEmail + "_Secret#2024!";
-                const loginRes = await authService.login(userEmail, fixedPassword);
-                const lToken = loginRes?.token || loginRes?.access_token || loginRes?.data?.token || loginRes?.data?.access_token;
-                if (lToken) {
-                  localStorage.setItem('access_token', lToken);
-                  if (loginRes.user || loginRes.data) {
-                    loginAction(loginRes.user || loginRes.data);
-                  }
+                const regToken = regData?.token || regData?.access_token || regData?.data?.token || regData?.data?.access_token;
+                if (regToken) {
+                  localStorage.setItem('access_token', regToken);
+                  loginAction(regData.user || regData.data || {
+                    email: userEmail,
+                    name: uname,
+                    display_name: uname,
+                    username: uname,
+                    education_level: "MIDDLE_SCHOOL",
+                    age: 0,
+                    bio: "ยังไม่ได้ระบุ"
+                  });
                   return;
                 }
-              } catch (loginErr) {
-                console.log("Fallback google login failed:", loginErr?.response?.data || loginErr.message);
-              }
-              if (session.access_token) {
-                const curToken = localStorage.getItem('access_token');
-                if (!curToken || curToken === 'undefined' || curToken === 'null') {
+              } catch (regErr) {
+                console.log("Google auto-register notice:", regErr?.response?.data || regErr.message);
+                
+                // ลอง Login ด้วยรหัสผ่านรูปแบบคงตัวแบบต่าง ๆ
+                let loggedIn = false;
+                let loginRes;
+                
+                // 1. ลองตัวพิมพ์เล็ก (แนะนำ)
+                const fixedPasswordLower = "Google_OAuth_" + userEmail.toLowerCase() + "_Secret#2024!";
+                try {
+                  loginRes = await authService.login(userEmail, fixedPasswordLower);
+                  loggedIn = true;
+                } catch (loginErr1) {
+                  // 2. ลองตัวพิมพ์ดั้งเดิมจาก Supabase
+                  const fixedPasswordOriginal = "Google_OAuth_" + userEmail + "_Secret#2024!";
+                  try {
+                    loginRes = await authService.login(userEmail, fixedPasswordOriginal);
+                    loggedIn = true;
+                  } catch (loginErr2) {
+                    console.log("Both fixed password logins failed. Proposing password link.");
+                  }
+                }
+
+                if (loggedIn && loginRes) {
+                  const lToken = loginRes?.token || loginRes?.access_token || loginRes?.data?.token || loginRes?.data?.access_token;
+                  if (lToken) {
+                    localStorage.setItem('access_token', lToken);
+                    if (loginRes.user || loginRes.data) {
+                      loginAction(loginRes.user || loginRes.data);
+                    }
+                    return;
+                  }
+                }
+
+                // หากไม่สามารถเข้าสู่ระบบด้วย OAuth ได้ แสดงว่าอีเมลนี้ลงทะเบียนด้วยรหัสผ่านปกติไว้แล้ว ให้ปฏิเสธและแจ้งเตือน
+                toast.error('อีเมลนี้เคยลงทะเบียนด้วยรหัสผ่านในระบบไว้แล้ว กรุณาเข้าสู่ระบบด้วยอีเมลและรหัสผ่านหลัก', { id: 'auth-link-error' });
+                await supabase.auth.signOut();
+                logoutAction();
+
+                if (session.access_token) {
                   localStorage.setItem('access_token', session.access_token);
                 }
               }
             }
           }
         }
+      } finally {
+        isSyncingRef.current = false;
       }
     };
 
@@ -203,8 +227,8 @@ function App() {
     const token = localStorage.getItem('access_token');
     if (token) {
       authService.getMe().then((res) => {
-        if (res && (res.data || res.user)) {
-          const dbUser = res.data || res.user;
+        if (res) {
+          const dbUser = res.data || res.user || res;
           loginAction({
             ...dbUser,
             id: dbUser.id || dbUser._id || dbUser.user_id,

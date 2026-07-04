@@ -29,7 +29,13 @@ api.interceptors.request.use(
 
     const token = localStorage.getItem('access_token');
     if (token && token !== 'undefined' && token !== 'null') {
-      config.headers.Authorization = `Bearer ${token}`;
+      if (config.headers && typeof config.headers.set === 'function') {
+        config.headers.set('Authorization', `Bearer ${token}`);
+      } else {
+        if (!config.headers) config.headers = {};
+        config.headers['Authorization'] = `Bearer ${token}`;
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
     return config;
   },
