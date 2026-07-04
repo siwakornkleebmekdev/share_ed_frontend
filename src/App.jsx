@@ -14,6 +14,7 @@ import Trending from './pages/Trending';
 import Profile from './pages/Profile';
 import Notifications from './pages/Notifications';
 import PostDetails from './pages/PostDetails';
+import EditPost from './pages/EditPost';
 import { supabase } from './utils/supabase';
 import api from './utils/api';
 import { authService } from './services/auth.service';
@@ -286,6 +287,14 @@ function App() {
           <Route path="/explore" element={<Explore />} />
           <Route path="/trending" element={<Trending />} />
           <Route path="/post/:id" element={<PostDetails />} />
+          <Route 
+            path="/post/edit/:id" 
+            element={
+              <ProtectedRoute>
+                <EditPost />
+              </ProtectedRoute>
+            } 
+          />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/reset-password" element={<ResetPassword />} />

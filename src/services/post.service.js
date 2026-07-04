@@ -38,6 +38,53 @@ export const postService = {
       console.error('Error creating post:', error);
       throw error;
     }
+  },
+
+  // Update an existing post
+  updatePost: async (id, formData) => {
+    try {
+      const response = await api.put(`/posts/${id}`, formData);
+      return response.data;
+    } catch (error) {
+      console.error(`Error updating post ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Toggle like status for a post
+  likePost: async (postId) => {
+    try {
+      const response = await api.post(`/likes/${postId}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error liking post ${postId}:`, error);
+      throw error;
+    }
+  },
+
+  // Toggle bookmark status for a post
+  bookmarkPost: async (postId) => {
+    try {
+      const response = await api.post(`/bookmarks/${postId}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error bookmarking post ${postId}:`, error);
+      throw error;
+    }
+  },
+
+  // Fetch general system statistics (total posts, total users)
+  getSystemStats: async () => {
+    try {
+      const response = await api.get('/posts/stats');
+      if (response.data.success) {
+        return response.data.data;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error fetching system stats:', error);
+      return null;
+    }
   }
 };
 
@@ -69,7 +116,8 @@ function formatSinglePostData(post) {
     level: mapEducationLevel(post.education_level),
     category: post.category?.category_name || post.category?.name || 'ทั่วไป',
     views: formatNumber(post.view_count),
-    likes: post._count?.likes || post.likes || 0,
+    likes: post._count?.likes || (Array.isArray(post.likes) ? post.likes.length : post.likes) || 0,
+    rawLikes: post.likes || [],
     coverImage: post.cover_image || 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=500&q=80',
     hashtags: hashtags,
     images: images,
@@ -79,6 +127,7 @@ function formatSinglePostData(post) {
       size: '2MB'
     } : null,
     author: {
+      id: post.author?.id,
       name: post.author?.username || 'ผู้ใช้งาน',
       role: 'Contributor',
       avatar: post.author?.profile_image || 'https://ui-avatars.com/api/?name=' + (post.author?.username || 'User'),
