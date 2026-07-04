@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { Mail, Lock, User, Loader2 } from 'lucide-react';
+import { Mail, Lock, User, Loader2, BookOpen } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { authService } from '@/services/auth.service';
 import useAuthStore from '@/store/authStore';
@@ -12,6 +12,7 @@ export default function Register() {
   // Form State
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
+  const [educationLevel, setEducationLevel] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
@@ -29,12 +30,16 @@ export default function Register() {
 
   const handleRegister = async (e) => {
     e.preventDefault();
-    if (!username || !email || !password || !confirmPassword) {
+    if (!username || !email || !educationLevel || !password || !confirmPassword) {
       return toast.error('กรุณากรอกข้อมูลให้ครบถ้วนทุกช่อง');
     }
 
     if (password !== confirmPassword) {
       return toast.error('รหัสผ่านไม่ตรงกัน');
+    }
+
+    if (!/[a-zA-Z]/.test(password)) {
+      return toast.error('รหัสผ่านต้องมีตัวอักษรภาษาอังกฤษอย่างน้อย 1 ตัว');
     }
 
     if (isAuthenticated || user) {
@@ -52,7 +57,7 @@ export default function Register() {
         username,
         nickname: username,
         full_name: username,
-        education_level: "MIDDLE_SCHOOL", // ค่าเริ่มต้นเพื่อให้ผ่าน validation ของ Backend
+        education_level: educationLevel, // ให้ผู้ใช้เลือกจากหน้าฟอร์ม
         age: 0, // ค่าเริ่มต้น
         bio: "ยังไม่ได้ระบุ" // ค่าเริ่มต้นชั่วคราวเพื่อให้ผ่าน validation ของ Backend
       };
@@ -82,7 +87,7 @@ export default function Register() {
         name: username,
         display_name: username,
         username,
-        education_level: "MIDDLE_SCHOOL",
+        education_level: educationLevel,
         age: 0,
         bio: "ยังไม่ได้ระบุ"
       });
@@ -163,6 +168,31 @@ export default function Register() {
                   className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors" 
                   placeholder="กรอกอีเมลของคุณ (เช่น name@example.com)" 
                 />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">ระดับการศึกษา <span className="text-red-500">*</span></label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <BookOpen className="h-5 w-5 text-slate-400" />
+                </div>
+                <select 
+                  value={educationLevel}
+                  onChange={(e) => setEducationLevel(e.target.value)}
+                  required 
+                  className="block w-full pl-10 pr-10 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors bg-white text-slate-900 appearance-none"
+                >
+                  <option value="" disabled>เลือกระดับการศึกษา</option>
+                  <option value="MIDDLE_SCHOOL">มัธยมศึกษาตอนต้น</option>
+                  <option value="HIGH_SCHOOL">มัธยมศึกษาตอนปลาย</option>
+                  <option value="UNIVERSITY">มหาวิทยาลัย</option>
+                </select>
+                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                  <svg className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
               </div>
             </div>
             
