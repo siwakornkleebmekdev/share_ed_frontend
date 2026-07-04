@@ -33,29 +33,20 @@ export default function Register() {
 
   const handleRegister = async (e) => {
     e.preventDefault();
-    setFieldErrors({});
-
-    const newErrors = {};
-    if (!username || !username.trim()) {
-      newErrors.username = 'กรุณากรอกชื่อผู้ใช้';
-    }
-    if (!email || !email.trim()) {
-      newErrors.email = 'กรุณากรอกอีเมล';
-    }
-    if (!password) {
-      newErrors.password = 'กรุณากรอกรหัสผ่าน';
-    } else if (password.length < 8) {
-      newErrors.password = 'รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร';
-    }
-    if (!confirmPassword) {
-      newErrors.confirmPassword = 'กรุณายืนยันรหัสผ่าน';
-    } else if (password && confirmPassword && password !== confirmPassword) {
-      newErrors.confirmPassword = 'รหัสผ่านไม่ตรงกัน';
+    if (!username || !email || !educationLevel || !password || !confirmPassword) {
+      return toast.error('กรุณากรอกข้อมูลให้ครบถ้วนทุกช่อง');
     }
 
-    if (Object.keys(newErrors).length > 0) {
-      setFieldErrors(newErrors);
-      return;
+    if (password !== confirmPassword) {
+      return toast.error('รหัสผ่านไม่ตรงกัน');
+    }
+
+    if (!/[a-zA-Z]/.test(password)) {
+      return toast.error('รหัสผ่านต้องมีตัวอักษรภาษาอังกฤษอย่างน้อย 1 ตัว');
+    }
+
+    if (isAuthenticated || user) {
+      return toast.error('คุณมีบัญชีผู้ใช้นี้ในระบบแล้ว');
     }
 
     try {
@@ -68,9 +59,9 @@ export default function Register() {
         username,
         nickname: username,
         full_name: username,
-        education_level: "MIDDLE_SCHOOL",
-        age: 0,
-        bio: "ยังไม่ได้ระบุ"
+        education_level: educationLevel, // ให้ผู้ใช้เลือกจากหน้าฟอร์ม
+        age: 0, // ค่าเริ่มต้น
+        bio: "ยังไม่ได้ระบุ" // ค่าเริ่มต้นชั่วคราวเพื่อให้ผ่าน validation ของ Backend
       };
 
       const data = await authService.register(payload);
