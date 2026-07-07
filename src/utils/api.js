@@ -8,7 +8,14 @@ const api = axios.create({
   },
 });
 
-// Request Interceptor: Attach token automatically from Supabase session
+const cors = require('cors');
+app.use(cors({
+  origin: 'https://share-ed-frontend-gamma.vercel.app/', // หรือใส่ '*' เพื่อเปิดให้ทุกโดเมนเข้าถึงได้
+  credentials: true
+}));
+
+
+// Request Interceptor: Attach token automatically
 api.interceptors.request.use(
   (config) => {
     // If the data is FormData, remove the default Content-Type header
