@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Image as ImageIcon, MapPin, Link as LinkIcon, BookOpen, Star, Award, FileText, CheckCircle2, Gift, GraduationCap } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router';
+import { Image as ImageIcon, MapPin, Link as LinkIcon, BookOpen, Star, Award, FileText, CheckCircle2, Gift, GraduationCap, Clock, Edit } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PostCard from '@/components/PostCard';
 
@@ -8,8 +9,17 @@ import { profileService } from '@/services/profile.service';
 import { Loader2 } from 'lucide-react';
 
 export default function Profile() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuthStore();
   const [activeTab, setActiveTab] = useState('posts'); // posts, drafts, bookmarks, milestones
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && ['posts', 'drafts', 'bookmarks', 'milestones'].includes(tab)) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
   const [milestones, setMilestones] = useState([]);
   const [myPosts, setMyPosts] = useState([]);
   const [drafts, setDrafts] = useState([]);
@@ -151,15 +161,70 @@ export default function Profile() {
 
               {activeTab === 'drafts' && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {drafts.length > 0 ? drafts.map(post => (
-                    <div key={post.id} className="relative group">
-                      <PostCard post={post} viewMode="grid" />
-                      <div className="absolute top-3 left-3 px-3 py-1 bg-yellow-500/90 text-white backdrop-blur-md rounded-lg text-xs font-bold shadow-sm flex items-center gap-1 z-10">
-                        <FileText className="h-3.5 w-3.5" /> DRAFT
+                  {drafts.length > 0 ? drafts.map(draft => (
+                    <div 
+                      key={draft.id} 
+                      className="bg-white rounded-3xl border border-slate-200/60 shadow-sm hover:shadow-md hover:border-primary/20 transition-all flex flex-col overflow-hidden group"
+                    >
+                      {/* Cover Image & Category */}
+                      <div className="h-44 bg-slate-100 overflow-hidden relative">
+                        <img 
+                          src={draft.image} 
+                          alt={draft.title} 
+                          className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-500" 
+                        />
+                        <div className="absolute top-3 left-3 px-2.5 py-1 bg-amber-500/90 text-white backdrop-blur-md rounded-lg text-[10px] font-bold shadow-sm z-10">
+                          แบบร่าง
+                        </div>
+                        <div className="absolute top-3 right-3 px-2.5 py-1 bg-white/95 backdrop-blur-md rounded-lg text-[10px] font-bold text-slate-700 shadow-sm z-10">
+                          {draft.subject}
+                        </div>
+                      </div>
+
+                      {/* Card Body */}
+                      <div className="p-5 flex-1 flex flex-col justify-between">
+                        <div>
+                          <div className="flex items-center gap-2 mb-3">
+                            <span className="px-2 py-0.5 bg-slate-50 border border-slate-100 text-slate-600 rounded-md text-[10px] font-bold">
+                              {draft.level}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
+                              <Clock className="h-3 w-3" /> แบบร่าง
+                            </span>
+                          </div>
+
+                          <h3 className="text-lg font-bold text-slate-800 line-clamp-2 mb-2 group-hover:text-primary transition-colors">
+                            {draft.title}
+                          </h3>
+
+                          <p className="text-slate-500 text-xs font-medium line-clamp-2 mb-4 leading-relaxed">
+                            {draft.description}
+                          </p>
+                        </div>
+
+                        {/* Card Actions */}
+                        <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-3 mt-auto">
+                          <span className="text-[10px] text-slate-400 font-medium">
+                            แก้ไขล่าสุด: {draft.created_at ? new Date(draft.created_at).toLocaleDateString('th-TH') : 'ไม่ระบุ'}
+                          </span>
+                          
+                          <button 
+                            onClick={() => navigate(`/post/edit/${draft.id}`)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-primary border border-blue-100 rounded-lg text-xs font-bold shadow-sm transition-all cursor-pointer"
+                          >
+                            <Edit className="h-3.5 w-3.5" /> แก้ไขโพสต์
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )) : (
-                    <div className="col-span-full py-10 text-center text-slate-500">ยังไม่มีแบบร่าง</div>
+                    <div className="col-span-full flex flex-col items-center justify-center py-20 text-center bg-white rounded-3xl border border-slate-100">
+                      <div className="h-24 w-24 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mb-4">
+                        <FileText className="h-10 w-10" />
+                      </div>
+                      <h3 className="text-xl font-bold text-slate-800 mb-2">ยังไม่มีแบบร่าง</h3>
+                      <p className="text-slate-500">คุณสามารถบันทึกสรุปความรู้เป็นแบบร่างเพื่อมาเขียนต่อได้ตลอดเวลา</p>
+                    </div>
                   )}
                 </div>
               )}

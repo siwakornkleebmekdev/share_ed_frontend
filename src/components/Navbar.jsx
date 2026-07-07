@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router';
-import { BookOpen, Search, Bell, User, Heart, MessageSquare, Info, LogOut, Settings } from 'lucide-react';
+import { BookOpen, Search, Bell, User, Heart, MessageSquare, Info, LogOut, Settings, FileText } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import useNotificationStore from '@/store/notificationStore';
 import useAuthStore from '@/store/authStore';
@@ -203,6 +203,14 @@ export default function Navbar() {
                       >
                         <User className="h-4 w-4" />
                         โปรไฟล์ของฉัน
+                      </Link>
+                      <Link 
+                        to="/profile?tab=drafts" 
+                        onClick={() => setShowProfileMenu(false)}
+                        className="flex items-center gap-3 w-full p-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors"
+                      >
+                        <FileText className="h-4 w-4" />
+                        แบบร่างของฉัน
                       </Link>
                       <Link 
                         to="/settings" 
