@@ -10,12 +10,6 @@ const api = axios.create({
   },
 });
 
-const cors = require('cors');
-app.use(cors({
-  origin: 'https://share-ed-frontend-gamma.vercel.app/', // หรือใส่ '*' เพื่อเปิดให้ทุกโดเมนเข้าถึงได้
-  credentials: true
-}));
-
 
 // Request Interceptor: Attach token automatically
 api.interceptors.request.use(
