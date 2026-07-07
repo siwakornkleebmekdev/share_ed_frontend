@@ -11,9 +11,28 @@ const api = axios.create({
 // Request Interceptor: Attach token automatically
 api.interceptors.request.use(
   (config) => {
+    // If the data is FormData, remove the default Content-Type header
+    // so Axios can set it automatically with the correct boundary parameter.
+    if (config.data instanceof FormData) {
+      if (config.headers) {
+        if (typeof config.headers.delete === 'function') {
+          config.headers.delete('Content-Type');
+        } else {
+          delete config.headers['Content-Type'];
+          delete config.headers['content-type'];
+        }
+      }
+    }
+
     const token = localStorage.getItem('access_token');
     if (token && token !== 'undefined' && token !== 'null') {
-      config.headers.Authorization = `Bearer ${token}`;
+      if (config.headers && typeof config.headers.set === 'function') {
+        config.headers.set('Authorization', `Bearer ${token}`);
+      } else {
+        if (!config.headers) config.headers = {};
+        config.headers['Authorization'] = `Bearer ${token}`;
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
     return config;
   },
