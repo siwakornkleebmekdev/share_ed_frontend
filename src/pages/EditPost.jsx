@@ -317,7 +317,7 @@ export default function EditPost() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
-      
+
       <button onClick={() => navigate(`/post/${id}`)} className="inline-flex items-center gap-2 text-slate-500 hover:text-primary transition-colors mb-6 font-bold cursor-pointer">
         <ChevronLeft className="h-5 w-5" /> ยกเลิกการแก้ไข
       </button>
