@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
-import { postService } from '../services/post.service';
+import { postService } from '@/services/post.service';
 
 const SUGGESTED_TAGS = ['#AI', '#เรียนรู้ไปด้วยกัน', '#เตรียมสอบ', '#TCAS67', '#สรุปย่อ', '#แชร์ความรู้', '#เด็กซิ่ว', '#สรุปชีท'];
 
@@ -188,12 +188,12 @@ export default function CreatePost() {
       formData.append('summary', summary.trim());
       formData.append('content', content);
       formData.append('category', category);
-      
+
       let backendLevel = 'UNIVERSITY';
       if (level === 'มัธยมศึกษาตอนต้น') backendLevel = 'MIDDLE_SCHOOL';
       else if (level === 'มัธยมศึกษาตอนปลาย') backendLevel = 'HIGH_SCHOOL';
       formData.append('education_level', backendLevel);
-      
+
       formData.append('post_status', status);
 
       if (coverImage) {
