@@ -2,11 +2,14 @@ import axios from 'axios';
 import useAuthStore from '../store/authStore';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
+  baseURL: import.meta.env.PROD 
+    ? '/api/v1' 
+    : (import.meta.env.VITE_API_BASE_URL || 'https://share-ed-backend-6jer.onrender.com/api/v1'),
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
 
 // Request Interceptor: Attach token automatically
 api.interceptors.request.use(

@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
-import { postService } from '../services/post.service';
+import { postService } from '@/services/post.service';
 import api from '../utils/api';
 
 const SUGGESTED_TAGS = ['#AI', '#เรียนรู้ไปด้วยกัน', '#เตรียมสอบ', '#TCAS67', '#สรุปย่อ', '#แชร์ความรู้', '#เด็กซิ่ว', '#สรุปชีท'];
@@ -52,7 +52,7 @@ export default function EditPost() {
           setSummary(response.description || '');
           setContent(response.details || '');
           setCategory(response.category || '');
-          
+
           let uiLevel = 'มหาวิทยาลัย';
           if (response.level === 'มัธยมศึกษาตอนต้น' || response.level === 'MIDDLE_SCHOOL') {
             uiLevel = 'มัธยมศึกษาตอนต้น';
@@ -85,7 +85,7 @@ export default function EditPost() {
         const data = resObj.data;
         if (data && data.success) {
           const post = data.data;
-          
+
           // Extract existing PDF
           const pdfMedia = post.media?.find(m => m.media_type === 'PDF');
           if (pdfMedia) {
@@ -259,12 +259,12 @@ export default function EditPost() {
       formData.append('summary', summary.trim());
       formData.append('content', content);
       formData.append('category', category);
-      
+
       let backendLevel = 'UNIVERSITY';
       if (level === 'มัธยมศึกษาตอนต้น') backendLevel = 'MIDDLE_SCHOOL';
       else if (level === 'มัธยมศึกษาตอนปลาย') backendLevel = 'HIGH_SCHOOL';
       formData.append('education_level', backendLevel);
-      
+
       formData.append('post_status', status);
 
       if (coverImage) {
@@ -321,7 +321,7 @@ export default function EditPost() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
-      
+
       <button onClick={() => navigate(`/post/${id}`)} className="inline-flex items-center gap-2 text-slate-500 hover:text-primary transition-colors mb-6 font-bold cursor-pointer">
         <ChevronLeft className="h-5 w-5" /> ยกเลิกการแก้ไข
       </button>

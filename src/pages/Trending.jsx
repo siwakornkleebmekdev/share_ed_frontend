@@ -61,34 +61,54 @@ export default function Trending() {
         <p className="text-slate-500 mt-4 text-lg">สรุปเนื้อหาที่กำลังได้รับความนิยมสูงสุดในขณะนี้</p>
       </div>
 
-      {/* Loading State */}
-      {isLoading && (
-        <div className="flex flex-col items-center justify-center py-20">
-          <Loader2 className="h-10 w-10 text-primary animate-spin mb-4" />
-          <p className="text-slate-500 font-medium">กำลังโหลดโพสต์ยอดนิยม...</p>
+      {/* Top 3 Section */}
+      {top3.length > 0 && (
+        <div className="mb-16">
+          <div className="flex items-center justify-center gap-2 mb-8">
+            <Sparkles className="h-5 w-5 text-yellow-500" />
+            <h2 className="text-2xl font-extrabold text-slate-800">Top 3 Creators</h2>
+            <Sparkles className="h-5 w-5 text-yellow-500" />
+          </div>
+
+          {/* Top 3 Grid with special styling */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-6 lg:gap-10 items-end px-4 sm:px-8">
+            {top3[1] && (
+              <div className="order-2 md:order-1 animate-in slide-in-from-bottom-10 fade-in duration-700 delay-100">
+                <PostCard post={top3[1]} viewMode="grid" rank={2} />
+              </div>
+            )}
+            {top3[0] && (
+              <div className="order-1 md:order-2 z-10 animate-in slide-in-from-bottom-16 fade-in duration-700 delay-300">
+                <PostCard post={top3[0]} viewMode="grid" rank={1} />
+              </div>
+            )}
+            {top3[2] && (
+              <div className="order-3 md:order-3 animate-in slide-in-from-bottom-10 fade-in duration-700 delay-500">
+                <PostCard post={top3[2]} viewMode="grid" rank={3} />
+              </div>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Error State */}
-      {!isLoading && error && (
-        <div className="text-center py-16 bg-rose-50/50 rounded-2xl border border-rose-100 max-w-xl mx-auto">
-          <p className="text-rose-600 font-semibold mb-4">{error}</p>
+      <div className="border-t border-slate-100 pt-12 mb-10 flex flex-col sm:flex-row justify-between items-center gap-6">
+        <h2 className="text-2xl font-bold text-slate-800">สำรวจโพสต์ฮิตอื่นๆ</h2>
+
+        {/* Filter Toggle */}
+        <div className="flex p-1.5 bg-slate-100 rounded-xl w-full sm:w-auto">
           <button
-            onClick={async () => {
-              try {
-                setIsLoading(true);
-                setError(null);
-                const fetchedPosts = await postService.getAllPosts();
-                setPosts(fetchedPosts);
-              } catch (err) {
-                setError('ไม่สามารถโหลดข้อมูลโพสต์ยอดนิยมได้ กรุณาลองใหม่อีกครั้ง');
-              } finally {
-                setIsLoading(false);
-              }
-            }}
-            className="px-6 py-2.5 bg-primary text-white rounded-xl font-bold hover:bg-blue-600 shadow-sm transition-all"
+            onClick={() => setFilterType('likes')}
+            className={`flex-1 sm:flex-none px-6 py-2.5 rounded-lg flex items-center justify-center gap-2 font-bold transition-all ${filterType === 'likes' ? 'bg-white text-rose-500 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
           >
-            ลองอีกครั้ง
+            <Flame className="h-5 w-5" />
+            Most Liked
+          </button>
+          <button
+            onClick={() => setFilterType('views')}
+            className={`flex-1 sm:flex-none px-6 py-2.5 rounded-lg flex items-center justify-center gap-2 font-bold transition-all ${filterType === 'views' ? 'bg-white text-blue-500 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            <Eye className="h-5 w-5" />
+            Most Viewed
           </button>
         </div>
       )}
