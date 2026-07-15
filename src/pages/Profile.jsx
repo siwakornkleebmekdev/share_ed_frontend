@@ -74,9 +74,19 @@ export default function Profile() {
     }
   }, [milestones]);
 
-  const handleClaimReward = (id) => {
-    setMilestones(prev => prev.map(m => m.id === id ? { ...m, status: 'CLAIMED' } : m));
-    toast.success('รับรางวัลสำเร็จแล้ว ไอเท็มถูกเก็บเข้าคลัง', { icon: '🎁' });
+  const handleClaimReward = async (id) => {
+    try {
+      const res = await profileService.claimMilestone(id);
+      if (res.success) {
+        setMilestones(prev => prev.map(m => m.id === id ? { ...m, status: 'CLAIMED' } : m));
+        toast.success(res.message || 'รับรางวัลสำเร็จแล้ว ไอเท็มถูกเก็บเข้าคลัง', { icon: '🎁' });
+      } else {
+        toast.error(res.message || 'เกิดข้อผิดพลาดในการรับรางวัล');
+      }
+    } catch (error) {
+      console.error("Error claiming milestone reward:", error);
+      toast.error(error.response?.data?.message || 'ไม่สามารถเชื่อมต่อระบบเพื่อรับรางวัลได้');
+    }
   };
 
   return (
@@ -267,11 +277,22 @@ export default function Profile() {
                             )}
                           </div>
                           
-                          {/* Subtitle Progress info for Locked items */}
+                          {/* Progress bar for Locked items */}
                           {m.status === 'LOCKED' && (
-                            <p className="text-sm font-bold text-blue-500 mt-3 bg-blue-50 px-3 py-1 rounded-full inline-block">
-                              ความคืบหน้า: {m.current} / {m.target}
-                            </p>
+                            <div className="mt-4 w-full min-w-[240px] max-w-[280px]">
+                              <div className="flex justify-between items-center text-xs font-bold text-slate-500 mb-1.5">
+                                <span>ความคืบหน้า</span>
+                                <span className="text-primary font-extrabold">
+                                  {m.current} / {m.target} ({Math.min(Math.round((m.current / m.target) * 100), 100)}%)
+                                </span>
+                              </div>
+                              <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden shadow-inner">
+                                <div 
+                                  className="bg-primary h-2 rounded-full transition-all duration-500 ease-out" 
+                                  style={{ width: `${Math.min(Math.round((m.current / m.target) * 100), 100)}%` }}
+                                ></div>
+                              </div>
+                            </div>
                           )}
                         </div>
                       </div>
