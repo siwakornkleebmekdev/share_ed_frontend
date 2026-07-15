@@ -139,26 +139,20 @@ export default function Profile() {
     loadProfileData();
   }, [user]);
 
-  if (!hasEntered) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 relative overflow-hidden">
-        {user?.user_metadata?.wallpaper_url && (
-          <img src={user.user_metadata.wallpaper_url} alt="" className="absolute inset-0 w-full h-full object-cover opacity-30" />
-        )}
-        <div className="relative z-10 max-w-md w-full text-center bg-slate-900/70 backdrop-blur-xl border border-white/10 rounded-3xl p-10 shadow-2xl">
-          <DoorOpen className="h-10 w-10 text-primary mx-auto mb-4" />
-          <h2 className="text-2xl font-extrabold text-white mb-3">{user?.display_name || user?.username || 'ผู้ใช้งาน'}</h2>
-          <p className="text-slate-300 mb-8">{user?.user_metadata?.enter_screen_message || 'ยินดีต้อนรับเข้าสู่โปรไฟล์'}</p>
-          <button
-            onClick={() => setHasEntered(true)}
-            className="px-8 py-3 bg-primary hover:bg-blue-600 text-white rounded-xl font-bold shadow-lg transition-all"
-          >
-            เข้าสู่โปรไฟล์
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const handleClaimReward = async (id) => {
+    try {
+      const res = await profileService.claimMilestone(id);
+      if (res.success) {
+        setMilestones(prev => prev.map(m => m.id === id ? { ...m, status: 'CLAIMED' } : m));
+        toast.success(res.message || 'รับรางวัลสำเร็จแล้ว ไอเท็มถูกเก็บเข้าคลัง', { icon: '🎁' });
+      } else {
+        toast.error(res.message || 'เกิดข้อผิดพลาดในการรับรางวัล');
+      }
+    } catch (error) {
+      console.error("Error claiming milestone reward:", error);
+      toast.error(error.response?.data?.message || 'ไม่สามารถเชื่อมต่อระบบเพื่อรับรางวัลได้');
+    }
+  };
 
   return (
     <div className={`min-h-screen ${pageBg} pb-20 relative transition-colors duration-500`}>
@@ -459,17 +453,24 @@ export default function Profile() {
                               <img src={avatarSrc} alt="" className="w-full h-full object-cover" />
                             )}
                           </div>
-                          <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold whitespace-nowrap ${statusMeta.badgeClass}`}>
-                            {statusMeta.label}
-                          </span>
-                        </div>
-                        <div>
-                          <h3 className={`font-bold ${headingClass}`}>{m.title}</h3>
-                          <p className={`text-sm mt-0.5 ${subTextClass}`}>{m.description}</p>
-                        </div>
-                        <div className={`flex items-center gap-1.5 text-xs font-semibold ${mutedTextClass}`}>
-                          <Gift className="h-3.5 w-3.5" />
-                          {m.reward.type === 'FRAME' ? 'กรอบรูป' : 'ภาพพื้นหลัง'}: {m.reward.name}
+                          
+                          {/* Progress bar for Locked items */}
+                          {m.status === 'LOCKED' && (
+                            <div className="mt-4 w-full min-w-[240px] max-w-[280px]">
+                              <div className="flex justify-between items-center text-xs font-bold text-slate-500 mb-1.5">
+                                <span>ความคืบหน้า</span>
+                                <span className="text-primary font-extrabold">
+                                  {m.current} / {m.target} ({Math.min(Math.round((m.current / m.target) * 100), 100)}%)
+                                </span>
+                              </div>
+                              <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden shadow-inner">
+                                <div 
+                                  className="bg-primary h-2 rounded-full transition-all duration-500 ease-out" 
+                                  style={{ width: `${Math.min(Math.round((m.current / m.target) * 100), 100)}%` }}
+                                ></div>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     );

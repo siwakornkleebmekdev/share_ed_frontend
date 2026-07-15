@@ -34,22 +34,32 @@ export const profileService = {
     return [];
   },
 
-  // Public profile of any user (self or someone else) — GET /users/:id.
-  // Includes _count.{posts,followers,following}.
-  getUserProfile: async (userId) => {
-    const response = await api.get(`/users/${userId}`);
-    return response.data?.data;
-  },
-
-  // Fetch Milestones (Temporarily disabled due to RLS blocking direct access — falls back to mock data)
+  // Fetch Milestones from backend API
   getMilestones: async () => {
     try {
-      const response = await api.get('/achievements/my-milestones');
-      if (response.data.success) return response.data.data;
-      return MOCK_MILESTONES;
+      const response = await api.get('/milestones');
+      if (response.data.success) {
+        return response.data.data.map(m => ({
+          id: m.id,
+          title: m.title,
+          description: m.description,
+          status: m.status, // LOCKED, READY_TO_CLAIM, CLAIMED
+          current: m.current_progress,
+          target: m.target_value,
+          rewardItem: m.reward_item
+        }));
+      }
+      return [];
     } catch (error) {
-      return MOCK_MILESTONES;
+      console.error('Error fetching milestones:', error);
+      return [];
     }
+  },
+
+  // Claim Milestone Reward
+  claimMilestone: async (id) => {
+    const response = await api.post(`/milestones/${id}/claim`);
+    return response.data;
   },
 
   // Fetch User Stats (Temporarily disabled due to RLS blocking direct access)
