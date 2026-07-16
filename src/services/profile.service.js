@@ -104,6 +104,7 @@ export const profileService = {
              facebook_url: data.facebook_url,
              profile_frame_id: data.profile_frame_id,
              wallpaper_url: data.wallpaper_url,
+             widgets: data.widgets,
              occupation: data.occupation,
              location: data.location,
              tags: data.tags,
