@@ -1,7 +1,7 @@
-// Samples the average perceived brightness of the top slice of an image or
-// video (the region that actually sits behind the fixed navbar) so the UI
-// can pick a readable light/dark navbar style for arbitrary user-uploaded
-// backgrounds instead of guessing from the route.
+// Samples the top slice of an image or video (the region that actually sits
+// behind the fixed navbar) so the UI can pick a readable light/dark style
+// AND a matching color tint for arbitrary user-uploaded backgrounds, instead
+// of guessing from the route.
 const SAMPLE_SIZE = 16;
 // Hero images/videos put their darkest gradient overlay near the bottom;
 // only the top band is ever behind the navbar.
@@ -9,16 +9,33 @@ const TOP_SLICE_RATIO = 0.25;
 
 function sampleCanvas(ctx) {
   const { data } = ctx.getImageData(0, 0, SAMPLE_SIZE, SAMPLE_SIZE);
-  let sum = 0;
+  let sumR = 0;
+  let sumG = 0;
+  let sumB = 0;
+  let sumLuminance = 0;
   let count = 0;
   for (let i = 0; i < data.length; i += 4) {
     const alpha = data[i + 3];
     if (alpha === 0) continue;
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+    sumR += r;
+    sumG += g;
+    sumB += b;
     // Perceived luminance (ITU-R BT.601)
-    sum += data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+    sumLuminance += r * 0.299 + g * 0.587 + b * 0.114;
     count += 1;
   }
-  return count ? sum / count / 255 : 0.5;
+  if (!count) {
+    return { brightness: 0.5, r: 15, g: 23, b: 42 };
+  }
+  return {
+    brightness: sumLuminance / count / 255,
+    r: Math.round(sumR / count),
+    g: Math.round(sumG / count),
+    b: Math.round(sumB / count),
+  };
 }
 
 function drawTopSlice(ctx, source, naturalWidth, naturalHeight) {
@@ -26,8 +43,9 @@ function drawTopSlice(ctx, source, naturalWidth, naturalHeight) {
   ctx.drawImage(source, 0, 0, naturalWidth, sliceHeight, 0, 0, SAMPLE_SIZE, SAMPLE_SIZE);
 }
 
-// Returns a brightness value between 0 (black) and 1 (white).
-export function getAverageBrightness(url) {
+// Returns { brightness: 0-1, r, g, b } sampled from the top slice of the
+// given image/video URL.
+export function getImageColorProfile(url) {
   return new Promise((resolve, reject) => {
     if (!url) {
       reject(new Error('No image URL provided'));

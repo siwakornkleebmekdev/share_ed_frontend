@@ -35,6 +35,13 @@ export const profileService = {
     return [];
   },
 
+  // Public profile of any user (self or someone else) — GET /users/:id.
+  // Includes _count.{posts,followers,following}.
+  getUserProfile: async (userId) => {
+    const response = await api.get(`/users/${userId}`);
+    return response.data?.data;
+  },
+
   // Fetch Milestones (Temporarily disabled due to RLS blocking direct access — falls back to mock data)
   getMilestones: async () => {
     try {
@@ -199,4 +206,16 @@ export function mapEducationLevel(level) {
     case 'UNIVERSITY': return 'มหาวิทยาลัย';
     default: return level;
   }
+}
+
+// GET /users/:id's `_count.followers` / `_count.following` are swapped from
+// their natural meaning on the live backend — following someone increments
+// *your own* `_count.followers` instead of `_count.following`. Centralized
+// here so there's one place to delete this swap if the backend ever
+// corrects it.
+export function normalizeFollowCounts(userProfile) {
+  return {
+    followersCount: userProfile?._count?.following || 0,
+    followingCount: userProfile?._count?.followers || 0,
+  };
 }

@@ -3,6 +3,8 @@ import { Heart, Eye, BookmarkPlus, BookmarkCheck, Crown, Medal } from 'lucide-re
 import { useNavigate } from 'react-router';
 import toast from 'react-hot-toast';
 import useAuthStore from '../store/authStore';
+import useHeroThemeStore from '../store/heroThemeStore';
+import { getGlassColor, rgbToRgba } from '../utils/colorUtils';
 
 export default function PostCard({ post, viewMode, rank = null, dark = false }) {
   const [isLiked, setIsLiked] = useState(false);
@@ -10,6 +12,12 @@ export default function PostCard({ post, viewMode, rank = null, dark = false }) 
   const [likesCount, setLikesCount] = useState(post.likes);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const navigate = useNavigate();
+  // `dark` cards sit on a page with a full-bleed hero background (Profile) —
+  // tint their glass to match that background's color instead of a flat
+  // neutral overlay.
+  const isDarkHero = useHeroThemeStore((state) => state.isDarkHero);
+  const heroColor = useHeroThemeStore((state) => state.heroColor);
+  const cardGlassStyle = dark ? { backgroundColor: rgbToRgba(getGlassColor(heroColor, isDarkHero), 25) } : undefined;
 
   const handleLike = (e) => {
     e.stopPropagation();
@@ -64,7 +72,7 @@ export default function PostCard({ post, viewMode, rank = null, dark = false }) 
 
   // Special Rank classes
   const cardRankClasses = dark
-    ? "bg-white/10 backdrop-blur-xl rounded-2xl shadow-lg shadow-black/20 border border-white/10 hover:shadow-xl hover:border-white/20 transition-all overflow-hidden group cursor-pointer flex flex-col relative"
+    ? "backdrop-blur-xl rounded-2xl shadow-lg shadow-black/20 border border-white/10 hover:shadow-xl hover:border-white/20 transition-all overflow-hidden group cursor-pointer flex flex-col relative"
     : rank === 1
     ? "bg-white rounded-2xl shadow-xl shadow-yellow-500/10 border-2 border-yellow-400 hover:shadow-2xl hover:shadow-yellow-500/20 transition-all overflow-visible group cursor-pointer flex flex-col relative scale-[1.02]"
     : rank === 2 || rank === 3
@@ -73,7 +81,11 @@ export default function PostCard({ post, viewMode, rank = null, dark = false }) 
 
   if (viewMode === 'list') {
     return (
-      <div onClick={handlePostClick} className={`flex flex-col sm:flex-row gap-4 p-4 rounded-2xl shadow-sm transition-all group cursor-pointer relative ${dark ? 'bg-white/10 backdrop-blur-xl border border-white/10 hover:border-white/20' : 'bg-white border border-slate-100 hover:shadow-md hover:border-primary/20'}`}>
+      <div
+        onClick={handlePostClick}
+        className={`flex flex-col sm:flex-row gap-4 p-4 rounded-2xl shadow-sm transition-all group cursor-pointer relative ${dark ? 'backdrop-blur-xl border border-white/10 hover:border-white/20' : 'bg-white border border-slate-100 hover:shadow-md hover:border-primary/20'}`}
+        style={cardGlassStyle}
+      >
         <div className="w-full sm:w-56 h-36 flex-shrink-0 rounded-xl overflow-hidden bg-slate-100 relative">
           <img src={post.image} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
           <div className={`absolute top-2 left-2 px-2.5 py-1 backdrop-blur-md rounded-lg text-[11px] font-bold shadow-sm ${dark ? 'bg-black/40 text-white border border-white/10' : 'bg-white/90 text-slate-700'}`}>
@@ -116,7 +128,7 @@ export default function PostCard({ post, viewMode, rank = null, dark = false }) 
 
   // Grid View (used in Top 3 and regular grid)
   return (
-    <div onClick={handlePostClick} className={cardRankClasses}>
+    <div onClick={handlePostClick} className={cardRankClasses} style={cardGlassStyle}>
       {getRankBadge()}
       <div className={`w-full relative bg-slate-100 overflow-hidden ${rank ? 'h-56 rounded-t-[14px]' : 'h-48'}`}>
         <img src={post.image} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
