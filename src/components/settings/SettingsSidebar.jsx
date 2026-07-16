@@ -1,5 +1,5 @@
 import { NavLink, Link, useNavigate } from 'react-router';
-import { BookOpen, LayoutDashboard, User, Palette, Puzzle, Settings, Undo2, LogOut } from 'lucide-react';
+import { BookOpen, LayoutDashboard, User, Palette, Award, Settings, Undo2, LogOut } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useAuthStore from '@/store/authStore';
 import { supabase } from '@/utils/supabase';
@@ -17,7 +17,7 @@ const NAV_GROUPS = [
     items: [
       { to: '/settings/profile', label: 'โปรไฟล์', icon: User },
       { to: '/settings/appearance', label: 'รูปลักษณ์', icon: Palette },
-      { to: '/settings/widgets', label: 'วิดเจ็ต', icon: Puzzle },
+      { to: '/settings/achievements', label: 'Achievements', icon: Award },
     ],
   },
 ];
@@ -90,19 +90,17 @@ export default function SettingsSidebar() {
       </nav>
 
       <div className="px-4 py-4 border-t border-slate-100 shrink-0 flex items-center gap-3">
-        <Link to="/profile" className="flex-1 min-w-0 flex items-center gap-3 hover:opacity-80 transition-opacity">
-          <div className="h-10 w-10 rounded-full bg-slate-100 overflow-hidden shrink-0 flex items-center justify-center text-slate-400 font-bold">
-            {avatarUrl ? (
-              <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" />
-            ) : (
-              displayName.charAt(0).toUpperCase()
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-slate-800 truncate">{displayName}</p>
-            <p className="text-xs text-slate-400 truncate">{educationLabel}</p>
-          </div>
-        </Link>
+        <div className="h-10 w-10 rounded-full bg-slate-100 overflow-hidden shrink-0 flex items-center justify-center text-slate-400 font-bold">
+          {avatarUrl ? (
+            <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" />
+          ) : (
+            displayName.charAt(0).toUpperCase()
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-bold text-slate-800 truncate">{displayName}</p>
+          <p className="text-xs text-slate-400 truncate">{educationLabel}</p>
+        </div>
         <button
           onClick={handleLogout}
           title="ออกจากระบบ"

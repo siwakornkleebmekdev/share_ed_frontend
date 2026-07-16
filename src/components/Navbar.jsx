@@ -19,10 +19,6 @@ export default function Navbar() {
   // Set by whichever page is currently mounted (see useHeroThemeStore) based
   // on the actual brightness of its background image, not the route.
   const isDarkHero = useHeroThemeStore((state) => state.isDarkHero);
-  // Average color sampled from that same background — used to tint the
-  // navbar's frosted glass so it visibly matches the page behind it.
-  const heroColor = useHeroThemeStore((state) => state.heroColor);
-  const glassColor = getGlassColor(heroColor, isDarkHero);
 
   const { notifications, unreadCount, fetchNotifications, markAsRead } = useNotificationStore();
   const { isAuthenticated, user, logout } = useAuthStore();
@@ -80,10 +76,12 @@ export default function Navbar() {
     <div className={`fixed top-0 left-0 w-full z-50 transition-all duration-500 ease-out px-4 ${isScrolled ? 'pt-2' : 'pt-4'}`}>
       <nav
         className={`mx-auto backdrop-blur-md transition-all duration-500 ease-out overflow-visible rounded-full border ${
-          isDarkHero ? 'border-white/10' : 'border-slate-200/50'
+          isDarkHero
+            ? 'border-white/10 bg-slate-900/60'
+            : 'border-slate-200/50 bg-white/80'
         } ${
           isScrolled
-            ? 'w-[92%] max-w-5xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] py-2 px-6'
+            ? `w-[92%] max-w-5xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] py-2 px-6 ${isDarkHero ? 'bg-slate-900/80' : 'bg-white/95'}`
             : 'w-[98%] max-w-7xl shadow-sm py-2.5 px-8'
         }`}
         style={{ backgroundColor: rgbToRgba(glassColor, isScrolled ? 85 : 65), transition: 'background-color 500ms ease-out' }}
