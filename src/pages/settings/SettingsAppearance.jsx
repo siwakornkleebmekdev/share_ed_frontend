@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
+import { Palette, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useAuthStore from '@/store/authStore';
 import { profileService } from '@/services/profile.service';
 import ProfilePreview from '@/components/settings/ProfilePreview';
-import { CARD_LAYOUTS, CARD_STYLES, CORNER_OPTIONS, DEFAULT_THEME } from './themeConstants';
+import { CARD_LAYOUTS, CARD_STYLES, CARD_COLOR_PRESETS, CORNER_OPTIONS, DEFAULT_THEME } from './themeConstants';
 
 export default function SettingsAppearance() {
   const { user, login } = useAuthStore();
@@ -111,36 +112,118 @@ export default function SettingsAppearance() {
 
           <div className="space-y-4">
             <h3 className="font-bold text-slate-800 text-lg border-t border-slate-100 pt-8">สีการ์ด</h3>
-            <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl p-4">
-              <div>
-                <p className="font-bold text-slate-700 text-sm">สีพื้นการ์ด</p>
-                <p className="text-xs text-slate-500">สีหลักของพื้นการ์ด</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="color"
-                  value={themeSettings.cardColor}
-                  onChange={(e) => updateTheme('cardColor', e.target.value)}
-                  className="h-9 w-9 rounded-lg border border-slate-200 cursor-pointer"
-                />
-                <span className="text-xs font-mono text-slate-500">{themeSettings.cardColor}</span>
-              </div>
-            </div>
+            <p className="text-sm text-slate-500 -mt-2">ปรับพื้นและขอบของการ์ดเอง</p>
 
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <label className="text-sm font-semibold text-slate-600">ความเข้ม</label>
-                <span className="text-sm font-bold text-slate-700">{themeSettings.cardOpacity}%</span>
+            <label className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl p-4 cursor-pointer">
+              <div className="flex items-center gap-3">
+                <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                  <Palette className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="font-bold text-slate-700 text-sm">ปรับสีการ์ดเอง</p>
+                  <p className="text-xs text-slate-500">ปรับโทนสีของสไตล์การ์ดที่เลือก</p>
+                </div>
               </div>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={themeSettings.cardOpacity}
-                onChange={(e) => updateTheme('cardOpacity', parseInt(e.target.value))}
-                className="w-full accent-primary"
-              />
-            </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={themeSettings.cardColorCustom}
+                onClick={() => updateTheme('cardColorCustom', !themeSettings.cardColorCustom)}
+                className={`relative h-6 w-11 rounded-full transition-colors shrink-0 ${themeSettings.cardColorCustom ? 'bg-primary' : 'bg-slate-300'}`}
+              >
+                <span className={`absolute top-0.5 left-0.5 h-5 w-5 bg-white rounded-full shadow transition-transform ${themeSettings.cardColorCustom ? 'translate-x-5' : 'translate-x-0'}`} />
+              </button>
+            </label>
+
+            <fieldset disabled={!themeSettings.cardColorCustom} className="space-y-4 disabled:opacity-50">
+              <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={themeSettings.cardColor}
+                    onChange={(e) => updateTheme('cardColor', e.target.value)}
+                    className="h-10 w-10 rounded-lg border border-slate-200 cursor-pointer shrink-0"
+                  />
+                  <div>
+                    <p className="font-bold text-slate-700 text-sm">สีพื้นการ์ด</p>
+                    <p className="text-xs text-slate-500">สีหลักของพื้นการ์ด</p>
+                  </div>
+                </div>
+                <span className="text-xs font-mono text-slate-500 bg-white border border-slate-200 rounded-md px-2 py-1">{themeSettings.cardColor}</span>
+              </div>
+
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="font-bold text-slate-700 text-sm">พรีเซ็ตสีการ์ด</p>
+                  <button
+                    type="button"
+                    onClick={() => updateTheme('cardColor', DEFAULT_THEME.cardColor)}
+                    className="text-xs font-bold text-primary hover:underline"
+                  >
+                    รีเซ็ต
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  {CARD_COLOR_PRESETS.map((color) => (
+                    <button
+                      key={color}
+                      type="button"
+                      title={color}
+                      onClick={() => updateTheme('cardColor', color)}
+                      className={`h-8 w-8 rounded-full border-2 transition-all ${themeSettings.cardColor === color ? 'border-primary scale-110' : 'border-white shadow-sm'}`}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-sm font-semibold text-slate-600">ความเข้ม</label>
+                  <span className="text-sm font-bold text-slate-700">{themeSettings.cardOpacity}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={themeSettings.cardOpacity}
+                  onChange={(e) => updateTheme('cardOpacity', parseInt(e.target.value))}
+                  className="w-full accent-primary"
+                />
+              </div>
+
+              <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={themeSettings.cardBorderColor || '#FFFFFF'}
+                    onChange={(e) => updateTheme('cardBorderColor', e.target.value)}
+                    className="h-10 w-10 rounded-lg border border-slate-200 cursor-pointer shrink-0"
+                  />
+                  <div>
+                    <p className="font-bold text-slate-700 text-sm">สีขอบ</p>
+                    <p className="text-xs text-slate-500">
+                      {themeSettings.cardBorderColor ? 'สีขอบของการ์ด' : 'ว่าง = ใช้ขอบของสไตล์การ์ด'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono text-slate-500 bg-white border border-slate-200 rounded-md px-2 py-1">
+                    {themeSettings.cardBorderColor || '#FFFFFF'}
+                  </span>
+                  {themeSettings.cardBorderColor && (
+                    <button
+                      type="button"
+                      title="ลบสีขอบ"
+                      onClick={() => updateTheme('cardBorderColor', '')}
+                      className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </fieldset>
           </div>
 
           <div className="space-y-4">

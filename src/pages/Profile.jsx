@@ -7,6 +7,9 @@ import PostCard from '@/components/PostCard';
 import useAuthStore from '@/store/authStore';
 import { profileService } from '@/services/profile.service';
 import { Loader2 } from 'lucide-react';
+import WidgetCard from '@/components/settings/WidgetCard';
+import { getPlatformConfig } from '@/pages/settings/widgetConstants';
+import { DEFAULT_THEME } from '@/pages/settings/themeConstants';
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -122,6 +125,24 @@ export default function Profile() {
               ชอบเรียนฟิสิกส์และคณิตศาสตร์เป็นชีวิตจิตใจ กำลังเตรียมตัวสอบเข้าวิศวะ มาร่วมแชร์สรุปเนื้อหากันได้นะครับ!
             </p>
           </div>
+
+          {(() => {
+            const profileWidgets = (user?.user_metadata?.widgets || []).filter((w) => w.options?.insideProfileCard !== false);
+            if (profileWidgets.length === 0) return null;
+            const widgetCardTheme = { ...DEFAULT_THEME, ...theme };
+            return (
+              <div className="mt-8 pt-8 border-t border-white/10">
+                <h3 className="font-bold text-white mb-3">วิดเจ็ต</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {profileWidgets.map((w) => {
+                    const platform = getPlatformConfig(w.platformId);
+                    if (!platform) return null;
+                    return <WidgetCard key={w.id} platform={platform} url={w.url} options={w.options} cardTheme={widgetCardTheme} />;
+                  })}
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Tabs */}
