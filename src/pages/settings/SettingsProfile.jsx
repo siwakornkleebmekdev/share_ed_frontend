@@ -1,27 +1,27 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router';
 import {
-  Upload, Image as ImageIcon,
-  Briefcase, MapPin, Tag, X, Sparkles
+  Upload, Image as ImageIcon, Link as LinkIcon,
+  AlertCircle, Briefcase, MapPin, Tag, X, Check
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useAuthStore from '@/store/authStore';
 import useAchievementStore from '@/store/achievementStore';
 import { profileService } from '@/services/profile.service';
 import { AVATAR_SHAPES, DEFAULT_THEME } from './themeConstants';
-import ProfilePreview from '@/components/settings/ProfilePreview';
-import FrameDecorationModal from '@/components/settings/FrameDecorationModal';
 
 export default function SettingsProfile() {
   const { user, login } = useAuthStore();
   const { milestones, fetchMilestones } = useAchievementStore();
   const [isSaving, setIsSaving] = useState(false);
   const [tagInput, setTagInput] = useState('');
-  const [isFrameModalOpen, setIsFrameModalOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     nickname: '',
     bio: '',
     education_level: 'HIGH_SCHOOL',
+    instagram_url: '',
+    facebook_url: '',
     occupation: '',
     location: '',
     tags: [],
@@ -34,11 +34,13 @@ export default function SettingsProfile() {
     banner: null,
   });
 
+  const [errors, setErrors] = useState({ instagram_url: '', facebook_url: '' });
+
   useEffect(() => {
     fetchMilestones();
   }, [fetchMilestones]);
 
-  const frameMilestones = milestones.filter((m) => m.reward.type === 'FRAME');
+  const claimedFrames = milestones.filter((m) => m.status === 'CLAIMED' && m.reward.type === 'FRAME');
   const claimedWallpapers = milestones.filter((m) => m.status === 'CLAIMED' && m.reward.type === 'WALLPAPER');
   const currentAvatarSrc = media.avatar?.url || user?.avatar_url
     || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.display_name || user?.username || 'User')}&background=1e293b&color=38bdf8`;
@@ -81,6 +83,8 @@ export default function SettingsProfile() {
       nickname: user.display_name || user.username || user.name || '',
       bio: user.bio || '',
       education_level: user.education_level || 'HIGH_SCHOOL',
+      instagram_url: meta.instagram_url || '',
+      facebook_url: meta.facebook_url || '',
       occupation: meta.occupation || '',
       location: meta.location || '',
       tags: meta.tags || [],
@@ -90,6 +94,29 @@ export default function SettingsProfile() {
       theme_settings: { ...DEFAULT_THEME, ...(meta.theme_settings || {}) },
     });
   }, [user]);
+
+  const validateSocialUrl = (url, platform) => {
+    if (!url) return '';
+    let error = '';
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      error = 'URL ต้องขึ้นต้นด้วย http:// หรือ https://';
+    } else {
+      const urlLower = url.toLowerCase();
+      if (platform === 'instagram' && !urlLower.includes('instagram.com')) {
+        error = 'URL ต้องเป็นของ Instagram (instagram.com)';
+      }
+      if (platform === 'facebook' && !urlLower.includes('facebook.com')) {
+        error = 'URL ต้องเป็นของ Facebook (facebook.com)';
+      }
+    }
+    return error;
+  };
+
+  const handleUrlChange = (e, platform) => {
+    const value = e.target.value;
+    setFormData(prev => ({ ...prev, [`${platform}_url`]: value }));
+    setErrors(prev => ({ ...prev, [`${platform}_url`]: validateSocialUrl(value, platform) }));
+  };
 
   const handleFileChange = (e, type) => {
     const file = e.target.files[0];
@@ -139,6 +166,15 @@ export default function SettingsProfile() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const igError = validateSocialUrl(formData.instagram_url, 'instagram');
+    const fbError = validateSocialUrl(formData.facebook_url, 'facebook');
+
+    if (igError || fbError) {
+      setErrors({ instagram_url: igError, facebook_url: fbError });
+      toast.error('กรุณาแก้ไขข้อมูลให้ถูกต้องก่อนบันทึก');
+      return;
+    }
+
     setIsSaving(true);
     try {
       const updatePayload = {
@@ -160,6 +196,8 @@ export default function SettingsProfile() {
           avatar_url: response.data?.avatar_url || media.avatar?.url || user.avatar_url,
           user_metadata: {
             ...user.user_metadata,
+            instagram_url: formData.instagram_url,
+            facebook_url: formData.facebook_url,
             occupation: formData.occupation,
             location: formData.location,
             tags: formData.tags,
@@ -183,6 +221,8 @@ export default function SettingsProfile() {
         avatar_url: media.avatar?.url || user.avatar_url,
         user_metadata: {
           ...user.user_metadata,
+          instagram_url: formData.instagram_url,
+          facebook_url: formData.facebook_url,
           occupation: formData.occupation,
           location: formData.location,
           tags: formData.tags,
@@ -199,43 +239,23 @@ export default function SettingsProfile() {
 
   const activeAvatarShape = AVATAR_SHAPES.find(s => s.id === formData.theme_settings.avatarShape) || AVATAR_SHAPES[3];
 
-  // Merge unsaved local edits (avatar/wallpaper uploads, frame equip is
-  // already live in `user` via handleEquipFrame) into the user object the
-  // preview reads, so it reflects everything on this page in real time.
-  const previewUser = {
-    ...user,
-    avatar_url: media.avatar?.url || user?.avatar_url,
-    user_metadata: {
-      ...user?.user_metadata,
-      wallpaper_url: media.wallpaper?.url || user?.user_metadata?.wallpaper_url,
-      banner_url: media.banner?.url || user?.user_metadata?.banner_url,
-    },
-  };
-  const previewFormData = {
-    theme_settings: formData.theme_settings,
-    nickname: formData.nickname,
-    bio: formData.bio,
-    tags: formData.tags,
-  };
-
   return (
-    <div className="max-w-6xl">
+    <div className="max-w-3xl">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-800">โปรไฟล์</h1>
-          <p className="text-slate-500 mt-1">ข้อมูลพื้นฐานและรูปภาพของคุณ</p>
+          <p className="text-slate-500 mt-1">ข้อมูลพื้นฐาน รูปภาพ และลิงก์โซเชียลมีเดียของคุณ</p>
         </div>
         <button
           type="submit"
           form="settings-profile-form"
-          disabled={isSaving}
+          disabled={isSaving || !!errors.instagram_url || !!errors.facebook_url}
           className="px-6 py-2.5 rounded-xl font-bold text-white bg-primary hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-all shrink-0"
         >
           {isSaving ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8 items-start">
       <form id="settings-profile-form" onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 sm:p-10 space-y-10">
         {/* Media Section */}
         <div className="space-y-4">
@@ -250,23 +270,11 @@ export default function SettingsProfile() {
                   <ImageIcon className="h-8 w-8" />
                 </div>
               )}
-              {user?.user_metadata?.profile_frame_id && (
-                <div className={`absolute inset-0 border-4 border-amber-400 mix-blend-overlay pointer-events-none ${activeAvatarShape.className}`}></div>
-              )}
             </div>
-            <div className="flex flex-col gap-2">
-              <label className="cursor-pointer px-5 py-2.5 bg-primary hover:bg-blue-600 rounded-xl text-sm font-bold text-white transition-colors flex items-center gap-2 shadow-sm">
-                <Upload className="h-4 w-4" /> แก้ไขรูปโปรไฟล์
-                <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileChange(e, 'avatar')} />
-              </label>
-              <button
-                type="button"
-                onClick={() => setIsFrameModalOpen(true)}
-                className="px-5 py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 transition-colors flex items-center gap-2 shadow-sm"
-              >
-                <Sparkles className="h-4 w-4" /> เลือกกรอบรูปภาพ
-              </button>
-            </div>
+            <label className="cursor-pointer px-5 py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 transition-colors flex items-center gap-2 shadow-sm">
+              <Upload className="h-4 w-4" /> แก้ไขรูปโปรไฟล์
+              <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileChange(e, 'avatar')} />
+            </label>
           </div>
 
           <div className="pt-2">
@@ -284,6 +292,49 @@ export default function SettingsProfile() {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className="pt-2">
+            <label className="block text-sm font-semibold text-slate-600 mb-2">กรอบโปรไฟล์ (จากความสำเร็จที่ปลดล็อก)</label>
+            {claimedFrames.length === 0 ? (
+              <p className="text-sm text-slate-400">
+                ยังไม่มีกรอบที่ปลดล็อก — <Link to="/achievements" className="text-primary font-semibold hover:underline">ไปทำภารกิจ</Link>
+              </p>
+            ) : (
+              <div className="flex gap-3 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => handleEquipFrame(null)}
+                  className="flex flex-col items-center gap-2 w-20"
+                >
+                  <div className={`h-11 w-11 rounded-full border-2 border-dashed flex items-center justify-center ${!user?.user_metadata?.profile_frame_id ? 'border-primary text-primary' : 'border-slate-300 text-slate-400'}`}>
+                    <X className="h-4 w-4" />
+                  </div>
+                  <span className="text-[11px] font-bold text-slate-600">ไม่ใช้กรอบ</span>
+                </button>
+                {claimedFrames.map((m) => {
+                  const selected = user?.user_metadata?.profile_frame_id === m.id;
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => handleEquipFrame(m.id)}
+                      className="flex flex-col items-center gap-2 w-20"
+                    >
+                      <div className={`relative h-11 w-11 rounded-full overflow-hidden border-4 ${selected ? 'border-primary' : 'border-amber-400'}`}>
+                        <img src={currentAvatarSrc} alt="" className="w-full h-full object-cover" />
+                        {selected && (
+                          <span className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-primary border-2 border-white flex items-center justify-center">
+                            <Check className="h-2.5 w-2.5 text-white" />
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[11px] font-bold text-slate-600 text-center line-clamp-1">{m.reward.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 
@@ -468,22 +519,51 @@ export default function SettingsProfile() {
             ))}
           </div>
         </div>
+
+        {/* Social Links */}
+        <div className="space-y-4">
+          <h3 className="font-bold text-slate-800 text-lg border-t border-slate-100 pt-8 flex items-center gap-2">
+            <LinkIcon className="h-5 w-5 text-slate-400" /> ลิงก์โซเชียลมีเดีย
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
+            <div>
+              <label className="flex items-center gap-2 text-sm font-semibold text-slate-600 mb-2">
+                <LinkIcon className="h-4 w-4 text-pink-500" /> Instagram URL
+              </label>
+              <input
+                type="text"
+                value={formData.instagram_url}
+                onChange={(e) => handleUrlChange(e, 'instagram')}
+                className={`w-full px-4 py-3 bg-slate-50 border rounded-xl focus:outline-none focus:ring-4 transition-all text-slate-800 font-medium ${errors.instagram_url ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500' : 'border-slate-200 focus:ring-primary/10 focus:border-primary'}`}
+                placeholder="https://instagram.com/yourprofile"
+              />
+              {errors.instagram_url && (
+                <p className="mt-2 text-xs font-bold text-red-500 flex items-center gap-1.5 bg-red-50 px-2 py-1 rounded-md">
+                  <AlertCircle className="h-3.5 w-3.5" /> {errors.instagram_url}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="flex items-center gap-2 text-sm font-semibold text-slate-600 mb-2">
+                <LinkIcon className="h-4 w-4 text-blue-500" /> Facebook URL
+              </label>
+              <input
+                type="text"
+                value={formData.facebook_url}
+                onChange={(e) => handleUrlChange(e, 'facebook')}
+                className={`w-full px-4 py-3 bg-slate-50 border rounded-xl focus:outline-none focus:ring-4 transition-all text-slate-800 font-medium ${errors.facebook_url ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500' : 'border-slate-200 focus:ring-primary/10 focus:border-primary'}`}
+                placeholder="https://facebook.com/yourprofile"
+              />
+              {errors.facebook_url && (
+                <p className="mt-2 text-xs font-bold text-red-500 flex items-center gap-1.5 bg-red-50 px-2 py-1 rounded-md">
+                  <AlertCircle className="h-3.5 w-3.5" /> {errors.facebook_url}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
       </form>
-
-      <div className="hidden lg:block sticky top-10">
-        <ProfilePreview user={previewUser} formData={previewFormData} />
-      </div>
-      </div>
-
-      <FrameDecorationModal
-        isOpen={isFrameModalOpen}
-        onClose={() => setIsFrameModalOpen(false)}
-        frames={frameMilestones}
-        currentFrameId={user?.user_metadata?.profile_frame_id ?? null}
-        avatarSrc={currentAvatarSrc}
-        avatarShapeClass={activeAvatarShape.className}
-        onConfirm={handleEquipFrame}
-      />
     </div>
   );
 }

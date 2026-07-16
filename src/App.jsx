@@ -21,7 +21,7 @@ import SettingsOverview from './pages/settings/SettingsOverview';
 import SettingsProfile from './pages/settings/SettingsProfile';
 import SettingsAppearance from './pages/settings/SettingsAppearance';
 import SettingsAccount from './pages/settings/SettingsAccount';
-import SettingsWidgets from './pages/settings/SettingsWidgets';
+import SettingsAchievements from './pages/settings/SettingsAchievements';
 import { supabase } from './utils/supabase';
 import api from './utils/api';
 import { authService } from './services/auth.service';
@@ -366,7 +366,7 @@ function App() {
           <Route index element={<SettingsOverview />} />
           <Route path="profile" element={<SettingsProfile />} />
           <Route path="appearance" element={<SettingsAppearance />} />
-          <Route path="widgets" element={<SettingsWidgets />} />
+          <Route path="achievements" element={<SettingsAchievements />} />
           <Route path="account" element={<SettingsAccount />} />
         </Route>
       </Routes>

@@ -34,13 +34,6 @@ export const profileService = {
     return [];
   },
 
-  // Public profile of any user (self or someone else) — GET /users/:id.
-  // Includes _count.{posts,followers,following}.
-  getUserProfile: async (userId) => {
-    const response = await api.get(`/users/${userId}`);
-    return response.data?.data;
-  },
-
   // Fetch Milestones (Temporarily disabled due to RLS blocking direct access — falls back to mock data)
   getMilestones: async () => {
     try {
@@ -111,7 +104,6 @@ export const profileService = {
              facebook_url: data.facebook_url,
              profile_frame_id: data.profile_frame_id,
              wallpaper_url: data.wallpaper_url,
-             widgets: data.widgets,
              occupation: data.occupation,
              location: data.location,
              tags: data.tags,
