@@ -49,6 +49,39 @@ export const postService = {
       console.error(`Error deleting post ${id}:`, error);
       throw error;
     }
+  },
+
+  // Like a post by ID
+  likePost: async (id) => {
+    try {
+      const response = await api.post(`/likes/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error liking post ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Bookmark a post by ID
+  bookmarkPost: async (id) => {
+    try {
+      const response = await api.post(`/bookmarks/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error bookmarking post ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Create a comment
+  createComment: async (postId, content) => {
+    try {
+      const response = await api.post('/comment', { post_id: postId, content });
+      return response.data;
+    } catch (error) {
+      console.error(`Error creating comment for post ${postId}:`, error);
+      throw error;
+    }
   }
 };
 
@@ -96,6 +129,16 @@ function formatSinglePostData(post) {
       avatar: post.author?.profile_image || 'https://ui-avatars.com/api/?name=' + (post.author?.username || 'User'),
     },
     createdAt: new Date(post.created_at).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' }),
+    comments: (post.comments || []).map(c => ({
+      id: c.id,
+      content: c.content,
+      createdAt: new Date(c.created_at).toLocaleDateString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' - ' + new Date(c.created_at).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }),
+      user: {
+        id: c.user?.id,
+        username: c.user?.username || 'ผู้ใช้งาน',
+        avatar: c.user?.profile_image || 'https://ui-avatars.com/api/?name=' + (c.user?.username || 'User')
+      }
+    }))
   };
 }
 
