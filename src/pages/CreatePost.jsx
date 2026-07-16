@@ -12,6 +12,7 @@ const SUGGESTED_TAGS = ['#AI', '#เรียนรู้ไปด้วยก�
 export default function CreatePost() {
   const navigate = useNavigate();
   const [coverImage, setCoverImage] = useState(null);
+  const [coverImagePreview, setCoverImagePreview] = useState('');
   const [pdfFile, setPdfFile] = useState(null);
   const [images, setImages] = useState([]);
 
@@ -28,6 +29,7 @@ export default function CreatePost() {
 
   const [showModal, setShowModal] = useState(false);
   const [previewFile, setPreviewFile] = useState(null); // { type: 'image' | 'pdf', url: string }
+  const [errors, setErrors] = useState({});
 
   // File Handlers
   const handleCoverUpload = (e) => {
@@ -42,7 +44,14 @@ export default function CreatePost() {
       });
       return;
     }
+    if (coverImagePreview) {
+      URL.revokeObjectURL(coverImagePreview);
+    }
     setCoverImage(file);
+    setCoverImagePreview(URL.createObjectURL(file));
+    if (errors.coverImage) {
+      setErrors(prev => ({ ...prev, coverImage: '' }));
+    }
   };
 
   const handlePdfUpload = (e) => {
@@ -81,7 +90,10 @@ export default function CreatePost() {
         hasOversized = true;
         continue;
       }
-      newImages.push(file);
+      newImages.push({
+        file: file,
+        preview: URL.createObjectURL(file)
+      });
     }
 
     if (hasOversized) {
@@ -97,14 +109,25 @@ export default function CreatePost() {
   };
 
   const removeImage = (index) => {
+    const imgToRemove = images[index];
+    if (imgToRemove && imgToRemove.preview) {
+      URL.revokeObjectURL(imgToRemove.preview);
+    }
     setImages(images.filter((_, i) => i !== index));
   };
 
-  const openPreview = (file, type) => {
-    setPreviewFile({ type, url: URL.createObjectURL(file) });
+  const openPreview = (fileOrUrl, type, isUrl = false) => {
+    if (isUrl) {
+      setPreviewFile({ type, url: fileOrUrl });
+    } else {
+      setPreviewFile({ type, url: URL.createObjectURL(fileOrUrl) });
+    }
   };
 
   const closePreview = () => {
+    if (previewFile && previewFile.type === 'pdf' && previewFile.url) {
+      URL.revokeObjectURL(previewFile.url);
+    }
     setPreviewFile(null);
   };
 
@@ -169,14 +192,22 @@ export default function CreatePost() {
       }
     }
 
-    if (!title.trim() || !category || !level || !summary.trim()) {
-      toast.error('กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน (ชื่อหัวข้อ, หมวดหมู่, ระดับชั้น, และบทสรุปย่อ)');
+    const newErrors = {};
+    if (!title.trim()) newErrors.title = 'กรุณากรอกชื่อหัวข้อสะสม';
+    if (!level) newErrors.level = 'กรุณาเลือกระดับชั้น';
+    if (!category) newErrors.category = 'กรุณาเลือกหมวดหมู่วิชา';
+    if (!summary.trim()) newErrors.summary = 'กรุณากรอกบทสรุปย่อ';
+    if (!coverImage) newErrors.coverImage = 'กรุณาอัปโหลดรูปปก';
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      toast.error('กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน');
       return;
     }
 
     try {
       Swal.fire({
-        title: status === 'ACTIVE' ? 'กำลังโพสต์สรุปความรู้...' : 'กำลังบันทึกแบบร่าง...',
+        title: status === 'ACTIVE' ? 'กำลังเผยแพร่โพสต์...' : 'กำลังบันทึกแบบร่าง...',
         allowOutsideClick: false,
         didOpen: () => {
           Swal.showLoading();
@@ -205,8 +236,8 @@ export default function CreatePost() {
       }
 
       if (images && images.length > 0) {
-        images.forEach(img => {
-          formData.append('media_files', img);
+        images.forEach(imgObj => {
+          formData.append('media_files', imgObj.file);
         });
       }
 
@@ -218,8 +249,8 @@ export default function CreatePost() {
       if (result.success) {
         Swal.fire({
           icon: 'success',
-          title: status === 'ACTIVE' ? 'โพสต์สำเร็จ!' : 'บันทึกสำเร็จ!',
-          text: status === 'ACTIVE' ? 'โพสต์สรุปความรู้เรียบร้อยแล้ว' : 'บันทึกแบบร่างเรียบร้อยแล้ว',
+          title: status === 'ACTIVE' ? 'เผยแพร่โพสต์สำเร็จ!' : 'บันทึกสำเร็จ!',
+          text: status === 'ACTIVE' ? 'เผยแพร่โพสต์เรียบร้อยแล้ว' : 'บันทึกแบบร่างเรียบร้อยแล้ว',
           confirmButtonColor: '#3b82f6'
         }).then(() => {
           navigate('/explore');
@@ -260,15 +291,15 @@ export default function CreatePost() {
                 <span className="text-xs font-normal text-slate-500">ไม่เกิน 2 MB</span>
               </label>
               {!coverImage ? (
-                <label className="flex flex-col items-center justify-center w-full aspect-video border-2 border-dashed border-slate-300 rounded-2xl hover:border-primary hover:bg-slate-50 cursor-pointer transition-all">
+                <label className={`flex flex-col items-center justify-center w-full aspect-video border-2 border-dashed rounded-2xl hover:bg-slate-50 cursor-pointer transition-all ${errors.coverImage ? 'border-rose-500 hover:border-rose-600 bg-rose-50/5' : 'border-slate-300 hover:border-primary'}`}>
                   <ImageIcon className="h-10 w-10 text-slate-400 mb-3" />
                   <span className="text-sm font-medium text-slate-500">คลิกเพื่ออัปโหลดรูปปก</span>
                   <input type="file" className="hidden" accept="image/*" onChange={handleCoverUpload} />
                 </label>
               ) : (
                 <div className="relative w-full aspect-video rounded-2xl overflow-visible border border-slate-200 group">
-                  <img src={URL.createObjectURL(coverImage)} alt="Cover" className="w-full h-full object-cover rounded-2xl cursor-pointer" onClick={() => openPreview(coverImage, 'image')} />
-                  <button onClick={(e) => { e.stopPropagation(); setCoverImage(null); }} className="absolute -top-3 -right-3 p-1.5 bg-white text-slate-500 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-all z-10 shadow-sm border border-slate-200 hover:border-rose-200" title="ลบรูปปก">
+                  <img src={coverImagePreview} alt="Cover" className="w-full h-full object-cover rounded-2xl cursor-pointer" onClick={() => openPreview(coverImagePreview, 'image', true)} />
+                  <button onClick={(e) => { e.stopPropagation(); if (coverImagePreview) URL.revokeObjectURL(coverImagePreview); setCoverImage(null); setCoverImagePreview(''); }} className="absolute -top-3 -right-3 p-1.5 bg-white text-slate-500 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-all z-10 shadow-sm border border-slate-200 hover:border-rose-200" title="ลบรูปปก">
                     <X className="h-5 w-5" />
                   </button>
                   {/* Hover Overlay */}
@@ -277,19 +308,30 @@ export default function CreatePost() {
                   </div>
                 </div>
               )}
+              {errors.coverImage && <p className="text-rose-500 text-sm mt-1">{errors.coverImage}</p>}
             </div>
 
             <div className="md:col-span-1">
-              <label className="flex items-center gap-2 text-base font-bold text-slate-800 mb-3">
-                ชื่อหัวข้อสรุป <span className="text-rose-500">*</span>
+              <label className="flex items-center justify-between text-base font-bold text-slate-800 mb-3">
+                <span>ชื่อหัวข้อสรุป <span className="text-rose-500">*</span></span>
+                <span className={`text-xs font-semibold ${title.length >= 100 ? 'text-rose-500' : 'text-slate-400'}`}>
+                  {title.length}/100 ตัวอักษร
+                </span>
               </label>
               <input
                 type="text"
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-5 py-4 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors text-base"
+                onChange={(e) => {
+                  setTitle(e.target.value.slice(0, 100));
+                  if (errors.title) {
+                    setErrors(prev => ({ ...prev, title: '' }));
+                  }
+                }}
+                maxLength={100}
+                className={`w-full px-5 py-4 rounded-xl border focus:outline-none focus:ring-2 transition-colors text-base ${errors.title ? 'border-rose-500 focus:ring-rose-500/20 focus:border-rose-500' : 'border-slate-200 focus:ring-primary/20 focus:border-primary'}`}
                 placeholder="เช่น สรุปสูตรฟิสิกส์ ม.4 เทอม 1"
               />
+              {errors.title && <p className="text-rose-500 text-sm mt-1">{errors.title}</p>}
 
               <div className="mt-6">
                 <label className="flex items-center gap-2 text-base font-bold text-slate-800 mb-3">
@@ -297,14 +339,20 @@ export default function CreatePost() {
                 </label>
                 <select
                   value={level}
-                  onChange={(e) => setLevel(e.target.value)}
-                  className="w-full px-5 py-4 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors bg-white font-medium text-slate-700 text-base"
+                  onChange={(e) => {
+                    setLevel(e.target.value);
+                    if (errors.level) {
+                      setErrors(prev => ({ ...prev, level: '' }));
+                    }
+                  }}
+                  className={`w-full px-5 py-4 rounded-xl border focus:outline-none focus:ring-2 transition-colors bg-white font-medium text-slate-700 text-base ${errors.level ? 'border-rose-500 focus:ring-rose-500/20 focus:border-rose-500' : 'border-slate-200 focus:ring-primary/20 focus:border-primary'}`}
                 >
                   <option value="" disabled>เลือกระดับชั้น</option>
                   <option value="มัธยมศึกษาตอนต้น">มัธยมศึกษาตอนต้น</option>
                   <option value="มัธยมศึกษาตอนปลาย">มัธยมศึกษาตอนปลาย</option>
                   <option value="มหาวิทยาลัย">มหาวิทยาลัย</option>
                 </select>
+                {errors.level && <p className="text-rose-500 text-sm mt-1">{errors.level}</p>}
               </div>
             </div>
           </div>
@@ -321,11 +369,17 @@ export default function CreatePost() {
             </label>
             <textarea
               value={summary}
-              onChange={(e) => setSummary(e.target.value.slice(0, 200))}
-              className="w-full px-5 py-4 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors text-base min-h-[100px] resize-y bg-white"
+              onChange={(e) => {
+                setSummary(e.target.value.slice(0, 200));
+                if (errors.summary) {
+                  setErrors(prev => ({ ...prev, summary: '' }));
+                }
+              }}
+              className={`w-full px-5 py-4 rounded-xl border focus:outline-none focus:ring-2 transition-colors text-base min-h-[100px] resize-y bg-white ${errors.summary ? 'border-rose-500 focus:ring-rose-500/20 focus:border-rose-500' : 'border-slate-200 focus:ring-primary/20 focus:border-primary'}`}
               placeholder="อธิบายสั้นๆ เกี่ยวกับไฟล์สรุปนี้ (จะนำไปแสดงบนการ์ดในหน้ารายการ) เช่น สรุปฟิสิกส์ ม.4 เทอม 1 เหมาะกับทบทวนสอบกลางภาค..."
               rows={3}
             />
+            {errors.summary && <p className="text-rose-500 text-sm mt-1">{errors.summary}</p>}
           </div>
 
           {/* Subject & Hashtags Section */}
@@ -335,7 +389,7 @@ export default function CreatePost() {
             </label>
             <div
               onClick={() => setShowModal(true)}
-              className="p-5 border border-dashed border-slate-200 hover:border-primary rounded-2xl bg-white hover:bg-blue-50/10 cursor-pointer transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+              className={`p-5 border border-dashed rounded-2xl bg-white hover:bg-blue-50/10 cursor-pointer transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${errors.category ? 'border-rose-500 bg-rose-50/5 hover:border-rose-600' : 'border-slate-200 hover:border-primary'}`}
             >
               <div className="flex flex-col gap-2">
                 {category ? (
@@ -370,6 +424,7 @@ export default function CreatePost() {
                 ตั้งค่าวิชาและแท็ก
               </button>
             </div>
+            {errors.category && <p className="text-rose-500 text-sm mt-1">{errors.category}</p>}
           </div>
 
           {/* Rich Text Editor */}
@@ -429,10 +484,10 @@ export default function CreatePost() {
                 {images.map((img, idx) => (
                   <div key={idx} className="relative w-20 h-20 rounded-xl border border-slate-200 overflow-visible group">
                     <img
-                      src={URL.createObjectURL(img)}
+                      src={img.preview}
                       alt={`img-${idx}`}
                       className="w-full h-full object-cover rounded-xl cursor-pointer"
-                      onClick={() => openPreview(img, 'image')}
+                      onClick={() => openPreview(img.preview, 'image', true)}
                     />
                     <button
                       onClick={(e) => { e.stopPropagation(); removeImage(idx); }}
@@ -485,7 +540,7 @@ export default function CreatePost() {
               บันทึกแบบร่าง
             </button>
             <button onClick={() => handleSubmit('ACTIVE')} className="w-full sm:w-auto px-8 py-4 rounded-xl font-bold text-white bg-primary hover:bg-blue-600 transition-colors shadow-md hover:shadow-lg hover:-translate-y-0.5 cursor-pointer">
-              โพสต์สรุปความรู้
+              เผยแพร่โพสต์
             </button>
           </div>
         </div>
@@ -513,7 +568,12 @@ export default function CreatePost() {
                 </label>
                 <select
                   value={category}
-                  onChange={(e) => setCategory(e.target.value)}
+                  onChange={(e) => {
+                    setCategory(e.target.value);
+                    if (errors.category) {
+                      setErrors(prev => ({ ...prev, category: '' }));
+                    }
+                  }}
                   className="w-full px-5 py-3.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors bg-white font-medium text-slate-700 text-base"
                 >
                   <option value="" disabled>เลือกวิชา</option>

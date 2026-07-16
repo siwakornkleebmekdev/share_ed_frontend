@@ -1,10 +1,14 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router';
-import { FileText, Download, Heart, MessageCircle, Share2, Tag, ChevronLeft, Calendar, Eye, Bookmark, X } from 'lucide-react';
+import { useParams, Link, useNavigate } from 'react-router';
+import { FileText, Download, Heart, MessageCircle, Share2, Tag, ChevronLeft, Calendar, Eye, Bookmark, X, Trash2 } from 'lucide-react';
 import { postService } from '@/services/post.service';
+import useAuthStore from '@/store/authStore';
+import Swal from 'sweetalert2';
 
 export default function PostDetails() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { user } = useAuthStore();
   const [isLiked, setIsLiked] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
 
@@ -33,6 +37,57 @@ export default function PostDetails() {
       fetchPost();
     }
   }, [id]);
+
+  const isAuthor = user && post && post.author && (user.id === post.author.id || user.user_id === post.author.id);
+
+  const handleDelete = async () => {
+    const result = await Swal.fire({
+      title: 'คุณต้องการลบโพสต์นี้ใช่หรือไม่?',
+      text: 'การดำเนินการนี้จะทำการลบโพสต์แบบ Soft Delete (ซ่อนโพสต์ชั่วคราว)',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'ใช่, ลบเลย',
+      cancelButtonText: 'ยกเลิก'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        Swal.fire({
+          title: 'กำลังลบโพสต์...',
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+
+        const response = await postService.deletePost(id);
+        Swal.close();
+
+        if (response && (response.success || response.status === 200)) {
+          await Swal.fire({
+            icon: 'success',
+            title: 'ลบสำเร็จ!',
+            text: 'โพสต์ของคุณถูกลบเรียบร้อยแล้ว',
+            confirmButtonColor: '#3b82f6'
+          });
+          navigate('/explore');
+        } else {
+          throw new Error(response?.message || 'เกิดข้อผิดพลาดในการลบโพสต์');
+        }
+      } catch (error) {
+        Swal.close();
+        console.error('Error deleting post:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'เกิดข้อผิดพลาด',
+          text: error.response?.data?.message || error.message || 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้',
+          confirmButtonColor: '#3b82f6'
+        });
+      }
+    }
+  };
 
   if (isLoading) {
     return <div className="text-center py-20 text-slate-500 font-medium">กำลังโหลดข้อมูล...</div>;
@@ -82,6 +137,15 @@ export default function PostDetails() {
               <div className="flex items-center gap-6 text-sm font-medium text-slate-500">
                 <span className="flex items-center gap-1.5"><Calendar className="h-4 w-4" /> {post.createdAt}</span>
                 <span className="flex items-center gap-1.5"><Eye className="h-4 w-4" /> {post.views} ครั้ง</span>
+                {isAuthor && (
+                  <button
+                    onClick={handleDelete}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 border border-rose-100 hover:bg-rose-100 text-rose-600 rounded-xl font-bold transition-colors shadow-sm cursor-pointer ml-2"
+                    title="ลบโพสต์"
+                  >
+                    <Trash2 className="h-4 w-4" /> ลบโพสต์
+                  </button>
+                )}
               </div>
             </div>
           </div>

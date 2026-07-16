@@ -38,6 +38,17 @@ export const postService = {
       console.error('Error creating post:', error);
       throw error;
     }
+  },
+
+  // Delete a post by ID
+  deletePost: async (id) => {
+    try {
+      const response = await api.delete(`/posts/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error deleting post ${id}:`, error);
+      throw error;
+    }
   }
 };
 
@@ -79,6 +90,7 @@ function formatSinglePostData(post) {
       size: '2MB'
     } : null,
     author: {
+      id: post.author?.id || post.author_id,
       name: post.author?.username || 'ผู้ใช้งาน',
       role: 'Contributor',
       avatar: post.author?.profile_image || 'https://ui-avatars.com/api/?name=' + (post.author?.username || 'User'),
