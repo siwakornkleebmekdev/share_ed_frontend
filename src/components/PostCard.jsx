@@ -72,7 +72,7 @@ export default function PostCard({ post, viewMode, rank = null, dark = false }) 
 
   // Special Rank classes
   const cardRankClasses = dark
-    ? "bg-white/10 backdrop-blur-xl rounded-2xl shadow-lg shadow-black/20 border border-white/10 hover:shadow-xl hover:border-white/20 transition-all overflow-hidden group cursor-pointer flex flex-col relative"
+    ? "backdrop-blur-xl rounded-2xl shadow-lg shadow-black/20 border border-white/10 hover:shadow-xl hover:border-white/20 transition-all overflow-hidden group cursor-pointer flex flex-col relative"
     : rank === 1
     ? "bg-white rounded-2xl shadow-xl shadow-yellow-500/10 border-2 border-yellow-400 hover:shadow-2xl hover:shadow-yellow-500/20 transition-all overflow-visible group cursor-pointer flex flex-col relative scale-[1.02]"
     : rank === 2 || rank === 3
@@ -81,7 +81,11 @@ export default function PostCard({ post, viewMode, rank = null, dark = false }) 
 
   if (viewMode === 'list') {
     return (
-      <div onClick={handlePostClick} className={`flex flex-col sm:flex-row gap-4 p-4 rounded-2xl shadow-sm transition-all group cursor-pointer relative ${dark ? 'bg-white/10 backdrop-blur-xl border border-white/10 hover:border-white/20' : 'bg-white border border-slate-100 hover:shadow-md hover:border-primary/20'}`}>
+      <div
+        onClick={handlePostClick}
+        className={`flex flex-col sm:flex-row gap-4 p-4 rounded-2xl shadow-sm transition-all group cursor-pointer relative ${dark ? 'backdrop-blur-xl border border-white/10 hover:border-white/20' : 'bg-white border border-slate-100 hover:shadow-md hover:border-primary/20'}`}
+        style={cardGlassStyle}
+      >
         <div className="w-full sm:w-56 h-36 flex-shrink-0 rounded-xl overflow-hidden bg-slate-100 relative">
           <img src={post.image} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
           <div className={`absolute top-2 left-2 px-2.5 py-1 backdrop-blur-md rounded-lg text-[11px] font-bold shadow-sm ${dark ? 'bg-black/40 text-white border border-white/10' : 'bg-white/90 text-slate-700'}`}>
