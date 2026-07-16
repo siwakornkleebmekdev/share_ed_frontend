@@ -186,7 +186,7 @@ export default function SettingsAccount() {
                   onClick={() => toggleNotificationPref(type.key)}
                   className={`w-12 h-7 rounded-full transition-colors relative shrink-0 ${enabled ? 'bg-primary' : 'bg-slate-300'}`}
                 >
-                  <span className={`absolute top-0.5 h-6 w-6 bg-white rounded-full shadow transition-transform ${enabled ? 'translate-x-5' : 'translate-x-0.5'}`}></span>
+                  <span className={`absolute top-0.5 left-0.5 h-6 w-6 bg-white rounded-full shadow transition-transform ${enabled ? 'translate-x-5' : 'translate-x-0'}`}></span>
                 </button>
               </div>
             );

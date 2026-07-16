@@ -8,13 +8,9 @@ import useAuthStore from '@/store/authStore';
 import useHeroThemeStore from '@/store/heroThemeStore';
 import { profileService } from '@/services/profile.service';
 import { Loader2 } from 'lucide-react';
+import WidgetCard from '@/components/settings/WidgetCard';
 import { getPlatformConfig } from '@/pages/settings/widgetConstants';
-import { getGlassColor, rgbToRgba } from '@/utils/colorUtils';
-
-const ACHIEVEMENT_STATUS_META = {
-  READY_TO_CLAIM: { label: 'พร้อมรับรางวัล', badgeClass: 'bg-amber-100 text-amber-700' },
-  CLAIMED: { label: 'ได้รับรางวัลแล้ว', badgeClass: 'bg-emerald-100 text-emerald-700' },
-};
+import { DEFAULT_THEME } from '@/pages/settings/themeConstants';
 
 const AVATAR_SHAPE_CLASS = {
   square: 'rounded-none',
