@@ -5,9 +5,7 @@ import { hexToRgba } from '@/utils/colorUtils';
 // Reused unmodified in WidgetModal's preview pane, SettingsWidgets' list,
 // and Profile.jsx's public hero card. `preview` renders a <div> instead of
 // a live <a> so the modal's staged preview isn't a dead link mid-edit.
-// `showLabel` swaps the main line from the raw URL to the platform's name
-// (used on the public profile card, where a bare link looks noisy).
-export default function WidgetCard({ platform, url, options, cardTheme, preview = false, showLabel = false }) {
+export default function WidgetCard({ platform, url, options, cardTheme, preview = false }) {
   const Icon = platform.icon;
   const extraOn = !!options?.[platform.extraOptionKey];
 
@@ -53,10 +51,10 @@ export default function WidgetCard({ platform, url, options, cardTheme, preview 
         <Icon className={compact ? 'h-4 w-4' : 'h-5 w-5'} color={platform.brandColor} />
       </div>
       <div className="relative min-w-0 flex-1">
-        {showCaption && !showLabel && (
+        {showCaption && (
           <p className="text-xs font-bold text-white/90 leading-tight">{platform.label}</p>
         )}
-        <p className="text-sm font-semibold text-white truncate">{showLabel ? platform.label : (url || platform.urlPlaceholder)}</p>
+        <p className="text-sm font-semibold text-white truncate">{url || platform.urlPlaceholder}</p>
       </div>
     </Tag>
   );
