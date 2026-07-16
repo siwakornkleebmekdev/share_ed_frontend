@@ -3,6 +3,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import { useEffect, useRef } from 'react';
 import useAuthStore from './store/authStore';
 import MainLayout from './layouts/MainLayout';
+import SettingsLayout from './layouts/SettingsLayout';
 import LandingPage from './pages/LandingPage';
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -12,8 +13,14 @@ import CreatePost from './pages/CreatePost';
 import Trending from './pages/Trending';
 import Profile from './pages/Profile';
 import Notifications from './pages/Notifications';
+import Achievements from './pages/Achievements';
 import PostDetails from './pages/PostDetails';
 import EditPost from './pages/EditPost';
+import SettingsOverview from './pages/settings/SettingsOverview';
+import SettingsProfile from './pages/settings/SettingsProfile';
+import SettingsAppearance from './pages/settings/SettingsAppearance';
+import SettingsAccount from './pages/settings/SettingsAccount';
+import SettingsAchievements from './pages/settings/SettingsAchievements';
 import { supabase } from './utils/supabase';
 import api from './utils/api';
 import { authService } from './services/auth.service';
@@ -275,14 +282,38 @@ function App() {
               </ProtectedRoute>
             } 
           />
-          <Route 
-            path="/notifications" 
+          <Route path="/profile/edit" element={<Navigate to="/settings/profile" replace />} />
+          <Route
+            path="/notifications"
             element={
               <ProtectedRoute>
                 <Notifications />
               </ProtectedRoute>
-            } 
+            }
           />
+          <Route
+            path="/achievements"
+            element={
+              <ProtectedRoute>
+                <Achievements />
+              </ProtectedRoute>
+            }
+          />
+        </Route>
+
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <SettingsLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<SettingsOverview />} />
+          <Route path="profile" element={<SettingsProfile />} />
+          <Route path="appearance" element={<SettingsAppearance />} />
+          <Route path="achievements" element={<SettingsAchievements />} />
+          <Route path="account" element={<SettingsAccount />} />
         </Route>
       </Routes>
 

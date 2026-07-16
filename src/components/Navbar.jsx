@@ -1,8 +1,10 @@
 import { Link, useNavigate } from 'react-router';
-import { BookOpen, Search, Bell, User, Heart, MessageSquare, Info, LogOut, Settings, FileText } from 'lucide-react';
+import { BookOpen, Search, Bell, User, Heart, MessageSquare, Info, LogOut, Settings, FileText, Trophy } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import useNotificationStore from '@/store/notificationStore';
 import useAuthStore from '@/store/authStore';
+import useHeroThemeStore from '@/store/heroThemeStore';
+import useAchievementStore from '@/store/achievementStore';
 import { supabase } from '@/utils/supabase';
 import toast from 'react-hot-toast';
 
@@ -13,9 +15,13 @@ export default function Navbar() {
   const notifRef = useRef(null);
   const profileRef = useRef(null);
   const navigate = useNavigate();
-  
+  // Set by whichever page is currently mounted (see useHeroThemeStore) based
+  // on the actual brightness of its background image, not the route.
+  const isDarkHero = useHeroThemeStore((state) => state.isDarkHero);
+
   const { notifications, unreadCount, fetchNotifications, markAsRead } = useNotificationStore();
   const { isAuthenticated, user, logout } = useAuthStore();
+  const { readyToClaimCount, fetchMilestones } = useAchievementStore();
 
   const handleLogout = async () => {
     try {
@@ -31,7 +37,8 @@ export default function Navbar() {
 
   useEffect(() => {
     fetchNotifications();
-  }, [fetchNotifications]);
+    fetchMilestones();
+  }, [fetchNotifications, fetchMilestones]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -66,39 +73,43 @@ export default function Navbar() {
 
   return (
     <div className={`fixed top-0 left-0 w-full z-50 transition-all duration-500 ease-out px-4 ${isScrolled ? 'pt-2' : 'pt-4'}`}>
-      <nav 
-        className={`mx-auto backdrop-blur-md transition-all duration-500 ease-out overflow-visible rounded-full border border-slate-200/50 ${
-          isScrolled 
-            ? 'w-[92%] max-w-5xl bg-white/95 shadow-[0_8px_30px_rgb(0,0,0,0.12)] py-2 px-6' 
-            : 'w-[98%] max-w-7xl bg-white/80 shadow-sm py-2.5 px-8'
+      <nav
+        className={`mx-auto backdrop-blur-md transition-all duration-500 ease-out overflow-visible rounded-full border ${
+          isDarkHero
+            ? 'border-white/10 bg-slate-900/60'
+            : 'border-slate-200/50 bg-white/80'
+        } ${
+          isScrolled
+            ? `w-[92%] max-w-5xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] py-2 px-6 ${isDarkHero ? 'bg-slate-900/80' : 'bg-white/95'}`
+            : 'w-[98%] max-w-7xl shadow-sm py-2.5 px-8'
         }`}
       >
         <div className={`w-full flex justify-between items-center transition-all duration-500 ${isScrolled ? 'h-12' : 'h-14'}`}>
           <Link to="/" className="flex items-center gap-2 group flex-shrink-0">
             <BookOpen className="text-primary transition-transform duration-300 group-hover:scale-110 h-7 w-7 sm:h-8 sm:w-8" />
-            <span className="font-bold text-slate-800 tracking-tight text-lg sm:text-xl">SHARE-ED</span>
+            <span className={`font-bold tracking-tight text-lg sm:text-xl ${isDarkHero ? 'text-white' : 'text-slate-800'}`}>SHARE-ED</span>
           </Link>
 
           <div className="hidden md:flex items-center justify-center gap-4 sm:gap-6 transition-all duration-500">
             <div className="flex items-center gap-3 sm:gap-4 flex-shrink-0">
-              <Link to="/home" className="text-slate-600 hover:text-primary font-bold transition-colors text-sm whitespace-nowrap">
+              <Link to="/home" className={`font-bold transition-colors text-sm whitespace-nowrap ${isDarkHero ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-primary'}`}>
                 หน้าหลัก
               </Link>
-              <Link to="/explore" className="text-slate-600 hover:text-primary font-bold transition-colors text-sm whitespace-nowrap">
+              <Link to="/explore" className={`font-bold transition-colors text-sm whitespace-nowrap ${isDarkHero ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-primary'}`}>
                 สำรวจเนื้อหา
               </Link>
-              <Link to="/trending" className="text-slate-600 hover:text-primary font-bold transition-colors text-sm whitespace-nowrap">
+              <Link to="/trending" className={`font-bold transition-colors text-sm whitespace-nowrap ${isDarkHero ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-primary'}`}>
                 โพสต์ยอดนิยม
               </Link>
             </div>
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-            
+
             <div className="relative" ref={notifRef}>
-              <button 
+              <button
                 onClick={() => setShowNotifications(!showNotifications)}
-                className="relative p-2.5 text-slate-500 hover:text-primary bg-slate-100 hover:bg-slate-200 rounded-full transition-colors shadow-sm"
+                className={`relative p-2.5 rounded-full transition-colors shadow-sm ${isDarkHero ? 'text-slate-300 hover:text-white bg-white/10 hover:bg-white/20' : 'text-slate-500 hover:text-primary bg-slate-100 hover:bg-slate-200'}`}
               >
                 <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
                 {unreadCount() > 0 && (
@@ -169,11 +180,26 @@ export default function Navbar() {
               )}
             </div>
 
+            {isAuthenticated && (
+              <Link
+                to="/achievements"
+                title="ความสำเร็จ"
+                className={`relative p-2.5 rounded-full transition-colors shadow-sm ${isDarkHero ? 'text-slate-300 hover:text-white bg-white/10 hover:bg-white/20' : 'text-slate-500 hover:text-primary bg-slate-100 hover:bg-slate-200'}`}
+              >
+                <Trophy className="h-4 w-4 sm:h-5 sm:w-5" />
+                {readyToClaimCount() > 0 && (
+                  <span className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center bg-amber-500 border-2 border-white rounded-full text-[9px] font-bold text-white">
+                    {readyToClaimCount()}
+                  </span>
+                )}
+              </Link>
+            )}
+
             {isAuthenticated ? (
               <div className="relative" ref={profileRef}>
-                <button 
+                <button
                   onClick={() => setShowProfileMenu(!showProfileMenu)}
-                  className="flex items-center justify-center p-2.5 text-slate-500 hover:text-primary bg-slate-100 hover:bg-slate-200 rounded-full transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20" 
+                  className={`flex items-center justify-center p-2.5 rounded-full transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 ${isDarkHero ? 'text-slate-300 hover:text-white bg-white/10 hover:bg-white/20' : 'text-slate-500 hover:text-primary bg-slate-100 hover:bg-slate-200'}`}
                   title="เมนูผู้ใช้"
                 >
                   {user?.user_metadata?.avatar_url || user?.avatar ? (
