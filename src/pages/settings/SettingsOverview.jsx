@@ -7,7 +7,7 @@ import { profileService } from '@/services/profile.service';
 const QUICK_LINKS = [
   { to: '/settings/profile', label: 'โปรไฟล์', description: 'ข้อมูลพื้นฐาน รูปภาพ และลิงก์โซเชียล', icon: User },
   { to: '/settings/appearance', label: 'รูปลักษณ์', description: 'ธีมสีและเค้าโครงการ์ดโปรไฟล์', icon: Palette },
-  { to: '/achievements', label: 'Achievements', description: 'ทำภารกิจปลดล็อกกรอบรูปและภาพพื้นหลังพิเศษ', icon: Award },
+  { to: '/settings/achievements', label: 'Achievements', description: 'ดูรายการความสำเร็จทั้งหมดและสถานะของคุณ', icon: Award },
   { to: '/settings/account', label: 'ตั้งค่าบัญชี', description: 'อีเมล รหัสผ่าน และการแจ้งเตือน', icon: Settings },
 ];
 

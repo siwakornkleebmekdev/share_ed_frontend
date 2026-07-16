@@ -34,32 +34,15 @@ export const profileService = {
     return [];
   },
 
-  // Fetch Milestones from backend API
+  // Fetch Milestones (Temporarily disabled due to RLS blocking direct access — falls back to mock data)
   getMilestones: async () => {
     try {
-      const response = await api.get('/milestones');
-      if (response.data.success) {
-        return response.data.data.map(m => ({
-          id: m.id,
-          title: m.title,
-          description: m.description,
-          status: m.status, // LOCKED, READY_TO_CLAIM, CLAIMED
-          current: m.current_progress,
-          target: m.target_value,
-          rewardItem: m.reward_item
-        }));
-      }
-      return [];
+      const response = await api.get('/achievements/my-milestones');
+      if (response.data.success) return response.data.data;
+      return MOCK_MILESTONES;
     } catch (error) {
-      console.error('Error fetching milestones:', error);
-      return [];
+      return MOCK_MILESTONES;
     }
-  },
-
-  // Claim Milestone Reward
-  claimMilestone: async (id) => {
-    const response = await api.post(`/milestones/${id}/claim`);
-    return response.data;
   },
 
   // Fetch User Stats (Temporarily disabled due to RLS blocking direct access)
@@ -121,7 +104,6 @@ export const profileService = {
              facebook_url: data.facebook_url,
              profile_frame_id: data.profile_frame_id,
              wallpaper_url: data.wallpaper_url,
-             widgets: data.widgets,
              occupation: data.occupation,
              location: data.location,
              tags: data.tags,
