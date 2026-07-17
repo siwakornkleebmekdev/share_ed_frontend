@@ -1,5 +1,4 @@
 import api from '../utils/api';
-import { supabase } from '../utils/supabase';
 
 export const profileService = {
   // Fetch My Posts (Active/Published)
