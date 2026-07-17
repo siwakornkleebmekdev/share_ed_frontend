@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router';
-import toast, { Toaster } from 'react-hot-toast';
+import { Toaster } from 'react-hot-toast';
 import { useEffect, useRef } from 'react';
 import useAuthStore from './store/authStore';
 import MainLayout from './layouts/MainLayout';
@@ -51,6 +51,20 @@ function App() {
   const isSyncingRef = useRef(false);
 
   useEffect(() => {
+    // The backend's real /auth/login response nests the session under
+    // `session` — e.g. { success, message, session: { access_token, user, ... } }
+    // (confirmed by probing the live backend directly). The Google-login
+    // fallback code below used to guess at flatter shapes (`token`,
+    // `access_token`, `data.token`) that never matched this, so it always
+    // treated a *successful* backend login as a failure and showed
+    // "already registered with a password" even when login actually worked.
+    const extractSession = (response) => {
+      const session = response?.session || response?.data?.session;
+      const token = session?.access_token || response?.token || response?.access_token || response?.data?.token || response?.data?.access_token;
+      const user = session?.user || response?.user || response?.data?.user || response?.data;
+      return { token, user };
+    };
+
     const syncAccountWithDatabase = async (session) => {
       if (!session || !session.user) return;
       if (isSyncingRef.current) return;
@@ -133,94 +147,38 @@ function App() {
           }
         } catch (err) {
           // ถ้าดึง getMe() ไม่ได้ เช่น เข้าด้วย Google ครั้งแรก หรือ token ยังไม่ตรงกันกับระบบหลังบ้าน
-          if (session.user.app_metadata?.provider === 'google' || session.user.user_metadata?.iss?.includes('google') || session.user.app_metadata?.providers?.includes('google')) {
+          const isGoogleLogin = session.user.app_metadata?.provider === 'google' || session.user.user_metadata?.iss?.includes('google') || session.user.app_metadata?.providers?.includes('google');
+          if (isGoogleLogin) {
+            // ลองเรียก /auth/google ของระบบหลังบ้านก่อน เผื่อมีในอนาคต (ตอนนี้ยังไม่มี — ยืนยันแล้วว่า 404 จริง)
             try {
-              // ลองเรียก /auth/google ของระบบหลังบ้านก่อน (ถ้ามี)
               const gRes = await api.post('/auth/google', {
                 email: userEmail,
                 name: meta.display_name || meta.full_name || meta.name || userEmail?.split('@')[0],
                 avatar: meta.avatar_url
               });
-              const gToken = gRes.data?.token || gRes.data?.access_token || gRes.data?.data?.token || gRes.data?.data?.access_token;
+              const { token: gToken, user: gUser } = extractSession(gRes.data);
               if (gToken) {
                 localStorage.setItem('access_token', gToken);
-                loginAction(gRes.data.user || gRes.data.data);
+                loginAction(gUser);
                 return;
               }
             } catch (gErr) {
-              // ถ้าไม่มี endpoint /auth/google ให้ใช้ authService.register ลงทะเบียนเข้า Node.js backend ทันที เพื่อไม่ให้ติด 401 เมื่อไปหน้า Profile
-              try {
-                const fixedPassword = "Google_OAuth_" + userEmail.toLowerCase() + "_Secret#2024!";
-                const uname = meta.display_name || meta.full_name || meta.name || userEmail?.split('@')[0];
-                const regData = await authService.register({
-                  email: userEmail,
-                  password: fixedPassword,
-                  confirmPassword: fixedPassword,
-                  username: uname,
-                  nickname: uname,
-                  full_name: uname,
-                  education_level: "MIDDLE_SCHOOL",
-                  age: 0,
-                  bio: "ยังไม่ได้ระบุ"
-                });
-                const regToken = regData?.token || regData?.access_token || regData?.data?.token || regData?.data?.access_token;
-                if (regToken) {
-                  localStorage.setItem('access_token', regToken);
-                  loginAction(regData.user || regData.data || {
-                    email: userEmail,
-                    name: uname,
-                    display_name: uname,
-                    username: uname,
-                    education_level: "MIDDLE_SCHOOL",
-                    age: 0,
-                    bio: "ยังไม่ได้ระบุ"
-                  });
-                  return;
-                }
-              } catch (regErr) {
-                console.log("Google auto-register notice:", regErr?.response?.data || regErr.message);
-                
-                // ลอง Login ด้วยรหัสผ่านรูปแบบคงตัวแบบต่าง ๆ
-                let loggedIn = false;
-                let loginRes;
-                
-                // 1. ลองตัวพิมพ์เล็ก (แนะนำ)
-                const fixedPasswordLower = "Google_OAuth_" + userEmail.toLowerCase() + "_Secret#2024!";
-                try {
-                  loginRes = await authService.login(userEmail, fixedPasswordLower);
-                  loggedIn = true;
-                } catch (loginErr1) {
-                  // 2. ลองตัวพิมพ์ดั้งเดิมจาก Supabase
-                  const fixedPasswordOriginal = "Google_OAuth_" + userEmail + "_Secret#2024!";
-                  try {
-                    loginRes = await authService.login(userEmail, fixedPasswordOriginal);
-                    loggedIn = true;
-                  } catch (loginErr2) {
-                    console.log("Both fixed password logins failed. Proposing password link.");
-                  }
-                }
-
-                if (loggedIn && loginRes) {
-                  const lToken = loginRes?.token || loginRes?.access_token || loginRes?.data?.token || loginRes?.data?.access_token;
-                  if (lToken) {
-                    localStorage.setItem('access_token', lToken);
-                    if (loginRes.user || loginRes.data) {
-                      loginAction(loginRes.user || loginRes.data);
-                    }
-                    return;
-                  }
-                }
-
-                // หากไม่สามารถเข้าสู่ระบบด้วย OAuth ได้ แสดงว่าอีเมลนี้ลงทะเบียนด้วยรหัสผ่านปกติไว้แล้ว ให้ปฏิเสธและแจ้งเตือน
-                toast.error('อีเมลนี้เคยลงทะเบียนด้วยรหัสผ่านในระบบไว้แล้ว กรุณาเข้าสู่ระบบด้วยอีเมลและรหัสผ่านหลัก', { id: 'auth-link-error' });
-                await supabase.auth.signOut();
-                logoutAction();
-
-                if (session.access_token) {
-                  localStorage.setItem('access_token', session.access_token);
-                }
-              }
+              // ไม่ถือว่าร้ายแรง — backend ยังไม่มี endpoint sync บัญชี Google โดยเฉพาะ
+              // สำคัญ: จุดนี้ "ไม่" ลองสมัครสมาชิกด้วยรหัสผ่านที่สร้างขึ้นเองอีกต่อไป —
+              // เพราะ Supabase เป็นเจ้าของอีเมลนี้อยู่แล้วทันทีที่ Google OAuth เสร็จสิ้น
+              // ทำให้ /auth/register ปฏิเสธด้วย "อีเมลนี้ถูกใช้งานแล้ว" เสมอ (ยืนยันจริงจากการทดสอบ
+              // backend ตรงๆ) แม้จะเป็นอีเมลที่ไม่เคยสมัครมาก่อนเลยก็ตาม โค้ดเดิมตีความ error
+              // นี้ผิดว่า "มีบัญชีรหัสผ่านอยู่แล้ว" แล้ว sign out ผู้ใช้ทันที — นี่คือบั๊กตัวจริงที่
+              // ทำให้ทุกการ login ด้วย Google เด้งออกภายในไม่กี่วินาที
+              console.log('ยังไม่มี /auth/google บน backend — ใช้ข้อมูลจาก Supabase session ต่อไปโดยไม่ sign out', gErr?.response?.data || gErr.message);
             }
+
+            // ยังไม่มี endpoint ฝั่ง backend สำหรับสร้าง/เชื่อมบัญชีจาก Google โดยตรง
+            // (ต้องแก้ที่ backend ในอนาคต) — แต่ Supabase session ที่ได้มาถูกต้องแล้ว
+            // จึงปล่อยให้ผู้ใช้ยังคง login อยู่ด้วยข้อมูลจาก Supabase (ที่ตั้งไว้ optimistic
+            // ด้านบนแล้ว) แทนการบังคับ sign out — ฟีเจอร์ที่ต้องพึ่ง backend โดยตรงอาจ
+            // ยังใช้ไม่ได้จนกว่าจะมี endpoint นี้ แต่ผู้ใช้จะไม่ถูกเด้งออกอีก
+            return;
           }
         }
       } finally {
