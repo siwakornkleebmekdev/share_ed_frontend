@@ -98,7 +98,14 @@ export default function PostDetails() {
     };
   }, [id, isAuthenticated]);
 
-  const isAuthor = user && post && post.author && (user.id === post.author.id || user.user_id === post.author.id);
+  const currentUserId = user?.id || user?.user_id;
+  const postAuthorId = post?.author?.id || post?.author?.user_id || post?.user_id || post?.author_id;
+  const isAuthor = Boolean(
+    isAuthenticated &&
+    currentUserId &&
+    postAuthorId &&
+    String(currentUserId) === String(postAuthorId)
+  );
 
   const handleLike = async () => {
     if (!isAuthenticated) {
@@ -260,7 +267,7 @@ export default function PostDetails() {
           <ChevronLeft className="h-5 w-5" /> กลับไปหน้าหลัก
         </Link>
         <div className="flex items-center gap-2">
-          {isAuthenticated && user?.id === post.author?.id && (
+          {isAuthor && (
             <>
               <Link to={`/post/edit/${post.id}`} className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-primary border border-blue-100 rounded-xl text-sm font-bold shadow-sm transition-all">
                 <Edit3 className="h-4 w-4" /> แก้ไขโพสต์

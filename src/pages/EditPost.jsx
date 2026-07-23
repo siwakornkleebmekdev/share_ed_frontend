@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { UploadCloud, File, X, GraduationCap, Tag, AlignLeft, BookOpen, PenTool, Save, Image as ImageIcon, Plus, Eye, FileText, ChevronLeft } from 'lucide-react';
+import { UploadCloud, File, X, GraduationCap, Tag, AlignLeft, BookOpen, PenTool, Save, Image as ImageIcon, Plus, Eye, FileText, ChevronLeft, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import ReactQuill from 'react-quill-new';
@@ -235,6 +235,55 @@ export default function EditPost() {
       setHashtags(hashtags.filter(t => t !== tag));
     } else {
       setHashtags([...hashtags, tag]);
+    }
+  };
+
+  const handleDelete = async () => {
+    const result = await Swal.fire({
+      title: 'คุณต้องการลบโพสต์นี้ใช่หรือไม่?',
+      text: 'การดำเนินการนี้จะทำการลบโพสต์แบบ Soft Delete (ซ่อนโพสต์ชั่วคราว)',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'ใช่, ลบเลย',
+      cancelButtonText: 'ยกเลิก'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        Swal.fire({
+          title: 'กำลังลบโพสต์...',
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+
+        const response = await postService.deletePost(id);
+        Swal.close();
+
+        if (response && (response.success || response.status === 200)) {
+          await Swal.fire({
+            icon: 'success',
+            title: 'ลบสำเร็จ!',
+            text: 'โพสต์ของคุณถูกลบเรียบร้อยแล้ว',
+            confirmButtonColor: '#3b82f6'
+          });
+          navigate('/explore');
+        } else {
+          throw new Error(response?.message || 'เกิดข้อผิดพลาดในการลบโพสต์');
+        }
+      } catch (error) {
+        Swal.close();
+        console.error('Error deleting post:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'เกิดข้อผิดพลาด',
+          text: error.response?.data?.message || error.message || 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้',
+          confirmButtonColor: '#3b82f6'
+        });
+      }
     }
   };
 
@@ -641,9 +690,15 @@ export default function EditPost() {
 
         {/* Actions */}
         <div className="sticky bottom-0 z-40 bg-slate-50 p-6 sm:px-12 sm:py-8 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4 rounded-b-[24px] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-          <button onClick={() => navigate(`/post/${id}`)} className="w-full sm:w-auto px-6 py-4 rounded-xl font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-colors shadow-sm cursor-pointer">
-            ยกเลิกการแก้ไข
-          </button>
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <button onClick={() => navigate(`/post/${id}`)} className="w-full sm:w-auto px-6 py-4 rounded-xl font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-colors shadow-sm cursor-pointer">
+              ยกเลิกการแก้ไข
+            </button>
+            <button onClick={handleDelete} className="w-full sm:w-auto px-6 py-4 rounded-xl font-bold text-rose-600 bg-rose-50 border border-rose-100 hover:bg-rose-100 transition-colors flex items-center justify-center gap-2 shadow-sm cursor-pointer">
+              <Trash2 className="h-5 w-5" />
+              ลบโพสต์
+            </button>
+          </div>
           <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
             <button onClick={() => handleSubmit('DRAFT')} className="w-full sm:w-auto px-6 py-4 rounded-xl font-bold text-primary bg-blue-50 border border-blue-100 hover:bg-blue-100 transition-colors flex items-center justify-center gap-2 cursor-pointer">
               <Save className="h-5 w-5" />

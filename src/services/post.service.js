@@ -38,6 +38,61 @@ export const postService = {
       console.error('Error creating post:', error);
       throw error;
     }
+  },
+
+  // Update an existing post
+  updatePost: async (id, formData) => {
+    try {
+      const response = await api.put(`/posts/${id}`, formData);
+      return response.data;
+    } catch (error) {
+      console.error(`Error updating post ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Delete a post (Soft Delete)
+  deletePost: async (id) => {
+    try {
+      const response = await api.delete(`/posts/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error deleting post ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Like / Unlike a post
+  likePost: async (id) => {
+    try {
+      const response = await api.post(`/posts/${id}/like`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error liking post ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Bookmark / Unbookmark a post
+  bookmarkPost: async (id) => {
+    try {
+      const response = await api.post(`/posts/${id}/bookmark`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error bookmarking post ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Create a comment on a post
+  createComment: async (id, content) => {
+    try {
+      const response = await api.post(`/posts/${id}/comments`, { content });
+      return response.data;
+    } catch (error) {
+      console.error(`Error creating comment on post ${id}:`, error);
+      throw error;
+    }
   }
 };
 

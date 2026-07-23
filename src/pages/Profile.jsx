@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
-import { Image as ImageIcon, MapPin, Link as LinkIcon, BookOpen, Star, Award, FileText, CheckCircle2, Gift, GraduationCap, Clock, Edit } from 'lucide-react';
+import { Image as ImageIcon, MapPin, Link as LinkIcon, BookOpen, Star, Award, FileText, CheckCircle2, Gift, GraduationCap, Clock, Edit, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import Swal from 'sweetalert2';
 import PostCard from '@/components/PostCard';
 
 import useAuthStore from '@/store/authStore';
 import { profileService } from '@/services/profile.service';
+import { postService } from '@/services/post.service';
 import { Loader2 } from 'lucide-react';
 import WidgetCard from '@/components/settings/WidgetCard';
 import { getPlatformConfig } from '@/pages/settings/widgetConstants';
@@ -80,6 +82,37 @@ export default function Profile() {
   const handleClaimReward = (id) => {
     setMilestones(prev => prev.map(m => m.id === id ? { ...m, status: 'CLAIMED' } : m));
     toast.success('รับรางวัลสำเร็จแล้ว ไอเท็มถูกเก็บเข้าคลัง', { icon: '🎁' });
+  };
+
+  const handleDeletePost = async (postId) => {
+    const result = await Swal.fire({
+      title: 'คุณต้องการลบรายการนี้ใช่หรือไม่?',
+      text: 'การดำเนินการนี้จะทำการลบรายการแบบ Soft Delete',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'ใช่, ลบเลย',
+      cancelButtonText: 'ยกเลิก'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        Swal.fire({ title: 'กำลังลบ...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        const response = await postService.deletePost(postId);
+        Swal.close();
+        if (response && (response.success || response.status === 200)) {
+          toast.success('ลบรายการเรียบร้อยแล้ว');
+          setMyPosts(prev => prev.filter(p => p.id !== postId));
+          setDrafts(prev => prev.filter(d => d.id !== postId));
+        } else {
+          throw new Error(response?.message || 'เกิดข้อผิดพลาดในการลบ');
+        }
+      } catch (error) {
+        Swal.close();
+        toast.error(error.message || 'ไม่สามารถลบรายการได้');
+      }
+    }
   };
 
   return (
@@ -229,12 +262,21 @@ export default function Profile() {
                             แก้ไขล่าสุด: {draft.created_at ? new Date(draft.created_at).toLocaleDateString('th-TH') : 'ไม่ระบุ'}
                           </span>
                           
-                          <button 
-                            onClick={() => navigate(`/post/edit/${draft.id}`)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-primary border border-blue-100 rounded-lg text-xs font-bold shadow-sm transition-all cursor-pointer"
-                          >
-                            <Edit className="h-3.5 w-3.5" /> แก้ไขโพสต์
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button 
+                              onClick={() => navigate(`/post/edit/${draft.id}`)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-primary border border-blue-100 rounded-lg text-xs font-bold shadow-sm transition-all cursor-pointer"
+                            >
+                              <Edit className="h-3.5 w-3.5" /> แก้ไข
+                            </button>
+                            <button 
+                              onClick={() => handleDeletePost(draft.id)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-100 rounded-lg text-xs font-bold shadow-sm transition-all cursor-pointer"
+                              title="ลบแบบร่าง"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" /> ลบ
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
