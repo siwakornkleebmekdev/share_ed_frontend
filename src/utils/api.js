@@ -1,5 +1,5 @@
 import axios from 'axios';
-import useAuthStore from '../store/authStore';
+import { supabase } from './supabase';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
@@ -8,12 +8,21 @@ const api = axios.create({
   },
 });
 
-// Request Interceptor: Attach token automatically
+// Request Interceptor: Attach token automatically from Supabase session
 api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('access_token');
-    if (token && token !== 'undefined' && token !== 'null') {
-      config.headers.Authorization = `Bearer ${token}`;
+  async (config) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        config.headers.Authorization = `Bearer ${session.access_token}`;
+      } else {
+        const fallbackToken = localStorage.getItem('access_token');
+        if (fallbackToken && fallbackToken !== 'undefined' && fallbackToken !== 'null') {
+          config.headers.Authorization = `Bearer ${fallbackToken}`;
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching Supabase session in API interceptor:', err);
     }
     return config;
   },
