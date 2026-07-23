@@ -20,7 +20,10 @@ const useAuthStore = create((set) => ({
     localStorage.removeItem('access_token');
     set({ isAuthenticated: false, user: null });
   },
+<<<<<<< HEAD
 >>>>>>> 01c96c7 (ADD Profile , Setting Profile , achievements/reward_claiming , Fixing AuthStore , Token access google , logout)
+=======
+>>>>>>> 2ded06a56b2e81e5aa0eedc83b3f6983fa0c15ee
 }));
 
 export default useAuthStore;
