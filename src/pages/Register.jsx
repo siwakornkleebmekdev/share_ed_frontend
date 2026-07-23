@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { Mail, Lock, User, Loader2 } from 'lucide-react';
+import { Mail, Lock, User, BookOpen, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { authService } from '@/services/auth.service';
 import useAuthStore from '@/store/authStore';
@@ -23,7 +23,6 @@ export default function Register() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // ถ้าผู้ใช้งานมีบัญชีในระบบและข้อมูลโปรไฟล์ครบถ้วนแล้ว ไม่ให้แสดงหน้า Register
     const isProfileComplete = user?.education_level || user?.user_metadata?.education_level;
     if (isAuthenticated && isProfileComplete) {
       toast.success('คุณมีบัญชีผู้ใช้ในระบบแล้ว');
@@ -33,16 +32,32 @@ export default function Register() {
 
   const handleRegister = async (e) => {
     e.preventDefault();
-    if (!username || !email || !password || !confirmPassword) {
-      return toast.error('กรุณากรอกข้อมูลให้ครบถ้วนทุกช่อง');
+    setFieldErrors({});
+
+    const newErrors = {};
+    if (!username || !username.trim()) {
+      newErrors.username = 'กรุณากรอกชื่อผู้ใช้';
+    }
+    if (!email || !email.trim()) {
+      newErrors.email = 'กรุณากรอกอีเมล';
+    }
+    if (!educationLevel) {
+      newErrors.educationLevel = 'กรุณาเลือกระดับการศึกษา';
+    }
+    if (!password) {
+      newErrors.password = 'กรุณากรอกรหัสผ่าน';
+    } else if (password.length < 8) {
+      newErrors.password = 'รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร';
+    }
+    if (!confirmPassword) {
+      newErrors.confirmPassword = 'กรุณายืนยันรหัสผ่าน';
+    } else if (password && confirmPassword && password !== confirmPassword) {
+      newErrors.confirmPassword = 'รหัสผ่านทั้งสองช่องไม่ตรงกัน';
     }
 
-    if (password !== confirmPassword) {
-      return toast.error('รหัสผ่านไม่ตรงกัน');
-    }
-
-    if (isAuthenticated || user) {
-      return toast.error('คุณมีบัญชีผู้ใช้นี้ในระบบแล้ว');
+    if (Object.keys(newErrors).length > 0) {
+      setFieldErrors(newErrors);
+      return;
     }
 
     try {
@@ -52,7 +67,7 @@ export default function Register() {
         email,
         password,
         username,
-        education_level: educationLevel || 'HIGH_SCHOOL',
+        education_level: educationLevel,
         age: 0,
         bio: 'ยังไม่ได้ระบุ'
       });
@@ -68,7 +83,7 @@ export default function Register() {
         name: username,
         display_name: username,
         username,
-        education_level: educationLevel || 'HIGH_SCHOOL',
+        education_level: educationLevel,
         age: 0,
         bio: 'ยังไม่ได้ระบุ',
         user_metadata: meta
@@ -77,8 +92,7 @@ export default function Register() {
       toast.success('สมัครสมาชิกสำเร็จ ยินดีต้อนรับสู่ SHARE-ED!');
       navigate('/explore');
     } catch (error) {
-      console.error("Register Error:", error);
-      toast.error(error.message || 'เกิดข้อผิดพลาดในการสมัครสมาชิก');
+      setFieldErrors({ general: error.message || 'เกิดข้อผิดพลาดในการสมัครสมาชิก' });
     } finally {
       setIsLoading(false);
     }
@@ -94,7 +108,7 @@ export default function Register() {
       });
       if (error) throw error;
     } catch (error) {
-      toast.error(error.message || 'ไม่สามารถสมัครสมาชิกด้วย Google ได้');
+      setFieldErrors({ general: error.message || 'ไม่สามารถสมัครสมาชิกด้วย Google ได้' });
     }
   };
 
@@ -110,6 +124,12 @@ export default function Register() {
             </Link>
           </p>
         </div>
+
+        {fieldErrors.general && (
+          <div className="p-3.5 rounded-xl bg-red-50 text-red-600 text-sm font-medium border border-red-100 text-center">
+            {fieldErrors.general}
+          </div>
+        )}
         
         <form className="mt-8 space-y-6" onSubmit={handleRegister} noValidate>
           <div className="space-y-4">
@@ -169,13 +189,19 @@ export default function Register() {
               <label className="block text-sm font-medium text-slate-700 mb-1">ระดับการศึกษา <span className="text-red-500">*</span></label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <BookOpen className="h-5 w-5 text-slate-400" />
+                  <BookOpen className={`h-5 w-5 ${fieldErrors.educationLevel ? 'text-red-400' : 'text-slate-400'}`} />
                 </div>
                 <select 
                   value={educationLevel}
-                  onChange={(e) => setEducationLevel(e.target.value)}
-                  required 
-                  className="block w-full pl-10 pr-10 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors bg-white text-slate-900 appearance-none"
+                  onChange={(e) => {
+                    setEducationLevel(e.target.value);
+                    if (fieldErrors.educationLevel) setFieldErrors(prev => ({ ...prev, educationLevel: null }));
+                  }}
+                  className={`block w-full pl-10 pr-10 py-2.5 border rounded-lg focus:outline-none transition-colors bg-white text-slate-900 appearance-none ${
+                    fieldErrors.educationLevel
+                      ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+                      : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
+                  }`}
                 >
                   <option value="" disabled>เลือกระดับการศึกษา</option>
                   <option value="MIDDLE_SCHOOL">มัธยมศึกษาตอนต้น</option>
@@ -188,31 +214,9 @@ export default function Register() {
                   </svg>
                 </div>
               </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">ระดับการศึกษา <span className="text-red-500">*</span></label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <BookOpen className="h-5 w-5 text-slate-400" />
-                </div>
-                <select 
-                  value={educationLevel}
-                  onChange={(e) => setEducationLevel(e.target.value)}
-                  required 
-                  className="block w-full pl-10 pr-10 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors bg-white text-slate-900 appearance-none"
-                >
-                  <option value="" disabled>เลือกระดับการศึกษา</option>
-                  <option value="MIDDLE_SCHOOL">มัธยมศึกษาตอนต้น</option>
-                  <option value="HIGH_SCHOOL">มัธยมศึกษาตอนปลาย</option>
-                  <option value="UNIVERSITY">มหาวิทยาลัย</option>
-                </select>
-                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-              </div>
+              {fieldErrors.educationLevel && (
+                <p className="mt-1 text-xs text-red-500 font-medium">{fieldErrors.educationLevel}</p>
+              )}
             </div>
             
             <div>
@@ -266,10 +270,6 @@ export default function Register() {
                 <p className="mt-1 text-xs text-red-500 font-medium">{fieldErrors.confirmPassword}</p>
               )}
             </div>
-
-            {fieldErrors.general && (
-              <p className="text-xs text-red-500 font-medium text-center">{fieldErrors.general}</p>
-            )}
           </div>
 
           <button 

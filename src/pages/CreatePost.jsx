@@ -28,6 +28,7 @@ export default function CreatePost() {
 
   const [showModal, setShowModal] = useState(false);
   const [previewFile, setPreviewFile] = useState(null); // { type: 'image' | 'pdf', url: string }
+  const [fieldErrors, setFieldErrors] = useState({});
 
   // File Handlers
   const handleCoverUpload = (e) => {
@@ -169,8 +170,15 @@ export default function CreatePost() {
       }
     }
 
-    if (!title.trim() || !category || !level || !summary.trim()) {
-      toast.error('กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน (ชื่อหัวข้อ, หมวดหมู่, ระดับชั้น, และบทสรุปย่อ)');
+    setFieldErrors({});
+    const newErrors = {};
+    if (!title.trim()) newErrors.title = 'กรุณากรอกชื่อหัวข้อสรุปความรู้';
+    if (!level) newErrors.level = 'กรุณาเลือกระดับชั้น';
+    if (!summary.trim()) newErrors.summary = 'กรุณากรอกบทสรุปย่อ';
+    if (!category) newErrors.category = 'กรุณาเลือกหมวดหมู่วิชา';
+
+    if (Object.keys(newErrors).length > 0) {
+      setFieldErrors(newErrors);
       return;
     }
 
@@ -286,10 +294,20 @@ export default function CreatePost() {
               <input
                 type="text"
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-5 py-4 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors text-base"
+                onChange={(e) => {
+                  setTitle(e.target.value);
+                  if (fieldErrors.title) setFieldErrors(prev => ({ ...prev, title: null }));
+                }}
+                className={`w-full px-5 py-4 rounded-xl border focus:outline-none transition-colors text-base ${
+                  fieldErrors.title
+                    ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+                    : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
+                }`}
                 placeholder="เช่น สรุปสูตรฟิสิกส์ ม.4 เทอม 1"
               />
+              {fieldErrors.title && (
+                <p className="mt-1.5 text-xs text-red-500 font-medium">{fieldErrors.title}</p>
+              )}
 
               <div className="mt-6">
                 <label className="flex items-center gap-2 text-base font-bold text-slate-800 mb-3">
@@ -297,14 +315,24 @@ export default function CreatePost() {
                 </label>
                 <select
                   value={level}
-                  onChange={(e) => setLevel(e.target.value)}
-                  className="w-full px-5 py-4 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors bg-white font-medium text-slate-700 text-base"
+                  onChange={(e) => {
+                    setLevel(e.target.value);
+                    if (fieldErrors.level) setFieldErrors(prev => ({ ...prev, level: null }));
+                  }}
+                  className={`w-full px-5 py-4 rounded-xl border focus:outline-none transition-colors bg-white font-medium text-slate-700 text-base ${
+                    fieldErrors.level
+                      ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+                      : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
+                  }`}
                 >
                   <option value="" disabled>เลือกระดับชั้น</option>
                   <option value="มัธยมศึกษาตอนต้น">มัธยมศึกษาตอนต้น</option>
                   <option value="มัธยมศึกษาตอนปลาย">มัธยมศึกษาตอนปลาย</option>
                   <option value="มหาวิทยาลัย">มหาวิทยาลัย</option>
                 </select>
+                {fieldErrors.level && (
+                  <p className="mt-1.5 text-xs text-red-500 font-medium">{fieldErrors.level}</p>
+                )}
               </div>
             </div>
           </div>
@@ -321,11 +349,21 @@ export default function CreatePost() {
             </label>
             <textarea
               value={summary}
-              onChange={(e) => setSummary(e.target.value.slice(0, 200))}
-              className="w-full px-5 py-4 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors text-base min-h-[100px] resize-y bg-white"
+              onChange={(e) => {
+                setSummary(e.target.value.slice(0, 200));
+                if (fieldErrors.summary) setFieldErrors(prev => ({ ...prev, summary: null }));
+              }}
+              className={`w-full px-5 py-4 rounded-xl border focus:outline-none transition-colors text-base min-h-[100px] resize-y bg-white ${
+                fieldErrors.summary
+                  ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+                  : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
+              }`}
               placeholder="อธิบายสั้นๆ เกี่ยวกับไฟล์สรุปนี้ (จะนำไปแสดงบนการ์ดในหน้ารายการ) เช่น สรุปฟิสิกส์ ม.4 เทอม 1 เหมาะกับทบทวนสอบกลางภาค..."
               rows={3}
             />
+            {fieldErrors.summary && (
+              <p className="mt-1.5 text-xs text-red-500 font-medium">{fieldErrors.summary}</p>
+            )}
           </div>
 
           {/* Subject & Hashtags Section */}
@@ -334,8 +372,13 @@ export default function CreatePost() {
               <Tag className="h-5 w-5 text-slate-400" /> หมวดหมู่วิชาและแฮชแท็ก <span className="text-rose-500">*</span>
             </label>
             <div
-              onClick={() => setShowModal(true)}
-              className="p-5 border border-dashed border-slate-200 hover:border-primary rounded-2xl bg-white hover:bg-blue-50/10 cursor-pointer transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+              onClick={() => {
+                setShowModal(true);
+                if (fieldErrors.category) setFieldErrors(prev => ({ ...prev, category: null }));
+              }}
+              className={`p-5 border border-dashed hover:border-primary rounded-2xl bg-white hover:bg-blue-50/10 cursor-pointer transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+                fieldErrors.category ? 'border-red-500 bg-red-50/10' : 'border-slate-200'
+              }`}
             >
               <div className="flex flex-col gap-2">
                 {category ? (

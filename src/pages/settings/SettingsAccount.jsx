@@ -18,9 +18,11 @@ export default function SettingsAccount() {
 
   const [email, setEmail] = useState('');
   const [isSavingEmail, setIsSavingEmail] = useState(false);
+  const [emailError, setEmailError] = useState(null);
 
   const [passwords, setPasswords] = useState({ password: '', confirmPassword: '' });
   const [isSavingPassword, setIsSavingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState(null);
 
   const [notificationPrefs, setNotificationPrefs] = useState(DEFAULT_NOTIFICATION_PREFS);
   const [isSavingPrefs, setIsSavingPrefs] = useState(false);
@@ -33,6 +35,7 @@ export default function SettingsAccount() {
 
   const handleSaveEmail = async (e) => {
     e.preventDefault();
+    setEmailError(null);
     if (!email || email === user?.email) return;
     setIsSavingEmail(true);
     try {
@@ -40,7 +43,7 @@ export default function SettingsAccount() {
       toast.success('ส่งอีเมลยืนยันการเปลี่ยนแปลงแล้ว กรุณาตรวจสอบกล่องจดหมายของคุณ');
     } catch (error) {
       console.error('Update email error:', error);
-      toast.error(error?.message || 'ไม่สามารถเปลี่ยนอีเมลได้ในขณะนี้');
+      setEmailError(error?.message || 'ไม่สามารถเปลี่ยนอีเมลได้ในขณะนี้');
     } finally {
       setIsSavingEmail(false);
     }
@@ -48,14 +51,17 @@ export default function SettingsAccount() {
 
   const handleSavePassword = async (e) => {
     e.preventDefault();
+    setPasswordError(null);
+
     if (passwords.password.length < 8) {
-      toast.error('รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร');
+      setPasswordError('รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร');
       return;
     }
     if (passwords.password !== passwords.confirmPassword) {
-      toast.error('รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน');
+      setPasswordError('รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน');
       return;
     }
+
     setIsSavingPassword(true);
     try {
       await authService.updateAccount({ password: passwords.password });
@@ -63,7 +69,7 @@ export default function SettingsAccount() {
       toast.success('เปลี่ยนรหัสผ่านสำเร็จ');
     } catch (error) {
       console.error('Update password error:', error);
-      toast.error(error?.message || 'ไม่สามารถเปลี่ยนรหัสผ่านได้ในขณะนี้');
+      setPasswordError(error?.message || 'ไม่สามารถเปลี่ยนรหัสผ่านได้ในขณะนี้');
     } finally {
       setIsSavingPassword(false);
     }
@@ -109,11 +115,20 @@ export default function SettingsAccount() {
           <input
             type="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-slate-800 font-medium"
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (emailError) setEmailError(null);
+            }}
+            className={`w-full px-4 py-3 bg-slate-50 border rounded-xl focus:outline-none transition-all text-slate-800 font-medium ${
+              emailError ? 'border-red-500 focus:ring-4 focus:ring-red-500/10 focus:border-red-500' : 'border-slate-200 focus:ring-4 focus:ring-primary/10 focus:border-primary'
+            }`}
             placeholder="you@example.com"
           />
-          <p className="text-xs text-slate-400 mt-2">การเปลี่ยนอีเมลต้องได้รับการยืนยันผ่านลิงก์ที่ส่งไปยังอีเมลใหม่</p>
+          {emailError ? (
+            <p className="text-xs text-red-500 font-medium mt-1.5">{emailError}</p>
+          ) : (
+            <p className="text-xs text-slate-400 mt-2">การเปลี่ยนอีเมลต้องได้รับการยืนยันผ่านลิงก์ที่ส่งไปยังอีเมลใหม่</p>
+          )}
         </div>
         <button
           type="submit"
@@ -135,8 +150,13 @@ export default function SettingsAccount() {
             <input
               type="password"
               value={passwords.password}
-              onChange={(e) => setPasswords(prev => ({ ...prev, password: e.target.value }))}
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-slate-800 font-medium"
+              onChange={(e) => {
+                setPasswords(prev => ({ ...prev, password: e.target.value }));
+                if (passwordError) setPasswordError(null);
+              }}
+              className={`w-full px-4 py-3 bg-slate-50 border rounded-xl focus:outline-none transition-all text-slate-800 font-medium ${
+                passwordError ? 'border-red-500 focus:ring-4 focus:ring-red-500/10 focus:border-red-500' : 'border-slate-200 focus:ring-4 focus:ring-primary/10 focus:border-primary'
+              }`}
               placeholder="อย่างน้อย 8 ตัวอักษร"
             />
           </div>
@@ -145,12 +165,20 @@ export default function SettingsAccount() {
             <input
               type="password"
               value={passwords.confirmPassword}
-              onChange={(e) => setPasswords(prev => ({ ...prev, confirmPassword: e.target.value }))}
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-slate-800 font-medium"
+              onChange={(e) => {
+                setPasswords(prev => ({ ...prev, confirmPassword: e.target.value }));
+                if (passwordError) setPasswordError(null);
+              }}
+              className={`w-full px-4 py-3 bg-slate-50 border rounded-xl focus:outline-none transition-all text-slate-800 font-medium ${
+                passwordError ? 'border-red-500 focus:ring-4 focus:ring-red-500/10 focus:border-red-500' : 'border-slate-200 focus:ring-4 focus:ring-primary/10 focus:border-primary'
+              }`}
               placeholder="กรอกรหัสผ่านใหม่อีกครั้ง"
             />
           </div>
         </div>
+        {passwordError && (
+          <p className="text-xs text-red-500 font-medium mt-1">{passwordError}</p>
+        )}
         <button
           type="submit"
           disabled={isSavingPassword || !passwords.password || !passwords.confirmPassword}

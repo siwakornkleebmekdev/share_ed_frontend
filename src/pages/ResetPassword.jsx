@@ -8,23 +8,28 @@ export default function ResetPassword() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
   const navigate = useNavigate();
 
   const handleResetPassword = async (e) => {
     e.preventDefault();
+    setFieldErrors({});
 
-    if (!password || !confirmPassword) {
-      toast.error('กรุณากรอกรหัสผ่านใหม่ให้ครบถ้วนทั้งสองช่อง');
-      return;
+    const newErrors = {};
+    if (!password) {
+      newErrors.password = 'กรุณากรอกรหัสผ่านใหม่';
+    } else if (password.length < 8) {
+      newErrors.password = 'รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร';
     }
 
-    if (password.length < 8) {
-      toast.error('รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร');
-      return;
+    if (!confirmPassword) {
+      newErrors.confirmPassword = 'กรุณายืนยันรหัสผ่านใหม่';
+    } else if (password && confirmPassword && password !== confirmPassword) {
+      newErrors.confirmPassword = 'รหัสผ่านทั้งสองช่องไม่ตรงกัน';
     }
 
-    if (password !== confirmPassword) {
-      toast.error('รหัสผ่านทั้งสองช่องไม่ตรงกัน');
+    if (Object.keys(newErrors).length > 0) {
+      setFieldErrors(newErrors);
       return;
     }
 
@@ -41,7 +46,7 @@ export default function ResetPassword() {
       navigate('/login');
     } catch (error) {
       console.error('Reset Password Error:', error);
-      toast.error(error.message || 'เกิดข้อผิดพลาดในการตั้งรหัสผ่านใหม่ กรุณาลองใหม่อีกครั้ง');
+      setFieldErrors({ general: error.message || 'เกิดข้อผิดพลาดในการตั้งรหัสผ่านใหม่ กรุณาลองใหม่อีกครั้ง' });
     } finally {
       setIsLoading(false);
     }
@@ -60,7 +65,13 @@ export default function ResetPassword() {
           </p>
         </div>
 
-        <form onSubmit={handleResetPassword} className="mt-8 space-y-6">
+        {fieldErrors.general && (
+          <div className="p-3.5 rounded-xl bg-red-50 text-red-600 text-sm font-medium border border-red-100 text-center">
+            {fieldErrors.general}
+          </div>
+        )}
+
+        <form onSubmit={handleResetPassword} className="mt-8 space-y-6" noValidate>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1" htmlFor="password">
@@ -68,19 +79,27 @@ export default function ResetPassword() {
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-slate-400" />
+                  <Lock className={`h-5 w-5 ${fieldErrors.password ? 'text-red-400' : 'text-slate-400'}`} />
                 </div>
                 <input
                   id="password"
                   type="password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={8}
-                  className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors text-sm"
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (fieldErrors.password) setFieldErrors(prev => ({ ...prev, password: null }));
+                  }}
+                  className={`block w-full pl-10 pr-3 py-2.5 border rounded-lg text-slate-900 focus:outline-none transition-colors text-sm ${
+                    fieldErrors.password
+                      ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+                      : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
+                  }`}
                   placeholder="ตั้งรหัสผ่านอย่างน้อย 8 ตัวอักษร"
                 />
               </div>
+              {fieldErrors.password && (
+                <p className="mt-1 text-xs text-red-500 font-medium">{fieldErrors.password}</p>
+              )}
             </div>
 
             <div>
@@ -89,19 +108,27 @@ export default function ResetPassword() {
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-slate-400" />
+                  <Lock className={`h-5 w-5 ${fieldErrors.confirmPassword ? 'text-red-400' : 'text-slate-400'}`} />
                 </div>
                 <input
                   id="confirmPassword"
                   type="password"
                   value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  minLength={8}
-                  className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors text-sm"
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value);
+                    if (fieldErrors.confirmPassword) setFieldErrors(prev => ({ ...prev, confirmPassword: null }));
+                  }}
+                  className={`block w-full pl-10 pr-3 py-2.5 border rounded-lg text-slate-900 focus:outline-none transition-colors text-sm ${
+                    fieldErrors.confirmPassword
+                      ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+                      : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
+                  }`}
                   placeholder="กรอกรหัสผ่านใหม่อีกครั้งเพื่อยืนยัน"
                 />
               </div>
+              {fieldErrors.confirmPassword && (
+                <p className="mt-1 text-xs text-red-500 font-medium">{fieldErrors.confirmPassword}</p>
+              )}
             </div>
           </div>
 

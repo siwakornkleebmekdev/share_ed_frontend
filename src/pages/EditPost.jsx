@@ -37,6 +37,7 @@ export default function EditPost() {
   const [hashtags, setHashtags] = useState([]);
   const [hashtagInput, setCountryInput] = useState('');
   const tagInputRef = useRef(null);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const [showModal, setShowModal] = useState(false);
   const [previewFile, setPreviewFile] = useState(null);
@@ -238,8 +239,15 @@ export default function EditPost() {
   };
 
   const handleSubmit = async (status = 'ACTIVE') => {
-    if (!title.trim() || !category || !level || !summary.trim()) {
-      toast.error('กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน (ชื่อหัวข้อ, หมวดหมู่, ระดับชั้น, และบทสรุปย่อ)');
+    setFieldErrors({});
+    const newErrors = {};
+    if (!title.trim()) newErrors.title = 'กรุณากรอกชื่อหัวข้อสรุปความรู้';
+    if (!level) newErrors.level = 'กรุณาเลือกระดับชั้น';
+    if (!summary.trim()) newErrors.summary = 'กรุณากรอกบทสรุปย่อ';
+    if (!category) newErrors.category = 'กรุณาเลือกหมวดหมู่วิชา';
+
+    if (Object.keys(newErrors).length > 0) {
+      setFieldErrors(newErrors);
       return;
     }
 
@@ -383,10 +391,20 @@ export default function EditPost() {
                 <input
                   type="text"
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  onChange={(e) => {
+                    setTitle(e.target.value);
+                    if (fieldErrors.title) setFieldErrors(prev => ({ ...prev, title: null }));
+                  }}
                   placeholder="เช่น สรุปสูตรตรีโกณมิติ ม.5"
-                  className="w-full px-5 py-3.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-slate-400 font-semibold text-slate-800 text-base"
+                  className={`w-full px-5 py-3.5 rounded-xl border focus:outline-none transition-all placeholder:text-slate-400 font-semibold text-slate-800 text-base ${
+                    fieldErrors.title
+                      ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+                      : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
+                  }`}
                 />
+                {fieldErrors.title && (
+                  <p className="mt-1.5 text-xs text-red-500 font-medium">{fieldErrors.title}</p>
+                )}
               </div>
 
               <div>
@@ -395,11 +413,21 @@ export default function EditPost() {
                 </label>
                 <textarea
                   value={summary}
-                  onChange={(e) => setSummary(e.target.value)}
+                  onChange={(e) => {
+                    setSummary(e.target.value);
+                    if (fieldErrors.summary) setFieldErrors(prev => ({ ...prev, summary: null }));
+                  }}
                   rows="3"
                   placeholder="เขียนอธิบายคร่าวๆ เกี่ยวกับสรุปความรู้นี้..."
-                  className="w-full px-5 py-3.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-slate-400 font-medium text-slate-600 text-base resize-none"
+                  className={`w-full px-5 py-3.5 rounded-xl border focus:outline-none transition-all placeholder:text-slate-400 font-medium text-slate-600 text-base resize-none ${
+                    fieldErrors.summary
+                      ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+                      : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
+                  }`}
                 />
+                {fieldErrors.summary && (
+                  <p className="mt-1.5 text-xs text-red-500 font-medium">{fieldErrors.summary}</p>
+                )}
               </div>
             </div>
           </div>
@@ -410,18 +438,28 @@ export default function EditPost() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>
               <label className="flex items-center gap-2 text-base font-bold text-slate-800 mb-3">
-                <GraduationCap className="h-5 w-5 text-primary" /> ระดับชั้นการศึกษา <span className="text-rose-500">*</span>
+                <GraduationCap className="h-5 w-5 text-slate-400" /> ระดับชั้น <span className="text-rose-500">*</span>
               </label>
               <select
                 value={level}
-                onChange={(e) => setLevel(e.target.value)}
-                className="w-full px-5 py-3.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors bg-white font-medium text-slate-700 text-base"
+                onChange={(e) => {
+                  setLevel(e.target.value);
+                  if (fieldErrors.level) setFieldErrors(prev => ({ ...prev, level: null }));
+                }}
+                className={`w-full px-5 py-3.5 rounded-xl border focus:outline-none transition-all bg-white font-semibold text-slate-700 text-base ${
+                  fieldErrors.level
+                    ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+                    : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
+                }`}
               >
                 <option value="" disabled>เลือกระดับชั้น</option>
                 <option value="มัธยมศึกษาตอนต้น">มัธยมศึกษาตอนต้น</option>
                 <option value="มัธยมศึกษาตอนปลาย">มัธยมศึกษาตอนปลาย</option>
                 <option value="มหาวิทยาลัย">มหาวิทยาลัย</option>
               </select>
+              {fieldErrors.level && (
+                <p className="mt-1.5 text-xs text-red-500 font-medium">{fieldErrors.level}</p>
+              )}
             </div>
 
             <div className="flex flex-col justify-end">
