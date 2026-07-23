@@ -6,6 +6,7 @@ import Swal from 'sweetalert2';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import { postService } from '../services/post.service';
+import { uploadFileToSupabase } from '@/utils/storage';
 
 const SUGGESTED_TAGS = ['#AI', '#เรียนรู้ไปด้วยกัน', '#เตรียมสอบ', '#TCAS67', '#สรุปย่อ', '#แชร์ความรู้', '#เด็กซิ่ว', '#สรุปชีท'];
 
@@ -206,16 +207,36 @@ export default function CreatePost() {
 
       if (coverImage) {
         formData.append('cover_image', coverImage);
+        try {
+          const coverUrl = await uploadFileToSupabase(coverImage, 'posts', 'covers');
+          if (coverUrl) formData.append('cover_image_url', coverUrl);
+        } catch (e) {
+          console.log('Cover upload to Supabase storage notice:', e);
+        }
       }
 
       if (pdfFile) {
         formData.append('media_files', pdfFile);
+        try {
+          const pdfUrl = await uploadFileToSupabase(pdfFile, 'posts', 'documents');
+          if (pdfUrl) formData.append('pdf_url', pdfUrl);
+        } catch (e) {
+          console.log('PDF upload to Supabase storage notice:', e);
+        }
       }
 
       if (images && images.length > 0) {
-        images.forEach(img => {
+        const imageUrls = [];
+        for (const img of images) {
           formData.append('media_files', img);
-        });
+          try {
+            const url = await uploadFileToSupabase(img, 'posts', 'images');
+            if (url) imageUrls.push(url);
+          } catch (e) {}
+        }
+        if (imageUrls.length > 0) {
+          formData.append('image_urls', JSON.stringify(imageUrls));
+        }
       }
 
       formData.append('tags', JSON.stringify(hashtags));
