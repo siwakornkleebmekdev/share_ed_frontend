@@ -49,11 +49,15 @@ const ProtectedRoute = ({ children }) => {
 function App() {
   const loginAction = useAuthStore((state) => state.login);
   const logoutAction = useAuthStore((state) => state.logout);
+  const setInitializing = useAuthStore((state) => state.setInitializing);
   const isSyncingRef = useRef(false);
 
   useEffect(() => {
     const syncAccountWithDatabase = async (session) => {
-      if (!session || !session.user) return;
+      if (!session || !session.user) {
+        setInitializing(false);
+        return;
+      }
       if (isSyncingRef.current) return;
       isSyncingRef.current = true;
 
@@ -61,12 +65,10 @@ function App() {
         const userEmail = session.user.email;
         const meta = session.user.user_metadata || {};
 
-        // เก็บ Token ของ Supabase ลง localStorage เพื่อใช้เป็น Header สำหรับส่งไป Backend
         if (session.access_token) {
           localStorage.setItem('access_token', session.access_token);
         }
 
-        // เบื้องต้นใส่ข้อมูลจาก session ลง store ก่อนเพื่อความรวดเร็ว
         loginAction({
           id: session.user.id,
           email: userEmail,
@@ -80,7 +82,6 @@ function App() {
           user_metadata: meta
         });
 
-        // ตรวจสอบกับระบบหลังบ้านผ่าน API โดยตรง (เพื่อให้อีเมลที่สมัครไว้แล้วใช้บัญชีเดียวกัน และไม่ติด 403 RLS ของ Supabase)
         try {
           const res = await authService.getMe();
           if (res) {
@@ -112,7 +113,6 @@ function App() {
               }
             });
 
-            // อัปเดต sync ทั้งในตาราง users และใน Supabase auth
             if (mergedEdu) {
               supabase.from('users').update({
                 education_level: mergedEdu,
@@ -133,10 +133,8 @@ function App() {
             return;
           }
         } catch (err) {
-          // ถ้าดึง getMe() ไม่ได้ เช่น เข้าด้วย Google ครั้งแรก หรือ token ยังไม่ตรงกันกับระบบหลังบ้าน
           if (session.user.app_metadata?.provider === 'google' || session.user.user_metadata?.iss?.includes('google') || session.user.app_metadata?.providers?.includes('google')) {
             try {
-              // ลองเรียก /auth/google ของระบบหลังบ้านก่อน (ถ้ามี)
               const gRes = await api.post('/auth/google', {
                 email: userEmail,
                 name: meta.display_name || meta.full_name || meta.name || userEmail?.split('@')[0],
@@ -149,7 +147,6 @@ function App() {
                 return;
               }
             } catch (gErr) {
-              // ถ้าไม่มี endpoint /auth/google ให้ใช้ authService.register ลงทะเบียนเข้า Node.js backend ทันที เพื่อไม่ให้ติด 401 เมื่อไปหน้า Profile
               try {
                 const fixedPassword = "Google_OAuth_" + userEmail.toLowerCase() + "_Secret#2024!";
                 const uname = meta.display_name || meta.full_name || meta.name || userEmail?.split('@')[0];
@@ -181,23 +178,20 @@ function App() {
               } catch (regErr) {
                 console.log("Google auto-register notice:", regErr?.response?.data || regErr.message);
                 
-                // ลอง Login ด้วยรหัสผ่านรูปแบบคงตัวแบบต่าง ๆ
                 let loggedIn = false;
                 let loginRes;
                 
-                // 1. ลองตัวพิมพ์เล็ก (แนะนำ)
                 const fixedPasswordLower = "Google_OAuth_" + userEmail.toLowerCase() + "_Secret#2024!";
                 try {
                   loginRes = await authService.login(userEmail, fixedPasswordLower);
                   loggedIn = true;
                 } catch (loginErr1) {
-                  // 2. ลองตัวพิมพ์ดั้งเดิมจาก Supabase
                   const fixedPasswordOriginal = "Google_OAuth_" + userEmail + "_Secret#2024!";
                   try {
                     loginRes = await authService.login(userEmail, fixedPasswordOriginal);
                     loggedIn = true;
                   } catch (loginErr2) {
-                    console.log("Both fixed password logins failed. Proposing password link.");
+                    console.log("Both fixed password logins failed.");
                   }
                 }
 
@@ -212,7 +206,6 @@ function App() {
                   }
                 }
 
-                // หากไม่สามารถเข้าสู่ระบบด้วย OAuth ได้ แสดงว่าอีเมลนี้ลงทะเบียนด้วยรหัสผ่านปกติไว้แล้ว ให้ปฏิเสธและแจ้งเตือน
                 toast.error('อีเมลนี้เคยลงทะเบียนด้วยรหัสผ่านในระบบไว้แล้ว กรุณาเข้าสู่ระบบด้วยอีเมลและรหัสผ่านหลัก', { id: 'auth-link-error' });
                 await supabase.auth.signOut();
                 logoutAction();
@@ -226,10 +219,10 @@ function App() {
         }
       } finally {
         isSyncingRef.current = false;
+        setInitializing(false);
       }
     };
 
-    // Check active session on load
     const token = localStorage.getItem('access_token');
     if (token) {
       authService.getMe().then((res) => {
@@ -241,7 +234,9 @@ function App() {
             user_id: dbUser.id || dbUser._id || dbUser.user_id
           });
         }
-      }).catch(() => {});
+      }).catch(() => {}).finally(() => {
+        setInitializing(false);
+      });
     }
 
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -258,10 +253,8 @@ function App() {
                 id: dbUser.id || dbUser._id || dbUser.user_id,
                 user_id: dbUser.id || dbUser._id || dbUser.user_id
               });
-            } else {
-              setInitializing(false);
             }
-          }).catch(() => {
+          }).catch(() => {}).finally(() => {
             setInitializing(false);
           });
         } else {
@@ -272,18 +265,15 @@ function App() {
       setInitializing(false);
     });
 
-    // Listen for auth changes (like returning from Google Login or logout)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
         syncAccountWithDatabase(session);
-      } else if (event === 'SIGNED_OUT') {
-        logoutAction();
+      } else {
+        setInitializing(false);
       }
     });
 
-    return () => {
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, [loginAction, logoutAction, setInitializing]);
 
   return (
@@ -358,7 +348,6 @@ function App() {
         </Route>
       </Routes>
 
-      {/* Modal สำหรับอัปเดตโปรไฟล์ครั้งแรก (Age, Education Level, Bio) เมื่อผู้ใช้งานเข้าสู่ระบบแล้วแต่ยังไม่มีข้อมูล */}
       <SetupProfileFirstTime />
 
       <Toaster position="bottom-center" toastOptions={{
