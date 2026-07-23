@@ -3,6 +3,7 @@ import { BookOpen, LayoutDashboard, User, Palette, Puzzle, Settings, Undo2, LogO
 import toast from 'react-hot-toast';
 import useAuthStore from '@/store/authStore';
 import { supabase } from '@/utils/supabase';
+import { authService } from '@/services/auth.service';
 import { mapEducationLevel } from '@/services/profile.service';
 
 const NAV_GROUPS = [
@@ -28,9 +29,9 @@ export default function SettingsSidebar() {
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
+      await authService.logout();
       logout();
-      navigate('/login');
+      navigate('/login', { replace: true });
       toast.success('ออกจากระบบสำเร็จ');
     } catch (error) {
       toast.error('เกิดข้อผิดพลาดในการออกจากระบบ');

@@ -48,55 +48,37 @@ export default function Register() {
     try {
       setIsLoading(true);
 
-      const payload = {
+      const data = await authService.register({
         email,
         password,
-        confirmPassword,
         username,
-        nickname: username,
-        full_name: username,
-        education_level: "MIDDLE_SCHOOL", // ค่าเริ่มต้นเพื่อให้ผ่าน validation ของ Backend
-        age: 0, // ค่าเริ่มต้น
-        bio: "ยังไม่ได้ระบุ" // ค่าเริ่มต้นชั่วคราวเพื่อให้ผ่าน validation ของ Backend
-      };
+        education_level: educationLevel || 'HIGH_SCHOOL',
+        age: 0,
+        bio: 'ยังไม่ได้ระบุ'
+      });
 
-      const data = await authService.register(payload);
-      
-      let token = data?.token || data?.access_token || data?.data?.token || data?.data?.access_token || data?.session?.access_token;
-      if (!token) {
-        try {
-          const loginRes = await authService.login(email, password);
-          token = loginRes?.token || loginRes?.access_token || loginRes?.data?.token || loginRes?.data?.access_token || loginRes?.session?.access_token;
-        } catch (e) {
-          console.log("Auto login after register info:", e);
-        }
-      }
+      const registeredUser = data?.session?.user || data?.user || {};
+      const meta = registeredUser.user_metadata || {};
 
-      // เข้าสู่ระบบใน state ทันที
-      const registeredUser = data?.user || data?.data || data?.session?.user || data || {};
       loginAction({
         ...registeredUser,
-        id: registeredUser.id || registeredUser._id || registeredUser.user_id || 'new_user',
-        user_id: registeredUser.id || registeredUser._id || registeredUser.user_id || 'new_user',
+        id: registeredUser.id || 'new_user',
+        user_id: registeredUser.id || 'new_user',
         email,
         name: username,
         display_name: username,
         username,
-        education_level: "MIDDLE_SCHOOL",
+        education_level: educationLevel || 'HIGH_SCHOOL',
         age: 0,
-        bio: "ยังไม่ได้ระบุ"
+        bio: 'ยังไม่ได้ระบุ',
+        user_metadata: meta
       });
 
       toast.success('สมัครสมาชิกสำเร็จ ยินดีต้อนรับสู่ SHARE-ED!');
       navigate('/explore');
     } catch (error) {
-      console.error("Register Error:", error.response?.data || error);
-      const errMsg = error.response?.data?.message || error.response?.data?.error || JSON.stringify(error.response?.data || error.message);
-      if (typeof errMsg === 'string' && (errMsg.includes('ใช้งานแล้ว') || errMsg.includes('ซ้ำ') || errMsg.includes('มีผู้ใช้งาน') || errMsg.includes('already') || errMsg.includes('exist') || errMsg.includes('in use') || errMsg.includes('duplicate'))) {
-        setFieldErrors({ email: 'อีเมลหรือชื่อผู้ใช้นี้เคยถูกใช้งานแล้ว กรุณาใช้อีเมลอื่น หรือเข้าสู่ระบบ' });
-      } else {
-        setFieldErrors({ general: typeof errMsg === 'string' ? errMsg : 'เกิดข้อผิดพลาดในการสมัครสมาชิก' });
-      }
+      console.error("Register Error:", error);
+      toast.error(error.message || 'เกิดข้อผิดพลาดในการสมัครสมาชิก');
     } finally {
       setIsLoading(false);
     }

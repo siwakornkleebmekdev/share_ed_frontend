@@ -24,21 +24,32 @@ export default function Login() {
       setIsLoading(true);
 
       const data = await authService.login(email, password);
-      const token = data?.token || data?.access_token || data?.data?.token || data?.data?.access_token || data?.session?.access_token;
+      const session = data?.session || data?.data?.session;
+      const token = session?.access_token || data?.token || data?.access_token || data?.data?.token;
+
       if (token) {
         localStorage.setItem('access_token', token);
       }
-      const loggedInUser = data.user || data.data || data.session?.user || data || {};
+
+      const loggedInUser = session?.user || data?.user || data?.data?.user || data?.data || data || {};
+      const meta = loggedInUser.user_metadata || {};
+
       loginAction({
         ...loggedInUser,
         id: loggedInUser.id || loggedInUser._id || loggedInUser.user_id,
-        user_id: loggedInUser.id || loggedInUser._id || loggedInUser.user_id
+        user_id: loggedInUser.id || loggedInUser._id || loggedInUser.user_id,
+        email: loggedInUser.email || email,
+        name: meta.display_name || meta.full_name || meta.username || loggedInUser.name || email.split('@')[0],
+        avatar: meta.avatar_url || loggedInUser.avatar,
+        display_name: meta.display_name || meta.full_name || meta.username || loggedInUser.display_name,
+        username: meta.username || meta.display_name || meta.full_name || loggedInUser.username,
+        user_metadata: meta
       });
       
       toast.success('เข้าสู่ระบบสำเร็จ!');
       navigate('/explore');
     } catch (error) {
-      toast.error(error.response?.data?.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
+      toast.error(error.message || error.response?.data?.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
     } finally {
       setIsLoading(false);
     }

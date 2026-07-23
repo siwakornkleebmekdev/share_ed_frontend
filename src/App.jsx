@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router';
 import toast, { Toaster } from 'react-hot-toast';
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import useAuthStore from './store/authStore';
 import MainLayout from './layouts/MainLayout';
 import SettingsLayout from './layouts/SettingsLayout';
@@ -22,9 +22,8 @@ import SettingsProfile from './pages/settings/SettingsProfile';
 import SettingsAppearance from './pages/settings/SettingsAppearance';
 import SettingsWidgets from './pages/settings/SettingsWidgets';
 import SettingsAccount from './pages/settings/SettingsAccount';
-import { supabase } from './utils/supabase';
-import api from './utils/api';
 import { authService } from './services/auth.service';
+import { supabase } from './utils/supabase';
 
 // Route Guardian Component
 const ProtectedRoute = ({ children }) => {
@@ -49,227 +48,70 @@ function App() {
   const loginAction = useAuthStore((state) => state.login);
   const logoutAction = useAuthStore((state) => state.logout);
   const setInitializing = useAuthStore((state) => state.setInitializing);
-  const isSyncingRef = useRef(false);
 
   useEffect(() => {
-    const syncAccountWithDatabase = async (session) => {
+    const handleSession = async (session) => {
       if (!session || !session.user) {
-        setInitializing(false);
-        return;
-      }
-      if (isSyncingRef.current) return;
-      isSyncingRef.current = true;
-
-      try {
-        const userEmail = session.user.email;
-        const meta = session.user.user_metadata || {};
-
-        if (session.access_token) {
-          localStorage.setItem('access_token', session.access_token);
-        }
-
-        loginAction({
-          id: session.user.id,
-          email: userEmail,
-          name: meta.display_name || meta.full_name || meta.username || userEmail,
-          avatar: meta.avatar_url,
-          display_name: meta.display_name || meta.full_name || meta.username,
-          username: meta.username || meta.display_name || meta.full_name,
-          education_level: meta.education_level,
-          age: meta.age,
-          bio: meta.bio,
-          user_metadata: meta
-        });
-
-        try {
-          const res = await authService.getMe();
-          if (res) {
-            const dbUser = res.data || res.user || res;
-            const mergedEdu = dbUser.education_level || meta.education_level;
-            const mergedAge = dbUser.age || meta.age;
-            const mergedBio = dbUser.bio || meta.bio;
-            const mergedUsername = dbUser.username || dbUser.nickname || meta.display_name || meta.username || meta.full_name || userEmail?.split('@')[0];
-
-            loginAction({
-              ...dbUser,
-              id: dbUser.id || dbUser._id || session.user.id,
-              user_id: dbUser.id || dbUser._id || session.user.id,
-              email: userEmail,
-              name: mergedUsername,
-              avatar: dbUser.avatar_url || meta.avatar_url,
-              display_name: mergedUsername,
-              username: mergedUsername,
-              education_level: mergedEdu,
-              age: mergedAge,
-              bio: mergedBio,
-              user_metadata: {
-                ...meta,
-                ...dbUser,
-                education_level: mergedEdu,
-                age: mergedAge,
-                bio: mergedBio,
-                username: mergedUsername
-              }
-            });
-
-            if (mergedEdu) {
-              supabase.from('users').update({
-                education_level: mergedEdu,
-                age: mergedAge || null,
-                bio: mergedBio || null,
-                updated_at: new Date()
-              }).eq('id', session.user.id).catch(() => {});
-
-              supabase.auth.updateUser({
-                data: {
-                  education_level: mergedEdu,
-                  age: mergedAge || 0,
-                  bio: mergedBio || " ",
-                  username: mergedUsername
-                }
-              }).catch(() => {});
-            }
-            return;
-          }
-        } catch (err) {
-          if (session.user.app_metadata?.provider === 'google' || session.user.user_metadata?.iss?.includes('google') || session.user.app_metadata?.providers?.includes('google')) {
-            try {
-              const gRes = await api.post('/auth/google', {
-                email: userEmail,
-                name: meta.display_name || meta.full_name || meta.name || userEmail?.split('@')[0],
-                avatar: meta.avatar_url
-              });
-              const gToken = gRes.data?.token || gRes.data?.access_token || gRes.data?.data?.token || gRes.data?.data?.access_token;
-              if (gToken) {
-                localStorage.setItem('access_token', gToken);
-                loginAction(gRes.data.user || gRes.data.data);
-                return;
-              }
-            } catch (gErr) {
-              try {
-                const fixedPassword = "Google_OAuth_" + userEmail.toLowerCase() + "_Secret#2024!";
-                const uname = meta.display_name || meta.full_name || meta.name || userEmail?.split('@')[0];
-                const regData = await authService.register({
-                  email: userEmail,
-                  password: fixedPassword,
-                  confirmPassword: fixedPassword,
-                  username: uname,
-                  nickname: uname,
-                  full_name: uname,
-                  education_level: "MIDDLE_SCHOOL",
-                  age: 0,
-                  bio: "ยังไม่ได้ระบุ"
-                });
-                const regToken = regData?.token || regData?.access_token || regData?.data?.token || regData?.data?.access_token;
-                if (regToken) {
-                  localStorage.setItem('access_token', regToken);
-                  loginAction(regData.user || regData.data || {
-                    email: userEmail,
-                    name: uname,
-                    display_name: uname,
-                    username: uname,
-                    education_level: "MIDDLE_SCHOOL",
-                    age: 0,
-                    bio: "ยังไม่ได้ระบุ"
-                  });
-                  return;
-                }
-              } catch (regErr) {
-                console.log("Google auto-register notice:", regErr?.response?.data || regErr.message);
-                
-                let loggedIn = false;
-                let loginRes;
-                
-                const fixedPasswordLower = "Google_OAuth_" + userEmail.toLowerCase() + "_Secret#2024!";
-                try {
-                  loginRes = await authService.login(userEmail, fixedPasswordLower);
-                  loggedIn = true;
-                } catch (loginErr1) {
-                  const fixedPasswordOriginal = "Google_OAuth_" + userEmail + "_Secret#2024!";
-                  try {
-                    loginRes = await authService.login(userEmail, fixedPasswordOriginal);
-                    loggedIn = true;
-                  } catch (loginErr2) {
-                    console.log("Both fixed password logins failed.");
-                  }
-                }
-
-                if (loggedIn && loginRes) {
-                  const lToken = loginRes?.token || loginRes?.access_token || loginRes?.data?.token || loginRes?.data?.access_token;
-                  if (lToken) {
-                    localStorage.setItem('access_token', lToken);
-                    if (loginRes.user || loginRes.data) {
-                      loginAction(loginRes.user || loginRes.data);
-                    }
-                    return;
-                  }
-                }
-
-                toast.error('อีเมลนี้เคยลงทะเบียนด้วยรหัสผ่านในระบบไว้แล้ว กรุณาเข้าสู่ระบบด้วยอีเมลและรหัสผ่านหลัก', { id: 'auth-link-error' });
-                await supabase.auth.signOut();
-                logoutAction();
-
-                if (session.access_token) {
-                  localStorage.setItem('access_token', session.access_token);
-                }
-              }
-            }
-          }
-        }
-      } finally {
-        isSyncingRef.current = false;
-        setInitializing(false);
-      }
-    };
-
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      authService.getMe().then((res) => {
-        if (res) {
-          const dbUser = res.data || res.user || res;
-          loginAction({
-            ...dbUser,
-            id: dbUser.id || dbUser._id || dbUser.user_id,
-            user_id: dbUser.id || dbUser._id || dbUser.user_id
-          });
-        }
-      }).catch(() => {}).finally(() => {
-        setInitializing(false);
-      });
-    }
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        syncAccountWithDatabase(session);
-      } else {
-        const fallbackToken = localStorage.getItem('access_token');
-        if (fallbackToken) {
-          authService.getMe().then((res) => {
+        const token = localStorage.getItem('access_token');
+        if (token && token !== 'undefined' && token !== 'null') {
+          try {
+            const res = await authService.getMe();
             if (res && (res.data || res.user)) {
               const dbUser = res.data || res.user;
               loginAction({
                 ...dbUser,
                 id: dbUser.id || dbUser._id || dbUser.user_id,
-                user_id: dbUser.id || dbUser._id || dbUser.user_id
+                user_id: dbUser.id || dbUser._id || dbUser.user_id,
+                email: dbUser.email,
+                name: dbUser.username || dbUser.name || dbUser.display_name,
+                username: dbUser.username || dbUser.display_name
               });
+              setInitializing(false);
+              return;
             }
-          }).catch(() => {}).finally(() => {
-            setInitializing(false);
-          });
-        } else {
-          setInitializing(false);
+          } catch (e) {
+            console.log('Fallback getMe error:', e);
+          }
         }
+        logoutAction();
+        setInitializing(false);
+        return;
       }
+
+      const userEmail = session.user.email;
+      const meta = session.user.user_metadata || {};
+
+      if (session.access_token) {
+        localStorage.setItem('access_token', session.access_token);
+      }
+
+      loginAction({
+        id: session.user.id,
+        user_id: session.user.id,
+        email: userEmail,
+        name: meta.display_name || meta.full_name || meta.name || meta.username || userEmail?.split('@')[0],
+        avatar: meta.avatar_url,
+        display_name: meta.display_name || meta.full_name || meta.name || meta.username,
+        username: meta.username || meta.display_name || meta.full_name || userEmail?.split('@')[0],
+        education_level: meta.education_level || 'HIGH_SCHOOL',
+        age: meta.age || 0,
+        bio: meta.bio || 'ยังไม่ได้ระบุ',
+        user_metadata: meta
+      });
+
+      setInitializing(false);
+    };
+
+    // Initial check of Supabase session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      handleSession(session);
     }).catch(() => {
       setInitializing(false);
     });
 
+    // Listen to Supabase Auth state changes (Login, Logout, OAuth redirect)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) {
-        syncAccountWithDatabase(session);
-      } else {
-        setInitializing(false);
-      }
+      handleSession(session);
     });
 
     return () => subscription.unsubscribe();

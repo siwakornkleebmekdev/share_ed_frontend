@@ -4,7 +4,14 @@ const useAuthStore = create((set) => ({
   isAuthenticated: false,
   user: null,
   login: (userData) => set({ isAuthenticated: true, user: userData }),
-  logout: () => set({ isAuthenticated: false, user: null }),
+  logout: () => {
+    try {
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('login_timestamp');
+      sessionStorage.clear();
+    } catch (e) {}
+    set({ isAuthenticated: false, user: null });
+  },
 }));
 
 export default useAuthStore;

@@ -6,6 +6,7 @@ import useAuthStore from '@/store/authStore';
 import useHeroThemeStore from '@/store/heroThemeStore';
 import useAchievementStore from '@/store/achievementStore';
 import { supabase } from '@/utils/supabase';
+import { authService } from '@/services/auth.service';
 import { getGlassColor, rgbToRgba } from '@/utils/colorUtils';
 import toast from 'react-hot-toast';
 
@@ -30,10 +31,10 @@ export default function Navbar() {
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
+      await authService.logout();
       logout();
       setShowProfileMenu(false);
-      navigate('/login');
+      navigate('/login', { replace: true });
       toast.success('ออกจากระบบสำเร็จ');
     } catch (error) {
       toast.error('เกิดข้อผิดพลาดในการออกจากระบบ');
