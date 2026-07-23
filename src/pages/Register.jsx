@@ -207,6 +207,31 @@ export default function Register() {
                 </div>
               </div>
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">ระดับการศึกษา <span className="text-red-500">*</span></label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <BookOpen className="h-5 w-5 text-slate-400" />
+                </div>
+                <select 
+                  value={educationLevel}
+                  onChange={(e) => setEducationLevel(e.target.value)}
+                  required 
+                  className="block w-full pl-10 pr-10 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors bg-white text-slate-900 appearance-none"
+                >
+                  <option value="" disabled>เลือกระดับการศึกษา</option>
+                  <option value="MIDDLE_SCHOOL">มัธยมศึกษาตอนต้น</option>
+                  <option value="HIGH_SCHOOL">มัธยมศึกษาตอนปลาย</option>
+                  <option value="UNIVERSITY">มหาวิทยาลัย</option>
+                </select>
+                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                  <svg className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+            </div>
             
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">รหัสผ่าน <span className="text-red-500">*</span></label>
