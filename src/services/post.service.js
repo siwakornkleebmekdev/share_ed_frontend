@@ -93,6 +93,20 @@ export const postService = {
       console.error(`Error creating comment on post ${id}:`, error);
       throw error;
     }
+  },
+
+  // Get System Stats (total users, total posts)
+  getSystemStats: async () => {
+    try {
+      const response = await api.get('/system/stats');
+      if (response.data.success) {
+        return response.data.data;
+      }
+      return { totalSharers: 0, totalPosts: 0 };
+    } catch (error) {
+      console.log('Notice: /system/stats API fallback');
+      return { totalSharers: 0, totalPosts: 0 };
+    }
   }
 };
 

@@ -33,16 +33,33 @@ export default function Home() {
     const fetchPostsAndStats = async () => {
       try {
         setIsLoading(true);
-        const [fetchedPosts, statsData] = await Promise.all([
-          postService.getAllPosts(),
-          postService.getSystemStats()
-        ]);
-        setPosts(fetchedPosts);
+        let fetchedPosts = [];
+        try {
+          fetchedPosts = await postService.getAllPosts();
+        } catch (e) {
+          console.error('Error fetching home posts:', e);
+        }
+
+        let statsData = null;
+        try {
+          if (typeof postService.getSystemStats === 'function') {
+            statsData = await postService.getSystemStats();
+          }
+        } catch (e) {
+          console.log('Notice: getSystemStats error fallback');
+        }
+
+        setPosts(fetchedPosts || []);
         if (statsData) {
           setStats({
-            totalUsers: statsData.totalSharers || 0,
-            totalPosts: statsData.totalPosts || 0
+            totalUsers: statsData.totalSharers || statsData.totalUsers || 0,
+            totalPosts: statsData.totalPosts || (fetchedPosts ? fetchedPosts.length : 0)
           });
+        } else {
+          setStats(prev => ({
+            ...prev,
+            totalPosts: (fetchedPosts ? fetchedPosts.length : 0) || prev.totalPosts
+          }));
         }
       } catch (error) {
         console.error('Error loading home data:', error);
