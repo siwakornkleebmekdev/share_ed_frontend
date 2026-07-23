@@ -22,7 +22,6 @@ import SettingsProfile from './pages/settings/SettingsProfile';
 import SettingsAppearance from './pages/settings/SettingsAppearance';
 import SettingsWidgets from './pages/settings/SettingsWidgets';
 import SettingsAccount from './pages/settings/SettingsAccount';
-import SetupProfileFirstTime from './components/SetupProfileFirstTime';
 import { supabase } from './utils/supabase';
 import api from './utils/api';
 import { authService } from './services/auth.service';
@@ -347,8 +346,6 @@ function App() {
           <Route path="account" element={<SettingsAccount />} />
         </Route>
       </Routes>
-
-      <SetupProfileFirstTime />
 
       <Toaster position="bottom-center" toastOptions={{
         style: {
