@@ -50,17 +50,15 @@ export default function Home() {
         }
 
         setPosts(fetchedPosts || []);
-        if (statsData) {
-          setStats({
-            totalUsers: statsData.totalSharers || statsData.totalUsers || 0,
-            totalPosts: statsData.totalPosts || (fetchedPosts ? fetchedPosts.length : 0)
-          });
-        } else {
-          setStats(prev => ({
-            ...prev,
-            totalPosts: (fetchedPosts ? fetchedPosts.length : 0) || prev.totalPosts
-          }));
-        }
+
+        const uniqueAuthors = new Set((fetchedPosts || []).map(p => p.author)).size;
+        const totalUsersCount = statsData?.totalSharers || statsData?.totalUsers || statsData?.total_users || (uniqueAuthors > 0 ? uniqueAuthors : 1);
+        const totalPostsCount = statsData?.totalPosts || (fetchedPosts ? fetchedPosts.length : 0);
+
+        setStats({
+          totalUsers: totalUsersCount,
+          totalPosts: totalPostsCount
+        });
       } catch (error) {
         console.error('Error loading home data:', error);
       } finally {

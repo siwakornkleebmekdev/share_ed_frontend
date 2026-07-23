@@ -99,13 +99,27 @@ export const postService = {
   getSystemStats: async () => {
     try {
       const response = await api.get('/system/stats');
-      if (response.data.success) {
+      if (response.data.success && (response.data.data?.totalSharers || response.data.data?.totalUsers)) {
         return response.data.data;
       }
-      return { totalSharers: 0, totalPosts: 0 };
     } catch (error) {
-      console.log('Notice: /system/stats API fallback');
-      return { totalSharers: 0, totalPosts: 0 };
+      console.log('Notice: /system/stats API fallback to Supabase query');
+    }
+
+    // Fallback: Query exact count from Supabase
+    try {
+      const [{ count: userCount }, { count: postCount }] = await Promise.all([
+        supabase.from('users').select('id', { count: 'exact', head: true }),
+        supabase.from('posts').select('id', { count: 'exact', head: true })
+      ]);
+
+      return {
+        totalSharers: userCount || 0,
+        totalUsers: userCount || 0,
+        totalPosts: postCount || 0
+      };
+    } catch (e) {
+      return { totalSharers: 0, totalUsers: 0, totalPosts: 0 };
     }
   }
 };
