@@ -30,14 +30,6 @@ export default function PostDetails() {
     window.scrollTo(0, 0);
   }, []);
 
-  // Force guest user to redirect to Login page
-  useEffect(() => {
-    if (!isAuthenticated) {
-      toast.error('กรุณาเข้าสู่ระบบก่อนเข้าชมรายละเอียดโพสต์');
-      navigate('/login');
-    }
-  }, [isAuthenticated, navigate]);
-
   const [post, setPost] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -73,9 +65,11 @@ export default function PostDetails() {
       }
     };
 
-    if (id && isAuthenticated) {
+    if (id) {
       fetchPost();
-      checkBookmarkStatus();
+      if (isAuthenticated) {
+        checkBookmarkStatus();
+      }
     }
   }, [id, user, isAuthenticated]);
 

@@ -25,6 +25,49 @@ import SettingsAccount from './pages/settings/SettingsAccount';
 import { authService } from './services/auth.service';
 import { supabase } from './utils/supabase';
 
+// Helper to decode JWT token payload safely
+const getUserFromToken = (token) => {
+  if (!token || typeof token !== 'string') return null;
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const base64Url = parts[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    const payload = JSON.parse(jsonPayload);
+
+    // Check if token expired
+    if (payload.exp && Date.now() >= payload.exp * 1000) {
+      return null;
+    }
+
+    const meta = payload.user_metadata || payload.app_metadata || {};
+    const userId = payload.sub || payload.id || payload.user_id;
+
+    return {
+      id: userId,
+      user_id: userId,
+      email: payload.email || meta.email || '',
+      name: meta.display_name || meta.full_name || meta.name || meta.username || payload.email?.split('@')[0] || 'ผู้ใช้งาน',
+      avatar: meta.avatar_url || payload.avatar,
+      display_name: meta.display_name || meta.full_name || meta.name || meta.username || payload.email?.split('@')[0] || 'ผู้ใช้งาน',
+      username: meta.username || meta.display_name || meta.full_name || payload.email?.split('@')[0] || 'ผู้ใช้งาน',
+      education_level: meta.education_level || payload.education_level || 'HIGH_SCHOOL',
+      age: meta.age || payload.age || 0,
+      bio: meta.bio || payload.bio || 'ยังไม่ได้ระบุ',
+      user_metadata: meta
+    };
+  } catch (e) {
+    console.error('Error decoding token:', e);
+    return null;
+  }
+};
+
 // Route Guardian Component
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, isInitializing } = useAuthStore();
@@ -51,54 +94,63 @@ function App() {
 
   useEffect(() => {
     const handleSession = async (session) => {
-      if (!session || !session.user) {
-        const token = localStorage.getItem('access_token');
-        if (token && token !== 'undefined' && token !== 'null') {
+      // 1. If Supabase session is active, update login state
+      if (session && session.user) {
+        const userEmail = session.user.email;
+        const meta = session.user.user_metadata || {};
+
+        if (session.access_token) {
+          localStorage.setItem('access_token', session.access_token);
+        }
+
+        loginAction({
+          id: session.user.id,
+          user_id: session.user.id,
+          email: userEmail,
+          name: meta.display_name || meta.full_name || meta.name || meta.username || userEmail?.split('@')[0],
+          avatar: meta.avatar_url,
+          display_name: meta.display_name || meta.full_name || meta.name || meta.username,
+          username: meta.username || meta.display_name || meta.full_name || userEmail?.split('@')[0],
+          education_level: meta.education_level || 'HIGH_SCHOOL',
+          age: meta.age || 0,
+          bio: meta.bio || 'ยังไม่ได้ระบุ',
+          user_metadata: meta
+        });
+
+        setInitializing(false);
+        return;
+      }
+
+      // 2. If Supabase session is empty, check localStorage access_token
+      const savedToken = localStorage.getItem('access_token');
+      if (savedToken && savedToken !== 'undefined' && savedToken !== 'null') {
+        const tokenUser = getUserFromToken(savedToken);
+        if (tokenUser) {
+          // Token is valid and not expired -> keep user logged in!
+          loginAction(tokenUser);
+          setInitializing(false);
+
+          // Asynchronously attempt to refresh user profile from server
           try {
             const res = await authService.getMe();
             if (res && (res.data || res.user)) {
               const dbUser = res.data || res.user;
               loginAction({
+                ...tokenUser,
                 ...dbUser,
-                id: dbUser.id || dbUser._id || dbUser.user_id,
-                user_id: dbUser.id || dbUser._id || dbUser.user_id,
-                email: dbUser.email,
-                name: dbUser.username || dbUser.name || dbUser.display_name,
-                username: dbUser.username || dbUser.display_name
+                id: dbUser.id || dbUser._id || dbUser.user_id || tokenUser.id,
+                user_id: dbUser.id || dbUser._id || dbUser.user_id || tokenUser.id
               });
-              setInitializing(false);
-              return;
             }
           } catch (e) {
-            console.log('Fallback getMe error:', e);
+            console.log('Background getMe check notice:', e);
           }
+          return;
         }
-        logoutAction();
-        setInitializing(false);
-        return;
       }
 
-      const userEmail = session.user.email;
-      const meta = session.user.user_metadata || {};
-
-      if (session.access_token) {
-        localStorage.setItem('access_token', session.access_token);
-      }
-
-      loginAction({
-        id: session.user.id,
-        user_id: session.user.id,
-        email: userEmail,
-        name: meta.display_name || meta.full_name || meta.name || meta.username || userEmail?.split('@')[0],
-        avatar: meta.avatar_url,
-        display_name: meta.display_name || meta.full_name || meta.name || meta.username,
-        username: meta.username || meta.display_name || meta.full_name || userEmail?.split('@')[0],
-        education_level: meta.education_level || 'HIGH_SCHOOL',
-        age: meta.age || 0,
-        bio: meta.bio || 'ยังไม่ได้ระบุ',
-        user_metadata: meta
-      });
-
+      // 3. Token is missing or expired -> log out cleanly
+      logoutAction();
       setInitializing(false);
     };
 
@@ -106,12 +158,24 @@ function App() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       handleSession(session);
     }).catch(() => {
+      const savedToken = localStorage.getItem('access_token');
+      const tokenUser = getUserFromToken(savedToken);
+      if (tokenUser) {
+        loginAction(tokenUser);
+      } else {
+        logoutAction();
+      }
       setInitializing(false);
     });
 
-    // Listen to Supabase Auth state changes (Login, Logout, OAuth redirect)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      handleSession(session);
+    // Listen to Supabase Auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        logoutAction();
+        setInitializing(false);
+      } else if (session) {
+        handleSession(session);
+      }
     });
 
     return () => subscription.unsubscribe();
