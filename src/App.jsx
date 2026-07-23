@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router';
-import { Toaster } from 'react-hot-toast';
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
+import toast, {Toaster} from 'react-hot-toast';
 import useAuthStore from './store/authStore';
 import MainLayout from './layouts/MainLayout';
 import SettingsLayout from './layouts/SettingsLayout';
@@ -8,6 +8,7 @@ import LandingPage from './pages/LandingPage';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ResetPassword from './pages/ResetPassword';
 import Explore from './pages/Explore';
 import CreatePost from './pages/CreatePost';
 import Trending from './pages/Trending';
@@ -27,7 +28,19 @@ import { authService } from './services/auth.service';
 
 // Route Guardian Component
 const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, isInitializing } = useAuthStore();
+
+  if (isInitializing) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-sm text-slate-500 font-medium">กำลังโหลดข้อมูล...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   return children;
 };
@@ -36,6 +49,7 @@ function App() {
   const loginAction = useAuthStore((state) => state.login);
   const logoutAction = useAuthStore((state) => state.logout);
   const isSyncingRef = useRef(false);
+  const setInitializing = useAuthStore((state) => state.setInitializing);
 
   useEffect(() => {
     // The backend's real /auth/login response nests the session under
@@ -191,18 +205,44 @@ function App() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         syncAccountWithDatabase(session);
+      } else {
+        const fallbackToken = localStorage.getItem('access_token');
+        if (fallbackToken) {
+          authService.getMe().then((res) => {
+            if (res && (res.data || res.user)) {
+              const dbUser = res.data || res.user;
+              loginAction({
+                ...dbUser,
+                id: dbUser.id || dbUser._id || dbUser.user_id,
+                user_id: dbUser.id || dbUser._id || dbUser.user_id
+              });
+            } else {
+              setInitializing(false);
+            }
+          }).catch(() => {
+            setInitializing(false);
+          });
+        } else {
+          setInitializing(false);
+        }
       }
+    }).catch(() => {
+      setInitializing(false);
     });
 
-    // Listen for auth changes (like returning from Google Login)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    // Listen for auth changes (like returning from Google Login or logout)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
         syncAccountWithDatabase(session);
+      } else if (event === 'SIGNED_OUT') {
+        logoutAction();
       }
     });
 
-    return () => subscription.unsubscribe();
-  }, [loginAction, logoutAction]);
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [loginAction, logoutAction, setInitializing]);
 
   return (
     <>
@@ -224,6 +264,7 @@ function App() {
 
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route 
             path="/create" 
             element={

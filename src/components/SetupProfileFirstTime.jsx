@@ -94,57 +94,11 @@ export default function SetupProfileFirstTime() {
         bio: bio || " "
       };
 
-      // อัปเดตข้อมูลระบบหลังบ้าน (ถ้ายังไม่มีบัญชีในระบบหลังบ้าน เช่น สมัครผ่าน Google ครั้งแรก ให้ทำการลงทะเบียนเข้าสู่ระบบหลังบ้านด้วย)
+      // อัปเดตข้อมูลระบบหลังบ้าน
       try {
         await api.put('/users/profile', payload);
       } catch (err) {
-        console.log("put /users/profile failed, attempting backend registration/login recovery:", err?.response?.data || err.message);
-        let fallbackSuccess = false;
-        if (effectiveEmail) {
-          try {
-            const fixedPassword = "Google_OAuth_" + effectiveEmail + "_Secret#2024!";
-            const regData = await authService.register({
-              email: effectiveEmail,
-              password: fixedPassword,
-              confirmPassword: fixedPassword,
-              ...payload
-            });
-            const token = regData?.token || regData?.access_token || regData?.data?.token || regData?.data?.access_token;
-            if (token) {
-              localStorage.setItem('access_token', token);
-              fallbackSuccess = true;
-            }
-          } catch (regErr) {
-            console.log("Backend register recovery info:", regErr?.response?.data || regErr.message);
-            try {
-              const fixedPassword = "Google_OAuth_" + effectiveEmail + "_Secret#2024!";
-              const loginRes = await authService.login(effectiveEmail, fixedPassword);
-              const lToken = loginRes?.token || loginRes?.access_token || loginRes?.data?.token || loginRes?.data?.access_token;
-              if (lToken) {
-                localStorage.setItem('access_token', lToken);
-                fallbackSuccess = true;
-              }
-            } catch (loginErr) {
-              console.log("Fallback login recovery info:", loginErr?.response?.data || loginErr.message);
-            }
-            if (!fallbackSuccess) {
-              try {
-                const res = await authService.getMe();
-                if (res && (res.data || res.user)) {
-                  fallbackSuccess = true;
-                }
-              } catch (meErr) {}
-            }
-          }
-        }
-
-        if (fallbackSuccess) {
-          try {
-            await api.put('/users/profile', payload);
-          } catch (retryErr) {
-            console.log("Retry put /users/profile notice:", retryErr?.response?.data || retryErr.message);
-          }
-        }
+        console.log("put /users/profile notice:", err?.response?.data || err.message);
       }
 
       // อัปเดตข้อมูล Supabase ทั้งในตาราง users และใน auth metadata
