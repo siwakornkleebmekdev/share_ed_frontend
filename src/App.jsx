@@ -1,43 +1,42 @@
-import { Routes, Route, Navigate } from 'react-router';
-import toast, { Toaster } from 'react-hot-toast';
-import { useEffect } from 'react';
-import useAuthStore from './store/authStore';
-import MainLayout from './layouts/MainLayout';
-import SettingsLayout from './layouts/SettingsLayout';
-import LandingPage from './pages/LandingPage';
-import Home from './pages/Home';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import ResetPassword from './pages/ResetPassword';
-import Explore from './pages/Explore';
-import CreatePost from './pages/CreatePost';
-import EditPost from './pages/EditPost';
-import Trending from './pages/Trending';
-import Profile from './pages/Profile';
-import Notifications from './pages/Notifications';
-import Achievements from './pages/Achievements';
-import PostDetails from './pages/PostDetails';
-import SettingsOverview from './pages/settings/SettingsOverview';
-import SettingsProfile from './pages/settings/SettingsProfile';
-import SettingsAppearance from './pages/settings/SettingsAppearance';
-import SettingsWidgets from './pages/settings/SettingsWidgets';
-import SettingsAccount from './pages/settings/SettingsAccount';
-import { authService } from './services/auth.service';
-import { supabase } from './utils/supabase';
+import { Routes, Route, Navigate } from "react-router";
+import toast, { Toaster } from "react-hot-toast";
+import { useEffect } from "react";
+import useAuthStore from "./store/authStore";
+import MainLayout from "./layouts/MainLayout";
+import SettingsLayout from "./layouts/SettingsLayout";
+import LandingPage from "./pages/LandingPage";
+import Home from "./pages/Home";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import ResetPassword from "./pages/ResetPassword";
+import Explore from "./pages/Explore";
+import CreatePost from "./pages/CreatePost";
+import EditPost from "./pages/EditPost";
+import Trending from "./pages/Trending";
+import Profile from "./pages/Profile";
+import Notifications from "./pages/Notifications";
+import Achievements from "./pages/Achievements";
+import PostDetails from "./pages/PostDetails";
+import SettingsProfile from "./pages/settings/SettingsProfile";
+import SettingsAppearance from "./pages/settings/SettingsAppearance";
+import SettingsWidgets from "./pages/settings/SettingsWidgets";
+import SettingsAccount from "./pages/settings/SettingsAccount";
+import { authService } from "./services/auth.service";
+import { supabase } from "./utils/supabase";
 
 // Helper to decode JWT token payload safely
 const getUserFromToken = (token) => {
-  if (!token || typeof token !== 'string') return null;
+  if (!token || typeof token !== "string") return null;
   try {
-    const parts = token.split('.');
+    const parts = token.split(".");
     if (parts.length !== 3) return null;
     const base64Url = parts[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
     const jsonPayload = decodeURIComponent(
       atob(base64)
-        .split('')
-        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join('')
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join(""),
     );
     const payload = JSON.parse(jsonPayload);
 
@@ -52,18 +51,36 @@ const getUserFromToken = (token) => {
     return {
       id: userId,
       user_id: userId,
-      email: payload.email || meta.email || '',
-      name: meta.display_name || meta.full_name || meta.name || meta.username || payload.email?.split('@')[0] || 'ผู้ใช้งาน',
+      email: payload.email || meta.email || "",
+      name:
+        meta.display_name ||
+        meta.full_name ||
+        meta.name ||
+        meta.username ||
+        payload.email?.split("@")[0] ||
+        "ผู้ใช้งาน",
       avatar: meta.avatar_url || payload.avatar,
-      display_name: meta.display_name || meta.full_name || meta.name || meta.username || payload.email?.split('@')[0] || 'ผู้ใช้งาน',
-      username: meta.username || meta.display_name || meta.full_name || payload.email?.split('@')[0] || 'ผู้ใช้งาน',
-      education_level: meta.education_level || payload.education_level || 'HIGH_SCHOOL',
+      display_name:
+        meta.display_name ||
+        meta.full_name ||
+        meta.name ||
+        meta.username ||
+        payload.email?.split("@")[0] ||
+        "ผู้ใช้งาน",
+      username:
+        meta.username ||
+        meta.display_name ||
+        meta.full_name ||
+        payload.email?.split("@")[0] ||
+        "ผู้ใช้งาน",
+      education_level:
+        meta.education_level || payload.education_level || "HIGH_SCHOOL",
       age: meta.age || payload.age || 0,
-      bio: meta.bio || payload.bio || 'ยังไม่ได้ระบุ',
-      user_metadata: meta
+      bio: meta.bio || payload.bio || "ยังไม่ได้ระบุ",
+      user_metadata: meta,
     };
   } catch (e) {
-    console.error('Error decoding token:', e);
+    console.error("Error decoding token:", e);
     return null;
   }
 };
@@ -77,7 +94,9 @@ const ProtectedRoute = ({ children }) => {
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-sm text-slate-500 font-medium">กำลังโหลดข้อมูล...</p>
+          <p className="text-sm text-slate-500 font-medium">
+            กำลังโหลดข้อมูล...
+          </p>
         </div>
       </div>
     );
@@ -100,21 +119,31 @@ function App() {
         const meta = session.user.user_metadata || {};
 
         if (session.access_token) {
-          localStorage.setItem('access_token', session.access_token);
+          localStorage.setItem("access_token", session.access_token);
         }
 
         loginAction({
           id: session.user.id,
           user_id: session.user.id,
           email: userEmail,
-          name: meta.display_name || meta.full_name || meta.name || meta.username || userEmail?.split('@')[0],
+          name:
+            meta.display_name ||
+            meta.full_name ||
+            meta.name ||
+            meta.username ||
+            userEmail?.split("@")[0],
           avatar: meta.avatar_url,
-          display_name: meta.display_name || meta.full_name || meta.name || meta.username,
-          username: meta.username || meta.display_name || meta.full_name || userEmail?.split('@')[0],
-          education_level: meta.education_level || 'HIGH_SCHOOL',
+          display_name:
+            meta.display_name || meta.full_name || meta.name || meta.username,
+          username:
+            meta.username ||
+            meta.display_name ||
+            meta.full_name ||
+            userEmail?.split("@")[0],
+          education_level: meta.education_level || "HIGH_SCHOOL",
           age: meta.age || 0,
-          bio: meta.bio || 'ยังไม่ได้ระบุ',
-          user_metadata: meta
+          bio: meta.bio || "ยังไม่ได้ระบุ",
+          user_metadata: meta,
         });
 
         setInitializing(false);
@@ -122,8 +151,8 @@ function App() {
       }
 
       // 2. If Supabase session is empty, check localStorage access_token
-      const savedToken = localStorage.getItem('access_token');
-      if (savedToken && savedToken !== 'undefined' && savedToken !== 'null') {
+      const savedToken = localStorage.getItem("access_token");
+      if (savedToken && savedToken !== "undefined" && savedToken !== "null") {
         const tokenUser = getUserFromToken(savedToken);
         if (tokenUser) {
           // Token is valid and not expired -> keep user logged in!
@@ -139,11 +168,12 @@ function App() {
                 ...tokenUser,
                 ...dbUser,
                 id: dbUser.id || dbUser._id || dbUser.user_id || tokenUser.id,
-                user_id: dbUser.id || dbUser._id || dbUser.user_id || tokenUser.id
+                user_id:
+                  dbUser.id || dbUser._id || dbUser.user_id || tokenUser.id,
               });
             }
           } catch (e) {
-            console.log('Background getMe check notice:', e);
+            console.log("Background getMe check notice:", e);
           }
           return;
         }
@@ -155,22 +185,27 @@ function App() {
     };
 
     // Initial check of Supabase session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      handleSession(session);
-    }).catch(() => {
-      const savedToken = localStorage.getItem('access_token');
-      const tokenUser = getUserFromToken(savedToken);
-      if (tokenUser) {
-        loginAction(tokenUser);
-      } else {
-        logoutAction();
-      }
-      setInitializing(false);
-    });
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        handleSession(session);
+      })
+      .catch(() => {
+        const savedToken = localStorage.getItem("access_token");
+        const tokenUser = getUserFromToken(savedToken);
+        if (tokenUser) {
+          loginAction(tokenUser);
+        } else {
+          logoutAction();
+        }
+        setInitializing(false);
+      });
 
     // Listen to Supabase Auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT') {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT") {
         logoutAction();
         setInitializing(false);
       } else if (session) {
@@ -190,35 +225,38 @@ function App() {
           <Route path="/explore" element={<Explore />} />
           <Route path="/trending" element={<Trending />} />
           <Route path="/post/:id" element={<PostDetails />} />
-          <Route 
-            path="/post/edit/:id" 
+          <Route
+            path="/post/edit/:id"
             element={
               <ProtectedRoute>
                 <EditPost />
               </ProtectedRoute>
-            } 
+            }
           />
 
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-          <Route 
-            path="/create" 
+          <Route
+            path="/create"
             element={
               <ProtectedRoute>
                 <CreatePost />
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/profile" 
+          <Route
+            path="/profile"
             element={
               <ProtectedRoute>
                 <Profile />
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route path="/profile/edit" element={<Navigate to="/settings/profile" replace />} />
+          <Route
+            path="/profile/edit"
+            element={<Navigate to="/settings/profile" replace />}
+          />
           <Route
             path="/notifications"
             element={
@@ -245,7 +283,6 @@ function App() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<SettingsOverview />} />
           <Route path="profile" element={<SettingsProfile />} />
           <Route path="appearance" element={<SettingsAppearance />} />
           <Route path="widgets" element={<SettingsWidgets />} />
@@ -253,14 +290,17 @@ function App() {
         </Route>
       </Routes>
 
-      <Toaster position="bottom-center" toastOptions={{
-        style: {
-          borderRadius: '12px',
-          background: '#333',
-          color: '#fff',
-          fontWeight: '500',
-        },
-      }} />
+      <Toaster
+        position="bottom-center"
+        toastOptions={{
+          style: {
+            borderRadius: "12px",
+            background: "#333",
+            color: "#fff",
+            fontWeight: "500",
+          },
+        }}
+      />
     </>
   );
 }
