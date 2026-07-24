@@ -1,14 +1,26 @@
-import { Link, useNavigate } from 'react-router';
-import { BookOpen, Search, Bell, User, Heart, MessageSquare, Info, LogOut, Settings, FileText, Trophy } from 'lucide-react';
-import { useState, useEffect, useRef } from 'react';
-import useNotificationStore from '@/store/notificationStore';
-import useAuthStore from '@/store/authStore';
-import useHeroThemeStore from '@/store/heroThemeStore';
-import useAchievementStore from '@/store/achievementStore';
-import { supabase } from '@/utils/supabase';
-import { authService } from '@/services/auth.service';
-import { getGlassColor, rgbToRgba } from '@/utils/colorUtils';
-import toast from 'react-hot-toast';
+import { Link, useNavigate } from "react-router";
+import {
+  BookOpen,
+  Search,
+  Bell,
+  User,
+  Heart,
+  MessageSquare,
+  Info,
+  LogOut,
+  Settings,
+  FileText,
+  Trophy,
+} from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import useNotificationStore from "@/store/notificationStore";
+import useAuthStore from "@/store/authStore";
+import useHeroThemeStore from "@/store/heroThemeStore";
+import useAchievementStore from "@/store/achievementStore";
+import { supabase } from "@/utils/supabase";
+import { authService } from "@/services/auth.service";
+import { getGlassColor, rgbToRgba } from "@/utils/colorUtils";
+import toast from "react-hot-toast";
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -25,7 +37,8 @@ export default function Navbar() {
   const heroColor = useHeroThemeStore((state) => state.heroColor);
   const glassColor = getGlassColor(heroColor, isDarkHero);
 
-  const { notifications, unreadCount, fetchNotifications, markAsRead } = useNotificationStore();
+  const { notifications, unreadCount, fetchNotifications, markAsRead } =
+    useNotificationStore();
   const { isAuthenticated, user, logout } = useAuthStore();
   const { readyToClaimCount, fetchMilestones } = useAchievementStore();
 
@@ -34,10 +47,10 @@ export default function Navbar() {
       await authService.logout();
       logout();
       setShowProfileMenu(false);
-      navigate('/login', { replace: true });
-      toast.success('ออกจากระบบสำเร็จ');
+      navigate("/login", { replace: true });
+      toast.success("ออกจากระบบสำเร็จ");
     } catch (error) {
-      toast.error('เกิดข้อผิดพลาดในการออกจากระบบ');
+      toast.error("เกิดข้อผิดพลาดในการออกจากระบบ");
     }
   };
 
@@ -50,8 +63,8 @@ export default function Navbar() {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
     };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   // Click outside to close notifications and profile popup
@@ -64,57 +77,80 @@ export default function Navbar() {
         setShowProfileMenu(false);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const getNotificationIcon = (type) => {
-    switch(type) {
-      case 'LIKE': return <Heart className="h-4 w-4 text-pink-500" />;
-      case 'COMMENT': return <MessageSquare className="h-4 w-4 text-blue-500" />;
-      case 'SYSTEM': return <Info className="h-4 w-4 text-indigo-500" />;
-      default: return <Bell className="h-4 w-4 text-slate-500" />;
+    switch (type) {
+      case "LIKE":
+        return <Heart className="h-4 w-4 text-pink-500" />;
+      case "COMMENT":
+        return <MessageSquare className="h-4 w-4 text-blue-500" />;
+      case "SYSTEM":
+        return <Info className="h-4 w-4 text-indigo-500" />;
+      default:
+        return <Bell className="h-4 w-4 text-slate-500" />;
     }
   };
 
   return (
-    <div className={`fixed top-0 left-0 w-full z-50 transition-all duration-500 ease-out px-4 ${isScrolled ? 'pt-2' : 'pt-4'}`}>
+    <div
+      className={`fixed top-0 left-0 w-full z-50 transition-all duration-500 ease-out px-4 ${isScrolled ? "pt-2" : "pt-4"}`}
+    >
       <nav
         className={`mx-auto backdrop-blur-md transition-all duration-500 ease-out overflow-visible rounded-full border ${
-          isDarkHero ? 'border-white/10' : 'border-slate-200/50'
+          isDarkHero ? "border-white/10" : "border-slate-200/50"
         } ${
           isScrolled
-            ? 'w-[92%] max-w-5xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] py-2 px-6'
-            : 'w-[98%] max-w-7xl shadow-sm py-2.5 px-8'
+            ? "w-[92%] max-w-5xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] py-2 px-6"
+            : "w-[98%] max-w-7xl shadow-sm py-2.5 px-8"
         }`}
-        style={{ backgroundColor: rgbToRgba(glassColor, isScrolled ? 85 : 65), transition: 'background-color 500ms ease-out' }}
+        style={{
+          backgroundColor: rgbToRgba(glassColor, isScrolled ? 85 : 65),
+          transition: "background-color 500ms ease-out",
+        }}
       >
-        <div className={`w-full flex justify-between items-center transition-all duration-500 ${isScrolled ? 'h-12' : 'h-14'}`}>
+        <div
+          className={`w-full flex justify-between items-center transition-all duration-500 ${isScrolled ? "h-12" : "h-14"}`}
+        >
           <Link to="/" className="flex items-center gap-2 group flex-shrink-0">
             <BookOpen className="text-primary transition-transform duration-300 group-hover:scale-110 h-7 w-7 sm:h-8 sm:w-8" />
-            <span className={`font-bold tracking-tight text-lg sm:text-xl ${isDarkHero ? 'text-white' : 'text-slate-800'}`}>SHARE-ED</span>
+            <span
+              className={`font-bold tracking-tight text-lg sm:text-xl ${isDarkHero ? "text-white" : "text-slate-800"}`}
+            >
+              SHARE-ED
+            </span>
           </Link>
 
           <div className="hidden md:flex items-center justify-center gap-4 sm:gap-6 transition-all duration-500">
             <div className="flex items-center gap-3 sm:gap-4 flex-shrink-0">
-              <Link to="/home" className={`font-bold transition-colors text-sm whitespace-nowrap ${isDarkHero ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-primary'}`}>
+              <Link
+                to="/home"
+                className={`font-bold transition-colors text-sm whitespace-nowrap ${isDarkHero ? "text-slate-300 hover:text-white" : "text-slate-600 hover:text-primary"}`}
+              >
                 หน้าหลัก
               </Link>
-              <Link to="/explore" className={`font-bold transition-colors text-sm whitespace-nowrap ${isDarkHero ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-primary'}`}>
+              <Link
+                to="/explore"
+                className={`font-bold transition-colors text-sm whitespace-nowrap ${isDarkHero ? "text-slate-300 hover:text-white" : "text-slate-600 hover:text-primary"}`}
+              >
                 สำรวจเนื้อหา
               </Link>
-              <Link to="/trending" className={`font-bold transition-colors text-sm whitespace-nowrap ${isDarkHero ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-primary'}`}>
+              <Link
+                to="/trending"
+                className={`font-bold transition-colors text-sm whitespace-nowrap ${isDarkHero ? "text-slate-300 hover:text-white" : "text-slate-600 hover:text-primary"}`}
+              >
                 โพสต์ยอดนิยม
               </Link>
             </div>
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-
             <div className="relative" ref={notifRef}>
               <button
                 onClick={() => setShowNotifications(!showNotifications)}
-                className={`relative p-2.5 rounded-full transition-colors shadow-sm ${isDarkHero ? 'text-slate-300 hover:text-white bg-white/10 hover:bg-white/20' : 'text-slate-500 hover:text-primary bg-slate-100 hover:bg-slate-200'}`}
+                className={`relative p-2.5 rounded-full transition-colors shadow-sm ${isDarkHero ? "text-slate-300 hover:text-white bg-white/10 hover:bg-white/20" : "text-slate-500 hover:text-primary bg-slate-100 hover:bg-slate-200"}`}
               >
                 <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
                 {unreadCount() > 0 && (
@@ -126,35 +162,43 @@ export default function Navbar() {
               {showNotifications && (
                 <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
                   <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                    <h3 className="font-bold text-slate-800 text-base">การแจ้งเตือน</h3>
+                    <h3 className="font-bold text-slate-800 text-base">
+                      การแจ้งเตือน
+                    </h3>
                     {unreadCount() > 0 && (
                       <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-0.5 rounded-full">
                         {unreadCount()} ใหม่
                       </span>
                     )}
                   </div>
-                  
+
                   <div className="max-h-[320px] overflow-y-auto">
                     {notifications.length === 0 ? (
                       <div className="p-8 text-center text-slate-500 flex flex-col items-center gap-2">
                         <Bell className="h-8 w-8 text-slate-300" />
-                        <p className="text-sm font-medium">ยังไม่ได้รับการแจ้งเตือนใดๆ</p>
+                        <p className="text-sm font-medium">
+                          ยังไม่ได้รับการแจ้งเตือนใดๆ
+                        </p>
                       </div>
                     ) : (
                       <div className="divide-y divide-slate-100">
                         {notifications.slice(0, 5).map((notif) => (
-                          <div 
-                            key={notif.id} 
+                          <div
+                            key={notif.id}
                             onClick={() => {
-                              if(!notif.isRead) markAsRead(notif.id);
+                              if (!notif.isRead) markAsRead(notif.id);
                             }}
-                            className={`p-4 flex gap-3 hover:bg-slate-50 transition-colors cursor-pointer ${!notif.isRead ? 'bg-blue-50/30' : ''}`}
+                            className={`p-4 flex gap-3 hover:bg-slate-50 transition-colors cursor-pointer ${!notif.isRead ? "bg-blue-50/30" : ""}`}
                           >
-                            <div className={`mt-0.5 p-2 rounded-full h-fit flex-shrink-0 ${!notif.isRead ? 'bg-white shadow-sm' : 'bg-slate-100'}`}>
+                            <div
+                              className={`mt-0.5 p-2 rounded-full h-fit flex-shrink-0 ${!notif.isRead ? "bg-white shadow-sm" : "bg-slate-100"}`}
+                            >
                               {getNotificationIcon(notif.type)}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className={`text-sm mb-0.5 truncate ${!notif.isRead ? 'font-bold text-slate-800' : 'font-medium text-slate-700'}`}>
+                              <p
+                                className={`text-sm mb-0.5 truncate ${!notif.isRead ? "font-bold text-slate-800" : "font-medium text-slate-700"}`}
+                              >
                                 {notif.title}
                               </p>
                               <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
@@ -169,11 +213,11 @@ export default function Navbar() {
                       </div>
                     )}
                   </div>
-                  
+
                   {notifications.length > 0 && (
                     <div className="p-3 border-t border-slate-100 bg-slate-50 text-center hover:bg-slate-100 transition-colors">
-                      <Link 
-                        to="/notifications" 
+                      <Link
+                        to="/notifications"
                         onClick={() => setShowNotifications(false)}
                         className="text-sm font-bold text-primary block w-full"
                       >
@@ -189,7 +233,7 @@ export default function Navbar() {
               <Link
                 to="/achievements"
                 title="ความสำเร็จ"
-                className={`relative p-2.5 rounded-full transition-colors shadow-sm ${isDarkHero ? 'text-slate-300 hover:text-white bg-white/10 hover:bg-white/20' : 'text-slate-500 hover:text-primary bg-slate-100 hover:bg-slate-200'}`}
+                className={`relative p-2.5 rounded-full transition-colors shadow-sm ${isDarkHero ? "text-slate-300 hover:text-white bg-white/10 hover:bg-white/20" : "text-slate-500 hover:text-primary bg-slate-100 hover:bg-slate-200"}`}
               >
                 <Trophy className="h-4 w-4 sm:h-5 sm:w-5" />
                 {readyToClaimCount() > 0 && (
@@ -204,11 +248,15 @@ export default function Navbar() {
               <div className="relative" ref={profileRef}>
                 <button
                   onClick={() => setShowProfileMenu(!showProfileMenu)}
-                  className={`flex items-center justify-center p-2.5 rounded-full transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 ${isDarkHero ? 'text-slate-300 hover:text-white bg-white/10 hover:bg-white/20' : 'text-slate-500 hover:text-primary bg-slate-100 hover:bg-slate-200'}`}
+                  className={`flex items-center justify-center p-2.5 rounded-full transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 ${isDarkHero ? "text-slate-300 hover:text-white bg-white/10 hover:bg-white/20" : "text-slate-500 hover:text-primary bg-slate-100 hover:bg-slate-200"}`}
                   title="เมนูผู้ใช้"
                 >
                   {user?.user_metadata?.avatar_url || user?.avatar ? (
-                    <img src={user?.user_metadata?.avatar_url || user?.avatar} alt="Profile" className="h-4 w-4 sm:h-5 sm:w-5 rounded-full object-cover" />
+                    <img
+                      src={user?.user_metadata?.avatar_url || user?.avatar}
+                      alt="Profile"
+                      className="h-4 w-4 sm:h-5 sm:w-5 rounded-full object-cover"
+                    />
                   ) : (
                     <User className="h-4 w-4 sm:h-5 sm:w-5" />
                   )}
@@ -219,32 +267,34 @@ export default function Navbar() {
                   <div className="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
                     <div className="p-4 border-b border-slate-100 bg-slate-50/50">
                       <p className="font-bold text-slate-800 truncate">
-                        {user?.user_metadata?.full_name || user?.name || 'ผู้ใช้งาน'}
+                        {user?.user_metadata?.full_name ||
+                          user?.name ||
+                          "ผู้ใช้งาน"}
                       </p>
                       <p className="text-sm text-slate-500 truncate mt-0.5">
-                        {user?.email || 'ไม่มีอีเมล'}
+                        {user?.email || "ไม่มีอีเมล"}
                       </p>
                     </div>
-                    
+
                     <div className="p-2">
-                      <Link 
-                        to="/profile" 
+                      <Link
+                        to="/profile"
                         onClick={() => setShowProfileMenu(false)}
                         className="flex items-center gap-3 w-full p-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors"
                       >
                         <User className="h-4 w-4" />
                         โปรไฟล์ของฉัน
                       </Link>
-                      <Link 
-                        to="/profile?tab=drafts" 
+                      <Link
+                        to="/profile?tab=drafts"
                         onClick={() => setShowProfileMenu(false)}
                         className="flex items-center gap-3 w-full p-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors"
                       >
                         <FileText className="h-4 w-4" />
                         แบบร่างของฉัน
                       </Link>
-                      <Link 
-                        to="/settings" 
+                      <Link
+                        to="/settings/profile"
                         onClick={() => setShowProfileMenu(false)}
                         className="flex items-center gap-3 w-full p-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors"
                       >
@@ -254,7 +304,7 @@ export default function Navbar() {
                     </div>
 
                     <div className="p-2 border-t border-slate-100">
-                      <button 
+                      <button
                         onClick={handleLogout}
                         className="flex items-center gap-3 w-full p-2 text-left text-sm font-medium text-red-600 hover:bg-red-50 rounded-xl transition-colors"
                       >
@@ -266,7 +316,10 @@ export default function Navbar() {
                 )}
               </div>
             ) : (
-              <Link to="/login" className="flex items-center justify-center gap-2 bg-primary text-white rounded-full font-bold hover:bg-blue-600 shadow-sm hover:shadow-md transition-all px-3 py-2 sm:px-5 sm:py-2.5 text-sm">
+              <Link
+                to="/login"
+                className="flex items-center justify-center gap-2 bg-primary text-white rounded-full font-bold hover:bg-blue-600 shadow-sm hover:shadow-md transition-all px-3 py-2 sm:px-5 sm:py-2.5 text-sm"
+              >
                 <User className="h-4 w-4 sm:hidden" />
                 <span className="hidden sm:inline">เข้าสู่ระบบ</span>
               </Link>
