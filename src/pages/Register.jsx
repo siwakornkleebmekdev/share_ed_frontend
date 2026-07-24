@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { Mail, Lock, User, Loader2, BookOpen } from 'lucide-react';
+import { Mail, Lock, User, BookOpen, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { authService } from '@/services/auth.service';
 import useAuthStore from '@/store/authStore';
@@ -16,11 +16,13 @@ export default function Register() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
+  // Field Errors State for Inline Validation
+  const [fieldErrors, setFieldErrors] = useState({});
+
   const { isAuthenticated, user, login: loginAction } = useAuthStore();
   const navigate = useNavigate();
 
   useEffect(() => {
-    // ถ้าผู้ใช้งานมีบัญชีในระบบและข้อมูลโปรไฟล์ครบถ้วนแล้ว ไม่ให้แสดงหน้า Register
     const isProfileComplete = user?.education_level || user?.user_metadata?.education_level;
     if (isAuthenticated && isProfileComplete) {
       toast.success('คุณมีบัญชีผู้ใช้ในระบบแล้ว');
@@ -30,79 +32,67 @@ export default function Register() {
 
   const handleRegister = async (e) => {
     e.preventDefault();
-    if (!username || !email || !educationLevel || !password || !confirmPassword) {
-      return toast.error('กรุณากรอกข้อมูลให้ครบถ้วนทุกช่อง');
+    setFieldErrors({});
+
+    const newErrors = {};
+    if (!username || !username.trim()) {
+      newErrors.username = 'กรุณากรอกชื่อผู้ใช้';
+    }
+    if (!email || !email.trim()) {
+      newErrors.email = 'กรุณากรอกอีเมล';
+    }
+    if (!educationLevel) {
+      newErrors.educationLevel = 'กรุณาเลือกระดับการศึกษา';
+    }
+    if (!password) {
+      newErrors.password = 'กรุณากรอกรหัสผ่าน';
+    } else if (password.length < 8) {
+      newErrors.password = 'รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร';
+    }
+    if (!confirmPassword) {
+      newErrors.confirmPassword = 'กรุณายืนยันรหัสผ่าน';
+    } else if (password && confirmPassword && password !== confirmPassword) {
+      newErrors.confirmPassword = 'รหัสผ่านทั้งสองช่องไม่ตรงกัน';
     }
 
-    if (password !== confirmPassword) {
-      return toast.error('รหัสผ่านไม่ตรงกัน');
-    }
-
-    if (!/[a-zA-Z]/.test(password)) {
-      return toast.error('รหัสผ่านต้องมีตัวอักษรภาษาอังกฤษอย่างน้อย 1 ตัว');
-    }
-
-    if (isAuthenticated || user) {
-      return toast.error('คุณมีบัญชีผู้ใช้นี้ในระบบแล้ว');
+    if (Object.keys(newErrors).length > 0) {
+      setFieldErrors(newErrors);
+      return;
     }
 
     try {
       setIsLoading(true);
 
-      // สมัครสมาชิกเข้าสู่ระบบหลังบ้านทันที (Backend Registration) - ระบบหลังบ้านจะเช็คอีเมลซ้ำให้อัตโนมัติโดยไม่ติด 403 RLS ของ Supabase
-      const payload = {
+      const data = await authService.register({
         email,
         password,
-        confirmPassword,
         username,
-        nickname: username,
-        full_name: username,
-        education_level: educationLevel, // ให้ผู้ใช้เลือกจากหน้าฟอร์ม
-        age: 0, // ค่าเริ่มต้น
-        bio: "ยังไม่ได้ระบุ" // ค่าเริ่มต้นชั่วคราวเพื่อให้ผ่าน validation ของ Backend
-      };
+        education_level: educationLevel,
+        age: 0,
+        bio: 'ยังไม่ได้ระบุ'
+      });
 
-      const data = await authService.register(payload);
-      
-      let token = data?.token || data?.access_token || data?.data?.token || data?.data?.access_token || data?.session?.access_token;
-      if (!token) {
-        try {
-          const loginRes = await authService.login(email, password);
-          token = loginRes?.token || loginRes?.access_token || loginRes?.data?.token || loginRes?.data?.access_token || loginRes?.session?.access_token;
-        } catch (e) {
-          console.log("Auto login after register info:", e);
-        }
-      }
-      if (token) {
-        localStorage.setItem('access_token', token);
-      }
+      const registeredUser = data?.session?.user || data?.user || {};
+      const meta = registeredUser.user_metadata || {};
 
-      // เข้าสู่ระบบใน state ทันที
-      const registeredUser = data?.user || data?.data || data?.session?.user || data || {};
       loginAction({
         ...registeredUser,
-        id: registeredUser.id || registeredUser._id || registeredUser.user_id || 'new_user',
-        user_id: registeredUser.id || registeredUser._id || registeredUser.user_id || 'new_user',
+        id: registeredUser.id || 'new_user',
+        user_id: registeredUser.id || 'new_user',
         email,
         name: username,
         display_name: username,
         username,
         education_level: educationLevel,
         age: 0,
-        bio: "ยังไม่ได้ระบุ"
+        bio: 'ยังไม่ได้ระบุ',
+        user_metadata: meta
       });
 
       toast.success('สมัครสมาชิกสำเร็จ ยินดีต้อนรับสู่ SHARE-ED!');
       navigate('/explore');
     } catch (error) {
-      console.error("Register Error:", error.response?.data || error);
-      const errMsg = error.response?.data?.message || error.response?.data?.error || JSON.stringify(error.response?.data || error.message);
-      if (typeof errMsg === 'string' && (errMsg.includes('ใช้งานแล้ว') || errMsg.includes('ซ้ำ') || errMsg.includes('มีผู้ใช้งาน') || errMsg.includes('already') || errMsg.includes('exist') || errMsg.includes('in use') || errMsg.includes('duplicate'))) {
-        toast.error('อีเมลหรือชื่อผู้ใช้นี้เคยถูกใช้งานแล้ว กรุณาเข้าสู่ระบบหรือเปลี่ยนชื่อผู้ใช้');
-        navigate('/login');
-      } else {
-        toast.error(typeof errMsg === 'string' ? errMsg : 'เกิดข้อผิดพลาดในการสมัครสมาชิก');
-      }
+      setFieldErrors({ general: error.message || 'เกิดข้อผิดพลาดในการสมัครสมาชิก' });
     } finally {
       setIsLoading(false);
     }
@@ -118,7 +108,7 @@ export default function Register() {
       });
       if (error) throw error;
     } catch (error) {
-      toast.error(error.message || 'ไม่สามารถสมัครสมาชิกด้วย Google ได้');
+      setFieldErrors({ general: error.message || 'ไม่สามารถสมัครสมาชิกด้วย Google ได้' });
     }
   };
 
@@ -134,54 +124,84 @@ export default function Register() {
             </Link>
           </p>
         </div>
+
+        {fieldErrors.general && (
+          <div className="p-3.5 rounded-xl bg-red-50 text-red-600 text-sm font-medium border border-red-100 text-center">
+            {fieldErrors.general}
+          </div>
+        )}
         
-        <form className="mt-8 space-y-6" onSubmit={handleRegister}>
+        <form className="mt-8 space-y-6" onSubmit={handleRegister} noValidate>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">ชื่อผู้ใช้ (Username) <span className="text-red-500">*</span></label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <User className="h-5 w-5 text-slate-400" />
+                  <User className={`h-5 w-5 ${fieldErrors.username ? 'text-red-400' : 'text-slate-400'}`} />
                 </div>
                 <input 
                   type="text" 
                   value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  required 
-                  className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors" 
+                  onChange={(e) => {
+                    setUsername(e.target.value);
+                    if (fieldErrors.username) setFieldErrors(prev => ({ ...prev, username: null }));
+                  }}
+                  className={`block w-full pl-10 pr-3 py-2.5 border rounded-lg focus:outline-none transition-colors ${
+                    fieldErrors.username
+                      ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+                      : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
+                  }`}
                   placeholder="ตั้งชื่อผู้ใช้ของคุณ (เช่น JohnDoe)" 
                 />
               </div>
+              {fieldErrors.username && (
+                <p className="mt-1 text-xs text-red-500 font-medium">{fieldErrors.username}</p>
+              )}
             </div>
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">อีเมล <span className="text-red-500">*</span></label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-slate-400" />
+                  <Mail className={`h-5 w-5 ${fieldErrors.email ? 'text-red-400' : 'text-slate-400'}`} />
                 </div>
                 <input 
                   type="email" 
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required 
-                  className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors" 
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (fieldErrors.email) setFieldErrors(prev => ({ ...prev, email: null }));
+                  }}
+                  className={`block w-full pl-10 pr-3 py-2.5 border rounded-lg focus:outline-none transition-colors ${
+                    fieldErrors.email
+                      ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+                      : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
+                  }`}
                   placeholder="กรอกอีเมลของคุณ (เช่น name@example.com)" 
                 />
               </div>
+              {fieldErrors.email && (
+                <p className="mt-1 text-xs text-red-500 font-medium">{fieldErrors.email}</p>
+              )}
             </div>
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">ระดับการศึกษา <span className="text-red-500">*</span></label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <BookOpen className="h-5 w-5 text-slate-400" />
+                  <BookOpen className={`h-5 w-5 ${fieldErrors.educationLevel ? 'text-red-400' : 'text-slate-400'}`} />
                 </div>
                 <select 
                   value={educationLevel}
-                  onChange={(e) => setEducationLevel(e.target.value)}
-                  required 
-                  className="block w-full pl-10 pr-10 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors bg-white text-slate-900 appearance-none"
+                  onChange={(e) => {
+                    setEducationLevel(e.target.value);
+                    if (fieldErrors.educationLevel) setFieldErrors(prev => ({ ...prev, educationLevel: null }));
+                  }}
+                  className={`block w-full pl-10 pr-10 py-2.5 border rounded-lg focus:outline-none transition-colors bg-white text-slate-900 appearance-none ${
+                    fieldErrors.educationLevel
+                      ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+                      : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
+                  }`}
                 >
                   <option value="" disabled>เลือกระดับการศึกษา</option>
                   <option value="MIDDLE_SCHOOL">มัธยมศึกษาตอนต้น</option>
@@ -194,42 +214,61 @@ export default function Register() {
                   </svg>
                 </div>
               </div>
+              {fieldErrors.educationLevel && (
+                <p className="mt-1 text-xs text-red-500 font-medium">{fieldErrors.educationLevel}</p>
+              )}
             </div>
             
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">รหัสผ่าน <span className="text-red-500">*</span></label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-slate-400" />
+                  <Lock className={`h-5 w-5 ${fieldErrors.password ? 'text-red-400' : 'text-slate-400'}`} />
                 </div>
                 <input 
                   type="password" 
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required 
-                  minLength={8} 
-                  className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors" 
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (fieldErrors.password) setFieldErrors(prev => ({ ...prev, password: null }));
+                  }}
+                  className={`block w-full pl-10 pr-3 py-2.5 border rounded-lg focus:outline-none transition-colors ${
+                    fieldErrors.password
+                      ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+                      : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
+                  }`}
                   placeholder="ตั้งรหัสผ่านอย่างน้อย 8 ตัวอักษร" 
                 />
               </div>
+              {fieldErrors.password && (
+                <p className="mt-1 text-xs text-red-500 font-medium">{fieldErrors.password}</p>
+              )}
             </div>
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">ยืนยันรหัสผ่าน <span className="text-red-500">*</span></label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-slate-400" />
+                  <Lock className={`h-5 w-5 ${fieldErrors.confirmPassword ? 'text-red-400' : 'text-slate-400'}`} />
                 </div>
                 <input 
                   type="password" 
                   value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required 
-                  minLength={8} 
-                  className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors" 
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value);
+                    if (fieldErrors.confirmPassword) setFieldErrors(prev => ({ ...prev, confirmPassword: null }));
+                  }}
+                  className={`block w-full pl-10 pr-3 py-2.5 border rounded-lg focus:outline-none transition-colors ${
+                    fieldErrors.confirmPassword
+                      ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+                      : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
+                  }`}
                   placeholder="กรอกรหัสผ่านอีกครั้งเพื่อยืนยัน" 
                 />
               </div>
+              {fieldErrors.confirmPassword && (
+                <p className="mt-1 text-xs text-red-500 font-medium">{fieldErrors.confirmPassword}</p>
+              )}
             </div>
           </div>
 

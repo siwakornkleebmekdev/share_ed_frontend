@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { UploadCloud, File, X, GraduationCap, Tag, AlignLeft, BookOpen, PenTool, Save, Image as ImageIcon, Plus, Eye, FileText, ChevronLeft } from 'lucide-react';
+import { UploadCloud, File, X, GraduationCap, Tag, AlignLeft, BookOpen, PenTool, Save, Image as ImageIcon, Plus, Eye, FileText, ChevronLeft, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import { postService } from '@/services/post.service';
+import { uploadFileToSupabase } from '@/utils/storage';
 import api from '../utils/api';
 
 const SUGGESTED_TAGS = ['#AI', '#เรียนรู้ไปด้วยกัน', '#เตรียมสอบ', '#TCAS67', '#สรุปย่อ', '#แชร์ความรู้', '#เด็กซิ่ว', '#สรุปชีท'];
@@ -37,6 +38,7 @@ export default function EditPost() {
   const [hashtags, setHashtags] = useState([]);
   const [hashtagInput, setCountryInput] = useState('');
   const tagInputRef = useRef(null);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const [showModal, setShowModal] = useState(false);
   const [previewFile, setPreviewFile] = useState(null);
@@ -52,7 +54,6 @@ export default function EditPost() {
           setSummary(response.description || '');
           setContent(response.details || '');
           setCategory(response.category || '');
-
           let uiLevel = 'มหาวิทยาลัย';
           if (response.level === 'มัธยมศึกษาตอนต้น' || response.level === 'MIDDLE_SCHOOL') {
             uiLevel = 'มัธยมศึกษาตอนต้น';
@@ -85,7 +86,6 @@ export default function EditPost() {
         const data = resObj.data;
         if (data && data.success) {
           const post = data.data;
-
           // Extract existing PDF
           const pdfMedia = post.media?.find(m => m.media_type === 'PDF');
           if (pdfMedia) {
@@ -239,9 +239,65 @@ export default function EditPost() {
     }
   };
 
+  const handleDelete = async () => {
+    const result = await Swal.fire({
+      title: 'คุณต้องการลบโพสต์นี้ใช่หรือไม่?',
+      text: 'การดำเนินการนี้จะทำการลบโพสต์แบบ Soft Delete (ซ่อนโพสต์ชั่วคราว)',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'ใช่, ลบเลย',
+      cancelButtonText: 'ยกเลิก'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        Swal.fire({
+          title: 'กำลังลบโพสต์...',
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+
+        const response = await postService.deletePost(id);
+        Swal.close();
+
+        if (response && (response.success || response.status === 200)) {
+          await Swal.fire({
+            icon: 'success',
+            title: 'ลบสำเร็จ!',
+            text: 'โพสต์ของคุณถูกลบเรียบร้อยแล้ว',
+            confirmButtonColor: '#3b82f6'
+          });
+          navigate('/explore');
+        } else {
+          throw new Error(response?.message || 'เกิดข้อผิดพลาดในการลบโพสต์');
+        }
+      } catch (error) {
+        Swal.close();
+        console.error('Error deleting post:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'เกิดข้อผิดพลาด',
+          text: error.response?.data?.message || error.message || 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้',
+          confirmButtonColor: '#3b82f6'
+        });
+      }
+    }
+  };
+
   const handleSubmit = async (status = 'ACTIVE') => {
-    if (!title.trim() || !category || !level || !summary.trim()) {
-      toast.error('กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน (ชื่อหัวข้อ, หมวดหมู่, ระดับชั้น, และบทสรุปย่อ)');
+    setFieldErrors({});
+    const newErrors = {};
+    if (!title.trim()) newErrors.title = 'กรุณากรอกชื่อหัวข้อสรุปความรู้';
+    if (!level) newErrors.level = 'กรุณาเลือกระดับชั้น';
+    if (!summary.trim()) newErrors.summary = 'กรุณากรอกบทสรุปย่อ';
+    if (!category) newErrors.category = 'กรุณาเลือกหมวดหมู่วิชา';
+
+    if (Object.keys(newErrors).length > 0) {
+      setFieldErrors(newErrors);
       return;
     }
 
@@ -259,26 +315,44 @@ export default function EditPost() {
       formData.append('summary', summary.trim());
       formData.append('content', content);
       formData.append('category', category);
-
       let backendLevel = 'UNIVERSITY';
       if (level === 'มัธยมศึกษาตอนต้น') backendLevel = 'MIDDLE_SCHOOL';
       else if (level === 'มัธยมศึกษาตอนปลาย') backendLevel = 'HIGH_SCHOOL';
       formData.append('education_level', backendLevel);
-
       formData.append('post_status', status);
 
       if (coverImage) {
         formData.append('cover_image', coverImage);
+        try {
+          const coverUrl = await uploadFileToSupabase(coverImage, 'posts', 'covers');
+          if (coverUrl) formData.append('cover_image_url', coverUrl);
+        } catch (e) {
+          console.log('Cover upload to Supabase storage notice:', e);
+        }
       }
 
       if (pdfFile) {
         formData.append('media_files', pdfFile);
+        try {
+          const pdfUrl = await uploadFileToSupabase(pdfFile, 'posts', 'documents');
+          if (pdfUrl) formData.append('pdf_url', pdfUrl);
+        } catch (e) {
+          console.log('PDF upload to Supabase storage notice:', e);
+        }
       }
 
       if (images && images.length > 0) {
-        images.forEach(img => {
+        const imageUrls = [];
+        for (const img of images) {
           formData.append('media_files', img);
-        });
+          try {
+            const url = await uploadFileToSupabase(img, 'posts', 'images');
+            if (url) imageUrls.push(url);
+          } catch (e) {}
+        }
+        if (imageUrls.length > 0) {
+          formData.append('image_urls', JSON.stringify(imageUrls));
+        }
       }
 
       formData.append('tags', JSON.stringify(hashtags));
@@ -387,10 +461,20 @@ export default function EditPost() {
                 <input
                   type="text"
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  onChange={(e) => {
+                    setTitle(e.target.value);
+                    if (fieldErrors.title) setFieldErrors(prev => ({ ...prev, title: null }));
+                  }}
                   placeholder="เช่น สรุปสูตรตรีโกณมิติ ม.5"
-                  className="w-full px-5 py-3.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-slate-400 font-semibold text-slate-800 text-base"
+                  className={`w-full px-5 py-3.5 rounded-xl border focus:outline-none transition-all placeholder:text-slate-400 font-semibold text-slate-800 text-base ${
+                    fieldErrors.title
+                      ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+                      : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
+                  }`}
                 />
+                {fieldErrors.title && (
+                  <p className="mt-1.5 text-xs text-red-500 font-medium">{fieldErrors.title}</p>
+                )}
               </div>
 
               <div>
@@ -399,11 +483,21 @@ export default function EditPost() {
                 </label>
                 <textarea
                   value={summary}
-                  onChange={(e) => setSummary(e.target.value)}
+                  onChange={(e) => {
+                    setSummary(e.target.value);
+                    if (fieldErrors.summary) setFieldErrors(prev => ({ ...prev, summary: null }));
+                  }}
                   rows="3"
                   placeholder="เขียนอธิบายคร่าวๆ เกี่ยวกับสรุปความรู้นี้..."
-                  className="w-full px-5 py-3.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-slate-400 font-medium text-slate-600 text-base resize-none"
+                  className={`w-full px-5 py-3.5 rounded-xl border focus:outline-none transition-all placeholder:text-slate-400 font-medium text-slate-600 text-base resize-none ${
+                    fieldErrors.summary
+                      ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+                      : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
+                  }`}
                 />
+                {fieldErrors.summary && (
+                  <p className="mt-1.5 text-xs text-red-500 font-medium">{fieldErrors.summary}</p>
+                )}
               </div>
             </div>
           </div>
@@ -414,18 +508,28 @@ export default function EditPost() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>
               <label className="flex items-center gap-2 text-base font-bold text-slate-800 mb-3">
-                <GraduationCap className="h-5 w-5 text-primary" /> ระดับชั้นการศึกษา <span className="text-rose-500">*</span>
+                <GraduationCap className="h-5 w-5 text-slate-400" /> ระดับชั้น <span className="text-rose-500">*</span>
               </label>
               <select
                 value={level}
-                onChange={(e) => setLevel(e.target.value)}
-                className="w-full px-5 py-3.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors bg-white font-medium text-slate-700 text-base"
+                onChange={(e) => {
+                  setLevel(e.target.value);
+                  if (fieldErrors.level) setFieldErrors(prev => ({ ...prev, level: null }));
+                }}
+                className={`w-full px-5 py-3.5 rounded-xl border focus:outline-none transition-all bg-white font-semibold text-slate-700 text-base ${
+                  fieldErrors.level
+                    ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+                    : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
+                }`}
               >
                 <option value="" disabled>เลือกระดับชั้น</option>
                 <option value="มัธยมศึกษาตอนต้น">มัธยมศึกษาตอนต้น</option>
                 <option value="มัธยมศึกษาตอนปลาย">มัธยมศึกษาตอนปลาย</option>
                 <option value="มหาวิทยาลัย">มหาวิทยาลัย</option>
               </select>
+              {fieldErrors.level && (
+                <p className="mt-1.5 text-xs text-red-500 font-medium">{fieldErrors.level}</p>
+              )}
             </div>
 
             <div className="flex flex-col justify-end">
@@ -607,9 +711,15 @@ export default function EditPost() {
 
         {/* Actions */}
         <div className="sticky bottom-0 z-40 bg-slate-50 p-6 sm:px-12 sm:py-8 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4 rounded-b-[24px] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-          <button onClick={() => navigate(`/post/${id}`)} className="w-full sm:w-auto px-6 py-4 rounded-xl font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-colors shadow-sm cursor-pointer">
-            ยกเลิกการแก้ไข
-          </button>
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <button onClick={() => navigate(`/post/${id}`)} className="w-full sm:w-auto px-6 py-4 rounded-xl font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-colors shadow-sm cursor-pointer">
+              ยกเลิกการแก้ไข
+            </button>
+            <button onClick={handleDelete} className="w-full sm:w-auto px-6 py-4 rounded-xl font-bold text-rose-600 bg-rose-50 border border-rose-100 hover:bg-rose-100 transition-colors flex items-center justify-center gap-2 shadow-sm cursor-pointer">
+              <Trash2 className="h-5 w-5" />
+              ลบโพสต์
+            </button>
+          </div>
           <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
             <button onClick={() => handleSubmit('DRAFT')} className="w-full sm:w-auto px-6 py-4 rounded-xl font-bold text-primary bg-blue-50 border border-blue-100 hover:bg-blue-100 transition-colors flex items-center justify-center gap-2 cursor-pointer">
               <Save className="h-5 w-5" />

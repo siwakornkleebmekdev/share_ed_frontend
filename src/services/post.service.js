@@ -51,39 +51,75 @@ export const postService = {
     }
   },
 
-  // Toggle like status for a post
-  likePost: async (postId) => {
+  // Delete a post (Soft Delete)
+  deletePost: async (id) => {
     try {
-      const response = await api.post(`/likes/${postId}`);
+      const response = await api.delete(`/posts/${id}`);
       return response.data;
     } catch (error) {
-      console.error(`Error liking post ${postId}:`, error);
+      console.error(`Error deleting post ${id}:`, error);
       throw error;
     }
   },
 
-  // Toggle bookmark status for a post
-  bookmarkPost: async (postId) => {
+  // Like / Unlike a post
+  likePost: async (id) => {
     try {
-      const response = await api.post(`/bookmarks/${postId}`);
+      const response = await api.post(`/posts/${id}/like`);
       return response.data;
     } catch (error) {
-      console.error(`Error bookmarking post ${postId}:`, error);
+      console.error(`Error liking post ${id}:`, error);
       throw error;
     }
   },
 
-  // Fetch general system statistics (total posts, total users)
+  // Bookmark / Unbookmark a post
+  bookmarkPost: async (id) => {
+    try {
+      const response = await api.post(`/posts/${id}/bookmark`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error bookmarking post ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Create a comment on a post
+  createComment: async (id, content) => {
+    try {
+      const response = await api.post(`/posts/${id}/comments`, { content });
+      return response.data;
+    } catch (error) {
+      console.error(`Error creating comment on post ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Get System Stats (total users, total posts)
   getSystemStats: async () => {
     try {
-      const response = await api.get('/posts/stats');
-      if (response.data.success) {
+      const response = await api.get('/system/stats');
+      if (response.data.success && (response.data.data?.totalSharers || response.data.data?.totalUsers)) {
         return response.data.data;
       }
-      return null;
     } catch (error) {
-      console.error('Error fetching system stats:', error);
-      return null;
+      console.log('Notice: /system/stats API fallback to Supabase query');
+    }
+
+    // Fallback: Query exact count from Supabase
+    try {
+      const [{ count: userCount }, { count: postCount }] = await Promise.all([
+        supabase.from('users').select('id', { count: 'exact', head: true }),
+        supabase.from('posts').select('id', { count: 'exact', head: true })
+      ]);
+
+      return {
+        totalSharers: userCount || 0,
+        totalUsers: userCount || 0,
+        totalPosts: postCount || 0
+      };
+    } catch (e) {
+      return { totalSharers: 0, totalUsers: 0, totalPosts: 0 };
     }
   }
 };
