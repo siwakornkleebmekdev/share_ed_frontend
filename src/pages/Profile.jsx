@@ -28,7 +28,7 @@ export default function Profile() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuthStore();
-  const [activeTab, setActiveTab] = useState('posts'); // posts, drafts, bookmarks, achievements
+  const [activeTab, setActiveTab] = useState('posts'); // แท็บที่เลือกอยู่: posts, drafts, bookmarks, achievements
   const theme = user?.user_metadata?.theme_settings || {};
   const avatarShapeClass = AVATAR_SHAPE_CLASS[theme.avatarShape] || AVATAR_SHAPE_CLASS.circle;
   const enterScreenEnabled = !!user?.user_metadata?.enter_screen_enabled;
@@ -38,29 +38,27 @@ export default function Profile() {
     setHasEntered(!enterScreenEnabled);
   }, [enterScreenEnabled]);
 
-  // Profile has a full-bleed hero background (the user's wallpaper, or a
-  // dark fallback photo) — the navbar reads its light/dark style from the
-  // actual image brightness instead of a hardcoded route. Reset on unmount
-  // so other pages aren't left stuck on Profile's theme.
+  // หน้าโปรไฟล์มีพื้นหลังเต็มจอ (วอลเปเปอร์ของผู้ใช้ หรือรูปสำรองสีเข้ม)
+  // navbar จะดูว่าควรใช้ธีมสว่างหรือมืดจากความสว่างของรูปจริง ไม่ได้กำหนดตายตัว
+  // ไว้ล่วงหน้า และต้องรีเซ็ตค่าตอนออกจากหน้านี้ ไม่งั้นหน้าอื่นจะติดธีมของโปรไฟล์ไปด้วย
   const setHeroImage = useHeroThemeStore((state) => state.setHeroImage);
   const clearHeroImage = useHeroThemeStore((state) => state.clearHeroImage);
   const isDarkHero = useHeroThemeStore((state) => state.isDarkHero);
   const heroColor = useHeroThemeStore((state) => state.heroColor);
   useEffect(() => {
-    // No wallpaper set → the profile defaults to the same plain light theme
-    // as every other page (fallbackDark: false), instead of always forcing
-    // a dark hero. Once the user sets a wallpaper, isDarkHero/heroColor
-    // adapt to that image's actual brightness/color as before.
+    // ถ้ายังไม่ได้ตั้งวอลเปเปอร์ → ใช้ธีมสว่างปกติเหมือนหน้าอื่นๆ ทั่วไป
+    // (fallbackDark: false) ไม่บังคับให้เป็นธีมมืดเสมอไป แต่ถ้าผู้ใช้ตั้งวอลเปเปอร์แล้ว
+    // ค่า isDarkHero/heroColor จะปรับตามความสว่าง/สีของรูปนั้นโดยอัตโนมัติ
     setHeroImage(user?.user_metadata?.wallpaper_url, { fallbackDark: false });
     return () => clearHeroImage();
   }, [user?.user_metadata?.wallpaper_url, setHeroImage, clearHeroImage]);
 
-  // Tint the profile card's frosted glass to match the wallpaper's color.
+  // ปรับสีกระจกฝ้าของการ์ดโปรไฟล์ให้เข้ากับโทนสีของวอลเปเปอร์
   const cardGlassColor = rgbToRgba(getGlassColor(heroColor, isDarkHero), 22);
 
-  // Themed tokens — light (default, no wallpaper) mirrors every other page's
-  // white/slate-50 look; dark activates automatically once isDarkHero flips
-  // (i.e. the user set a dark-ish wallpaper).
+  // ชุดคลาส CSS ตามธีม — โทนสว่าง (ค่าเริ่มต้น ตอนยังไม่มีวอลเปเปอร์) จะหน้าตา
+  // เหมือนหน้าอื่นๆ ทั่วไป (ขาว/เทาอ่อน) ส่วนโทนมืดจะเปิดใช้เองอัตโนมัติเมื่อ
+  // isDarkHero เป็นจริง (คือผู้ใช้ตั้งวอลเปเปอร์โทนเข้ม)
   const pageBg = isDarkHero ? 'bg-slate-900' : 'bg-slate-50';
   const cardBorderClass = isDarkHero ? 'border-white/10 border-t-white/20' : 'border-slate-100';
   const dividerClass = isDarkHero ? 'border-white/10' : 'border-slate-100';
@@ -92,9 +90,9 @@ export default function Profile() {
   const [isLoading, setIsLoading] = useState(true);
   const [followCounts, setFollowCounts] = useState({ followersCount: 0, followingCount: 0 });
 
-  // View-only — no claim button here. Just shows what's already done
-  // (READY_TO_CLAIM or CLAIMED both mean the underlying task is finished;
-  // LOCKED items are hidden entirely since this tab isn't about progress).
+  // แท็บนี้แค่ดูอย่างเดียว ไม่มีปุ่มกดรับรางวัล จะโชว์เฉพาะรางวัลที่ทำสำเร็จแล้ว
+  // (ทั้งสถานะ READY_TO_CLAIM และ CLAIMED ถือว่าทำภารกิจสำเร็จแล้วทั้งคู่)
+  // ส่วนที่ยังไม่ปลดล็อก (LOCKED) จะไม่แสดงในหน้านี้ เพราะไม่ใช่หน้าดูความคืบหน้า
   const { milestones, fetchMilestones } = useAchievementStore();
   useEffect(() => {
     fetchMilestones();
@@ -162,10 +160,9 @@ export default function Profile() {
 
   return (
     <div className={`min-h-screen ${pageBg} pb-20 relative transition-colors duration-500`}>
-      {/* Full Screen Background — fixed so it fills the entire viewport and
-          stays put behind all scrolling content (and behind the fixed
-          navbar). No wallpaper set → nothing renders here, just the plain
-          page bg. */}
+      {/* พื้นหลังเต็มจอ — ปักตำแหน่งไว้กับที่ (fixed) ให้เต็มทั้งหน้าจอและอยู่นิ่ง
+          ไม่เลื่อนตามเนื้อหา (อยู่หลัง navbar ด้วย) ถ้ายังไม่ได้ตั้งวอลเปเปอร์
+          ส่วนนี้จะไม่แสดงอะไรเลย เห็นแค่สีพื้นหลังปกติของหน้า */}
       <div className="fixed inset-0 z-0 overflow-hidden">
         {user?.user_metadata?.wallpaper_url && (
           user.user_metadata.wallpaper_url.endsWith('.mp4') ? (
@@ -200,7 +197,7 @@ export default function Profile() {
               <div className={`h-32 w-32 sm:h-40 sm:w-40 border-4 overflow-hidden shadow-2xl relative ${avatarBorderClass} ${avatarShapeClass}`}>
                 <img src={user?.avatar_url || "https://ui-avatars.com/api/?name=Somchai&background=1e293b&color=38bdf8&size=200"} alt="Avatar" className="w-full h-full object-cover" />
 
-                {/* Render Frame if selected */}
+                {/* แสดงกรอบรูปโปรไฟล์ ถ้าผู้ใช้เลือกไว้ */}
                 {user?.user_metadata?.profile_frame_id && (
                   <div className={`absolute inset-0 border-4 border-amber-400 mix-blend-overlay pointer-events-none ${avatarShapeClass}`}></div>
                 )}
@@ -302,7 +299,7 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* Tabs */}
+        {/* แถบแท็บ */}
         <div className="flex gap-2 mb-8 overflow-x-auto pb-2 scrollbar-hide">
           <button onClick={() => setActiveTab('posts')} className={`flex items-center gap-2 px-6 py-3.5 rounded-xl font-bold whitespace-nowrap transition-all ${activeTab === 'posts' ? 'bg-primary text-white shadow-lg shadow-primary/20' : tabInactiveClass}`}>
             <BookOpen className="h-5 w-5" /> โพสต์ของฉัน
@@ -318,7 +315,7 @@ export default function Profile() {
           </button>
         </div>
 
-        {/* Tab Content */}
+        {/* เนื้อหาของแต่ละแท็บ */}
         <div className="min-h-[400px]">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-20">
@@ -344,7 +341,7 @@ export default function Profile() {
                       key={draft.id}
                       className={`backdrop-blur-xl rounded-3xl border shadow-lg shadow-black/10 hover:shadow-xl transition-all flex flex-col overflow-hidden group ${emptyCardClass}`}
                     >
-                      {/* Cover Image & Category */}
+                      {/* รูปปกและหมวดหมู่ */}
                       <div className="h-44 bg-slate-100 overflow-hidden relative">
                         <img
                           src={draft.image}
@@ -359,7 +356,7 @@ export default function Profile() {
                         </div>
                       </div>
 
-                      {/* Card Body */}
+                      {/* เนื้อหาการ์ด */}
                       <div className="p-5 flex-1 flex flex-col justify-between">
                         <div>
                           <div className="flex items-center gap-2 mb-3">
@@ -380,7 +377,7 @@ export default function Profile() {
                           </p>
                         </div>
 
-                        {/* Card Actions */}
+                        {/* ปุ่มดำเนินการของการ์ด */}
                         <div className={`pt-3 border-t flex items-center justify-between gap-3 mt-auto ${dividerClass}`}>
                           <span className={`text-[10px] font-medium ${subTextClass}`}>
                             แก้ไขล่าสุด: {draft.created_at ? new Date(draft.created_at).toLocaleDateString('th-TH') : 'ไม่ระบุ'}

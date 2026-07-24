@@ -19,6 +19,7 @@ export const profileService = {
   // Fetch Drafts
   getDrafts: async () => {
     try {
+
       const response = await api.get('/posts/user/my-posts');
       if (response.data.success) {
         return formatPosts(response.data.data.filter(p => p.post_status === 'DRAFT'));
@@ -79,51 +80,51 @@ export const profileService = {
       // Fallback: If no dedicated file API exists, try standard update
       // Since backend endpoint isn't fully confirmed, we'll try API first, then Supabase
       try {
-         const response = await api.put('/users/profile', data);
-         return response.data;
+        const response = await api.put('/users/profile', data);
+        return response.data;
       } catch (apiError) {
-         console.log("API /users/profile update failed or doesn't exist, falling back to Supabase", apiError);
-         
-         const updatePayload = {
-            nickname: data.nickname,
-            bio: data.bio,
+        console.log("API /users/profile update failed or doesn't exist, falling back to Supabase", apiError);
+
+        const updatePayload = {
+          nickname: data.nickname,
+          bio: data.bio,
+          education_level: data.education_level,
+          updated_at: new Date()
+        };
+
+        // In Supabase, if we have custom fields, we might need a separate query
+        // We update basic fields in `users` table
+        const { data: updatedData, error } = await supabase
+          .from('users')
+          .update(updatePayload)
+          .eq('id', userId)
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        // Also update auth metadata
+        await supabase.auth.updateUser({
+          data: {
             education_level: data.education_level,
-            updated_at: new Date()
-         };
-         
-         // In Supabase, if we have custom fields, we might need a separate query
-         // We update basic fields in `users` table
-         const { data: updatedData, error } = await supabase
-            .from('users')
-            .update(updatePayload)
-            .eq('id', userId)
-            .select()
-            .single();
+            bio: data.bio,
+            username: data.nickname,
+            instagram_url: data.instagram_url,
+            facebook_url: data.facebook_url,
+            profile_frame_id: data.profile_frame_id,
+            wallpaper_url: data.wallpaper_url,
+            widgets: data.widgets,
+            occupation: data.occupation,
+            location: data.location,
+            tags: data.tags,
+            enter_screen_enabled: data.enter_screen_enabled,
+            enter_screen_message: data.enter_screen_message,
+            theme_settings: data.theme_settings,
+            notification_preferences: data.notification_preferences
+          }
+        });
 
-         if (error) throw error;
-         
-         // Also update auth metadata
-         await supabase.auth.updateUser({
-           data: {
-             education_level: data.education_level,
-             bio: data.bio,
-             username: data.nickname,
-             instagram_url: data.instagram_url,
-             facebook_url: data.facebook_url,
-             profile_frame_id: data.profile_frame_id,
-             wallpaper_url: data.wallpaper_url,
-             widgets: data.widgets,
-             occupation: data.occupation,
-             location: data.location,
-             tags: data.tags,
-             enter_screen_enabled: data.enter_screen_enabled,
-             enter_screen_message: data.enter_screen_message,
-             theme_settings: data.theme_settings,
-             notification_preferences: data.notification_preferences
-           }
-         });
-
-         return { success: true, data: updatedData };
+        return { success: true, data: updatedData };
       }
     } catch (error) {
       console.error('Error updating profile:', error);
