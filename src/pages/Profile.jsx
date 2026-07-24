@@ -1,25 +1,50 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router';
-import { Image as ImageIcon, MapPin, Link as LinkIcon, BookOpen, Star, Award, FileText, CheckCircle2, Gift, GraduationCap, Clock, Edit, Trash2 } from 'lucide-react';
-import toast from 'react-hot-toast';
-import Swal from 'sweetalert2';
-import PostCard from '@/components/PostCard';
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router";
+import {
+  Image as ImageIcon,
+  MapPin,
+  Link as LinkIcon,
+  BookOpen,
+  Star,
+  Award,
+  FileText,
+  CheckCircle2,
+  Gift,
+  GraduationCap,
+  Clock,
+  Edit,
+  Trash2,
+} from "lucide-react";
+import toast from "react-hot-toast";
+import Swal from "sweetalert2";
+import PostCard from "@/components/PostCard";
 
-import useAuthStore from '@/store/authStore';
-import { profileService } from '@/services/profile.service';
-import { postService } from '@/services/post.service';
-import { Loader2 } from 'lucide-react';
-import WidgetCard from '@/components/settings/WidgetCard';
-import { getPlatformConfig } from '@/pages/settings/widgetConstants';
-import { DEFAULT_THEME } from '@/pages/settings/themeConstants';
+import useAuthStore from "@/store/authStore";
+import useAchievementStore from "@/store/achievementStore";
+import useHeroThemeStore from "@/store/heroThemeStore";
+import { profileService } from "@/services/profile.service";
+import { postService } from "@/services/post.service";
+import { getGlassColor, rgbToRgba } from "@/utils/colorUtils";
+import { Loader2 } from "lucide-react";
+import WidgetCard from "@/components/settings/WidgetCard";
+import { getPlatformConfig } from "@/pages/settings/widgetConstants";
+import { DEFAULT_THEME } from "@/pages/settings/themeConstants";
+
+const AVATAR_SHAPE_CLASS = {
+  square: "rounded-none",
+  soft: "rounded-2xl",
+  rounded: "rounded-3xl",
+  circle: "rounded-full",
+};
 
 export default function Profile() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuthStore();
-  const [activeTab, setActiveTab] = useState('posts'); // แท็บที่เลือกอยู่: posts, drafts, bookmarks, achievements
+  const [activeTab, setActiveTab] = useState("posts"); // แท็บที่เลือกอยู่: posts, drafts, bookmarks, achievements
   const theme = user?.user_metadata?.theme_settings || {};
-  const avatarShapeClass = AVATAR_SHAPE_CLASS[theme.avatarShape] || AVATAR_SHAPE_CLASS.circle;
+  const avatarShapeClass =
+    AVATAR_SHAPE_CLASS[theme.avatarShape] || AVATAR_SHAPE_CLASS.circle;
   const enterScreenEnabled = !!user?.user_metadata?.enter_screen_enabled;
   const [hasEntered, setHasEntered] = useState(!enterScreenEnabled);
 
@@ -48,28 +73,36 @@ export default function Profile() {
   // ชุดคลาส CSS ตามธีม — โทนสว่าง (ค่าเริ่มต้น ตอนยังไม่มีวอลเปเปอร์) จะหน้าตา
   // เหมือนหน้าอื่นๆ ทั่วไป (ขาว/เทาอ่อน) ส่วนโทนมืดจะเปิดใช้เองอัตโนมัติเมื่อ
   // isDarkHero เป็นจริง (คือผู้ใช้ตั้งวอลเปเปอร์โทนเข้ม)
-  const pageBg = isDarkHero ? 'bg-slate-900' : 'bg-slate-50';
-  const cardBorderClass = isDarkHero ? 'border-white/10 border-t-white/20' : 'border-slate-100';
-  const dividerClass = isDarkHero ? 'border-white/10' : 'border-slate-100';
-  const headingClass = isDarkHero ? 'text-white' : 'text-slate-800';
-  const subTextClass = isDarkHero ? 'text-slate-400' : 'text-slate-500';
-  const mutedTextClass = isDarkHero ? 'text-slate-300' : 'text-slate-600';
-  const tagPillClass = isDarkHero ? 'bg-white/10 border-white/10 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-600';
+  const pageBg = isDarkHero ? "bg-slate-900" : "bg-slate-50";
+  const cardBorderClass = isDarkHero
+    ? "border-white/10 border-t-white/20"
+    : "border-slate-100";
+  const dividerClass = isDarkHero ? "border-white/10" : "border-slate-100";
+  const headingClass = isDarkHero ? "text-white" : "text-slate-800";
+  const subTextClass = isDarkHero ? "text-slate-400" : "text-slate-500";
+  const mutedTextClass = isDarkHero ? "text-slate-300" : "text-slate-600";
+  const tagPillClass = isDarkHero
+    ? "bg-white/10 border-white/10 text-slate-200"
+    : "bg-slate-100 border-slate-200 text-slate-600";
   const editButtonClass = isDarkHero
-    ? 'bg-white/10 hover:bg-white/20 text-white border-white/10'
-    : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200';
-  const avatarBorderClass = isDarkHero ? 'border-slate-800 bg-slate-800' : 'border-white bg-slate-100 shadow-md';
+    ? "bg-white/10 hover:bg-white/20 text-white border-white/10"
+    : "bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200";
+  const avatarBorderClass = isDarkHero
+    ? "border-slate-800 bg-slate-800"
+    : "border-white bg-slate-100 shadow-md";
   const tabInactiveClass = isDarkHero
-    ? 'bg-white/5 text-slate-300 hover:bg-white/15 hover:text-white border border-white/10 backdrop-blur-xl'
-    : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-100 shadow-sm';
+    ? "bg-white/5 text-slate-300 hover:bg-white/15 hover:text-white border border-white/10 backdrop-blur-xl"
+    : "bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-100 shadow-sm";
   const emptyCardClass = isDarkHero
-    ? 'bg-white/10 backdrop-blur-xl border-white/10'
-    : 'bg-white border-slate-100 shadow-sm';
-  const emptyIconWrapClass = isDarkHero ? 'bg-white/10 text-slate-400' : 'bg-slate-100 text-slate-400';
+    ? "bg-white/10 backdrop-blur-xl border-white/10"
+    : "bg-white border-slate-100 shadow-sm";
+  const emptyIconWrapClass = isDarkHero
+    ? "bg-white/10 text-slate-400"
+    : "bg-slate-100 text-slate-400";
 
   useEffect(() => {
-    const tab = searchParams.get('tab');
-    if (tab && ['posts', 'drafts', 'bookmarks', 'milestones'].includes(tab)) {
+    const tab = searchParams.get("tab");
+    if (tab && ["posts", "drafts", "bookmarks", "milestones"].includes(tab)) {
       setActiveTab(tab);
     }
   }, [searchParams]);
@@ -78,22 +111,29 @@ export default function Profile() {
   const [drafts, setDrafts] = useState([]);
   const [bookmarks, setBookmarks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [followCounts, setFollowCounts] = useState({ followersCount: 0, followingCount: 0 });
+  const [followCounts, setFollowCounts] = useState({
+    followersCount: 0,
+    followingCount: 0,
+  });
 
   // แท็บนี้แค่ดูอย่างเดียว ไม่มีปุ่มกดรับรางวัล จะโชว์เฉพาะรางวัลที่ทำสำเร็จแล้ว
   // (ทั้งสถานะ READY_TO_CLAIM และ CLAIMED ถือว่าทำภารกิจสำเร็จแล้วทั้งคู่)
   // ส่วนที่ยังไม่ปลดล็อก (LOCKED) จะไม่แสดงในหน้านี้ เพราะไม่ใช่หน้าดูความคืบหน้า
-  const { milestones, fetchMilestones } = useAchievementStore();
+  const { milestones: achievementMilestones, fetchMilestones } =
+    useAchievementStore();
   useEffect(() => {
     fetchMilestones();
   }, [fetchMilestones]);
-  const completedAchievements = milestones.filter((m) => m.status !== 'LOCKED');
-  const avatarSrc = user?.avatar_url
-    || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.display_name || user?.username || 'User')}&background=1e293b&color=38bdf8`;
+  const completedAchievements = achievementMilestones.filter(
+    (m) => m.status !== "LOCKED",
+  );
+  const avatarSrc =
+    user?.avatar_url ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.display_name || user?.username || "User")}&background=1e293b&color=38bdf8`;
 
   useEffect(() => {
     if (!user) return;
-    
+
     const loadProfileData = async () => {
       setIsLoading(true);
       try {
@@ -103,19 +143,24 @@ export default function Profile() {
           return;
         }
 
-        const [fetchedPosts, fetchedDrafts, fetchedBookmarks, fetchedMilestones] = await Promise.all([
+        const [
+          fetchedPosts,
+          fetchedDrafts,
+          fetchedBookmarks,
+          fetchedMilestones,
+        ] = await Promise.all([
           profileService.getMyPosts(userId),
           profileService.getDrafts(userId),
           profileService.getBookmarks(userId),
-          profileService.getMilestones(userId)
+          profileService.getMilestones(userId),
         ]);
-        
+
         setMyPosts(fetchedPosts);
         setDrafts(fetchedDrafts);
         setBookmarks(fetchedBookmarks);
         setMilestones(fetchedMilestones);
       } catch (error) {
-        toast.error('เกิดข้อผิดพลาดในการโหลดข้อมูลโปรไฟล์');
+        toast.error("เกิดข้อผิดพลาดในการโหลดข้อมูลโปรไฟล์");
         console.error(error);
       } finally {
         setIsLoading(false);
@@ -124,116 +169,165 @@ export default function Profile() {
 
     loadProfileData();
   }, [user]);
-  
+
   // Simulate realtime notification for milestones (Trigger when mounted)
   useEffect(() => {
-    const unnotifiedReady = milestones.filter(m => m.status === 'READY_TO_CLAIM');
+    const unnotifiedReady = milestones.filter(
+      (m) => m.status === "READY_TO_CLAIM",
+    );
     if (unnotifiedReady.length > 0) {
       const timer = setTimeout(() => {
-        toast.success(`เป้าหมายสำเร็จ: ${unnotifiedReady[0].description} พร้อมรับรางวัลแล้ว!`, {
-          icon: '🎉',
-          duration: 5000,
-        });
+        toast.success(
+          `เป้าหมายสำเร็จ: ${unnotifiedReady[0].description} พร้อมรับรางวัลแล้ว!`,
+          {
+            icon: "🎉",
+            duration: 5000,
+          },
+        );
       }, 1000);
       return () => clearTimeout(timer);
     }
   }, [milestones]);
 
   const handleClaimReward = (id) => {
-    setMilestones(prev => prev.map(m => m.id === id ? { ...m, status: 'CLAIMED' } : m));
-    toast.success('รับรางวัลสำเร็จแล้ว ไอเท็มถูกเก็บเข้าคลัง', { icon: '🎁' });
+    setMilestones((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, status: "CLAIMED" } : m)),
+    );
+    toast.success("รับรางวัลสำเร็จแล้ว ไอเท็มถูกเก็บเข้าคลัง", { icon: "🎁" });
   };
 
   const handleDeletePost = async (postId) => {
     const result = await Swal.fire({
-      title: 'คุณต้องการลบรายการนี้ใช่หรือไม่?',
-      text: 'การดำเนินการนี้จะทำการลบรายการแบบ Soft Delete',
-      icon: 'warning',
+      title: "คุณต้องการลบรายการนี้ใช่หรือไม่?",
+      text: "การดำเนินการนี้จะทำการลบรายการแบบ Soft Delete",
+      icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: '#ef4444',
-      cancelButtonColor: '#64748b',
-      confirmButtonText: 'ใช่, ลบเลย',
-      cancelButtonText: 'ยกเลิก'
+      confirmButtonColor: "#ef4444",
+      cancelButtonColor: "#64748b",
+      confirmButtonText: "ใช่, ลบเลย",
+      cancelButtonText: "ยกเลิก",
     });
 
     if (result.isConfirmed) {
       try {
-        Swal.fire({ title: 'กำลังลบ...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        Swal.fire({
+          title: "กำลังลบ...",
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading(),
+        });
         const response = await postService.deletePost(postId);
         Swal.close();
         if (response && (response.success || response.status === 200)) {
-          toast.success('ลบรายการเรียบร้อยแล้ว');
-          setMyPosts(prev => prev.filter(p => p.id !== postId));
-          setDrafts(prev => prev.filter(d => d.id !== postId));
+          toast.success("ลบรายการเรียบร้อยแล้ว");
+          setMyPosts((prev) => prev.filter((p) => p.id !== postId));
+          setDrafts((prev) => prev.filter((d) => d.id !== postId));
         } else {
-          throw new Error(response?.message || 'เกิดข้อผิดพลาดในการลบ');
+          throw new Error(response?.message || "เกิดข้อผิดพลาดในการลบ");
         }
       } catch (error) {
         Swal.close();
-        toast.error(error.message || 'ไม่สามารถลบรายการได้');
+        toast.error(error.message || "ไม่สามารถลบรายการได้");
       }
     }
   };
 
   return (
-    <div className={`min-h-screen ${pageBg} pb-20 relative transition-colors duration-500`}>
+    <div
+      className={`min-h-screen ${pageBg} pb-20 relative transition-colors duration-500`}
+    >
       {/* พื้นหลังเต็มจอ — ปักตำแหน่งไว้กับที่ (fixed) ให้เต็มทั้งหน้าจอและอยู่นิ่ง
           ไม่เลื่อนตามเนื้อหา (อยู่หลัง navbar ด้วย) ถ้ายังไม่ได้ตั้งวอลเปเปอร์
           ส่วนนี้จะไม่แสดงอะไรเลย เห็นแค่สีพื้นหลังปกติของหน้า */}
       <div className="fixed inset-0 z-0 overflow-hidden">
-        {user?.user_metadata?.wallpaper_url && (
-          user.user_metadata.wallpaper_url.endsWith('.mp4') ? (
-            <video src={user.user_metadata.wallpaper_url} className="w-full h-full object-cover" autoPlay muted loop playsInline />
+        {user?.user_metadata?.wallpaper_url &&
+          (user.user_metadata.wallpaper_url.endsWith(".mp4") ? (
+            <video
+              src={user.user_metadata.wallpaper_url}
+              className="w-full h-full object-cover"
+              autoPlay
+              muted
+              loop
+              playsInline
+            />
           ) : (
-            <img src={user.user_metadata.wallpaper_url} alt="Wallpaper" className="w-full h-full object-cover" />
-          )
-        )}
+            <img
+              src={user.user_metadata.wallpaper_url}
+              alt="Wallpaper"
+              className="w-full h-full object-cover"
+            />
+          ))}
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-24 sm:-mt-32 relative z-10">
         <div className="bg-white rounded-[32px] shadow-sm border border-slate-100 p-6 sm:p-10 mb-8">
           <div className="flex flex-col sm:flex-row gap-8 items-start sm:items-end">
             <div className="relative">
-              <div className={`h-32 w-32 sm:h-40 sm:w-40 border-4 overflow-hidden shadow-2xl relative ${avatarBorderClass} ${avatarShapeClass}`}>
-                <img src={user?.avatar_url || "https://ui-avatars.com/api/?name=Somchai&background=1e293b&color=38bdf8&size=200"} alt="Avatar" className="w-full h-full object-cover" />
+              <div
+                className={`h-32 w-32 sm:h-40 sm:w-40 border-4 overflow-hidden shadow-2xl relative ${avatarBorderClass} ${avatarShapeClass}`}
+              >
+                <img
+                  src={
+                    user?.avatar_url ||
+                    "https://ui-avatars.com/api/?name=Somchai&background=1e293b&color=38bdf8&size=200"
+                  }
+                  alt="Avatar"
+                  className="w-full h-full object-cover"
+                />
 
                 {/* แสดงกรอบรูปโปรไฟล์ ถ้าผู้ใช้เลือกไว้ */}
                 {user?.user_metadata?.profile_frame_id && (
-                  <div className={`absolute inset-0 border-4 border-amber-400 mix-blend-overlay pointer-events-none ${avatarShapeClass}`}></div>
+                  <div
+                    className={`absolute inset-0 border-4 border-amber-400 mix-blend-overlay pointer-events-none ${avatarShapeClass}`}
+                  ></div>
                 )}
               </div>
               <button className="absolute bottom-2 right-2 p-2.5 bg-white rounded-full shadow-md text-slate-500 hover:text-primary transition-colors border border-slate-100">
                 <ImageIcon className="h-5 w-5" />
               </button>
             </div>
-            
+
             <div className="flex-1 pb-2">
-              <h1 className="text-3xl font-extrabold text-slate-900">{user?.user_metadata?.full_name || user?.name || 'ผู้ใช้งาน'}</h1>
-              <p className="text-slate-500 font-medium text-lg mb-4">{user?.email}</p>
-              
+              <h1 className="text-3xl font-extrabold text-slate-900">
+                {user?.user_metadata?.full_name || user?.name || "ผู้ใช้งาน"}
+              </h1>
+              <p className="text-slate-500 font-medium text-lg mb-4">
+                {user?.email}
+              </p>
+
               <div className="flex flex-wrap gap-4 text-sm font-semibold text-slate-600">
-                <div className="flex items-center gap-1.5"><GraduationCap className="h-4 w-4" /> มัธยมศึกษาตอนปลาย</div>
-                <div className="flex items-center gap-1.5"><MapPin className="h-4 w-4" /> Bangkok, TH</div>
-                <div className="flex items-center gap-1.5 text-blue-500 hover:underline cursor-pointer"><LinkIcon className="h-4 w-4" /> myportfolio.com</div>
+                <div className="flex items-center gap-1.5">
+                  <GraduationCap className="h-4 w-4" /> มัธยมศึกษาตอนปลาย
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <MapPin className="h-4 w-4" /> Bangkok, TH
+                </div>
+                <div className="flex items-center gap-1.5 text-blue-500 hover:underline cursor-pointer">
+                  <LinkIcon className="h-4 w-4" /> myportfolio.com
+                </div>
               </div>
             </div>
-            
+
             <div className="flex gap-4 w-full sm:w-auto pb-2">
               <button className="flex-1 sm:flex-none px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition-colors">
                 แก้ไขโปรไฟล์
               </button>
             </div>
           </div>
-          
+
           <div className="mt-8 pt-8 border-t border-slate-100">
-            <h3 className="font-bold text-slate-800 mb-2">เกี่ยวกับฉัน (Bio)</h3>
+            <h3 className="font-bold text-slate-800 mb-2">
+              เกี่ยวกับฉัน (Bio)
+            </h3>
             <p className="text-slate-600 leading-relaxed">
-              ชอบเรียนฟิสิกส์และคณิตศาสตร์เป็นชีวิตจิตใจ กำลังเตรียมตัวสอบเข้าวิศวะ มาร่วมแชร์สรุปเนื้อหากันได้นะครับ!
+              ชอบเรียนฟิสิกส์และคณิตศาสตร์เป็นชีวิตจิตใจ
+              กำลังเตรียมตัวสอบเข้าวิศวะ มาร่วมแชร์สรุปเนื้อหากันได้นะครับ!
             </p>
           </div>
 
           {(() => {
-            const profileWidgets = (user?.user_metadata?.widgets || []).filter((w) => w.options?.insideProfileCard !== false);
+            const profileWidgets = (user?.user_metadata?.widgets || []).filter(
+              (w) => w.options?.insideProfileCard !== false,
+            );
             if (profileWidgets.length === 0) return null;
             const widgetCardTheme = { ...DEFAULT_THEME, ...theme };
             return (
@@ -243,7 +337,15 @@ export default function Profile() {
                   {profileWidgets.map((w) => {
                     const platform = getPlatformConfig(w.platformId);
                     if (!platform) return null;
-                    return <WidgetCard key={w.id} platform={platform} url={w.url} options={w.options} cardTheme={widgetCardTheme} />;
+                    return (
+                      <WidgetCard
+                        key={w.id}
+                        platform={platform}
+                        url={w.url}
+                        options={w.options}
+                        cardTheme={widgetCardTheme}
+                      />
+                    );
                   })}
                 </div>
               </div>
@@ -253,16 +355,28 @@ export default function Profile() {
 
         {/* แถบแท็บ */}
         <div className="flex gap-2 mb-8 overflow-x-auto pb-2 scrollbar-hide">
-          <button onClick={() => setActiveTab('posts')} className={`flex items-center gap-2 px-6 py-3.5 rounded-xl font-bold whitespace-nowrap transition-colors ${activeTab === 'posts' ? 'bg-primary text-white shadow-md' : 'bg-white text-slate-500 hover:bg-slate-100'}`}>
+          <button
+            onClick={() => setActiveTab("posts")}
+            className={`flex items-center gap-2 px-6 py-3.5 rounded-xl font-bold whitespace-nowrap transition-colors ${activeTab === "posts" ? "bg-primary text-white shadow-md" : "bg-white text-slate-500 hover:bg-slate-100"}`}
+          >
             <BookOpen className="h-5 w-5" /> โพสต์ของฉัน
           </button>
-          <button onClick={() => setActiveTab('drafts')} className={`flex items-center gap-2 px-6 py-3.5 rounded-xl font-bold whitespace-nowrap transition-colors ${activeTab === 'drafts' ? 'bg-primary text-white shadow-md' : 'bg-white text-slate-500 hover:bg-slate-100'}`}>
+          <button
+            onClick={() => setActiveTab("drafts")}
+            className={`flex items-center gap-2 px-6 py-3.5 rounded-xl font-bold whitespace-nowrap transition-colors ${activeTab === "drafts" ? "bg-primary text-white shadow-md" : "bg-white text-slate-500 hover:bg-slate-100"}`}
+          >
             <FileText className="h-5 w-5" /> แบบร่าง
           </button>
-          <button onClick={() => setActiveTab('bookmarks')} className={`flex items-center gap-2 px-6 py-3.5 rounded-xl font-bold whitespace-nowrap transition-colors ${activeTab === 'bookmarks' ? 'bg-primary text-white shadow-md' : 'bg-white text-slate-500 hover:bg-slate-100'}`}>
+          <button
+            onClick={() => setActiveTab("bookmarks")}
+            className={`flex items-center gap-2 px-6 py-3.5 rounded-xl font-bold whitespace-nowrap transition-colors ${activeTab === "bookmarks" ? "bg-primary text-white shadow-md" : "bg-white text-slate-500 hover:bg-slate-100"}`}
+          >
             <Star className="h-5 w-5" /> บุ๊คมาร์ก
           </button>
-          <button onClick={() => setActiveTab('milestones')} className={`flex items-center gap-2 px-6 py-3.5 rounded-xl font-bold whitespace-nowrap transition-colors ${activeTab === 'milestones' ? 'bg-primary text-white shadow-md' : 'bg-white text-slate-500 hover:bg-slate-100'}`}>
+          <button
+            onClick={() => setActiveTab("milestones")}
+            className={`flex items-center gap-2 px-6 py-3.5 rounded-xl font-bold whitespace-nowrap transition-colors ${activeTab === "milestones" ? "bg-primary text-white shadow-md" : "bg-white text-slate-500 hover:bg-slate-100"}`}
+          >
             <Award className="h-5 w-5" /> ความสำเร็จ
           </button>
         </div>
@@ -272,165 +386,220 @@ export default function Profile() {
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-20">
               <Loader2 className="h-10 w-10 text-primary animate-spin mb-4" />
-              <p className="text-slate-500 font-medium">กำลังโหลดข้อมูลโปรไฟล์...</p>
+              <p className="text-slate-500 font-medium">
+                กำลังโหลดข้อมูลโปรไฟล์...
+              </p>
             </div>
           ) : (
             <>
-              {activeTab === 'posts' && (
+              {activeTab === "posts" && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {myPosts.length > 0 ? myPosts.map(post => (
-                    <PostCard key={post.id} post={post} viewMode="grid" />
-                  )) : (
-                    <div className="col-span-full py-10 text-center text-slate-500">ยังไม่มีโพสต์ที่เผยแพร่</div>
+                  {myPosts.length > 0 ? (
+                    myPosts.map((post) => (
+                      <PostCard key={post.id} post={post} viewMode="grid" />
+                    ))
+                  ) : (
+                    <div className="col-span-full py-10 text-center text-slate-500">
+                      ยังไม่มีโพสต์ที่เผยแพร่
+                    </div>
                   )}
                 </div>
               )}
 
-              {activeTab === 'drafts' && (
+              {activeTab === "drafts" && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {drafts.length > 0 ? drafts.map(draft => (
-                    <div 
-                      key={draft.id} 
-                      className="bg-white rounded-3xl border border-slate-200/60 shadow-sm hover:shadow-md hover:border-primary/20 transition-all flex flex-col overflow-hidden group"
-                    >
-                      {/* รูปปกและหมวดหมู่ */}
-                      <div className="h-44 bg-slate-100 overflow-hidden relative">
-                        <img 
-                          src={draft.image} 
-                          alt={draft.title} 
-                          className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-500" 
-                        />
-                        <div className="absolute top-3 left-3 px-2.5 py-1 bg-amber-500/90 text-white backdrop-blur-md rounded-lg text-[10px] font-bold shadow-sm z-10">
-                          แบบร่าง
-                        </div>
-                        <div className="absolute top-3 right-3 px-2.5 py-1 bg-white/95 backdrop-blur-md rounded-lg text-[10px] font-bold text-slate-700 shadow-sm z-10">
-                          {draft.subject}
-                        </div>
-                      </div>
-
-                      {/* เนื้อหาการ์ด */}
-                      <div className="p-5 flex-1 flex flex-col justify-between">
-                        <div>
-                          <div className="flex items-center gap-2 mb-3">
-                            <span className="px-2 py-0.5 bg-slate-50 border border-slate-100 text-slate-600 rounded-md text-[10px] font-bold">
-                              {draft.level}
-                            </span>
-                            <span className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
-                              <Clock className="h-3 w-3" /> แบบร่าง
-                            </span>
+                  {drafts.length > 0 ? (
+                    drafts.map((draft) => (
+                      <div
+                        key={draft.id}
+                        className="bg-white rounded-3xl border border-slate-200/60 shadow-sm hover:shadow-md hover:border-primary/20 transition-all flex flex-col overflow-hidden group"
+                      >
+                        {/* รูปปกและหมวดหมู่ */}
+                        <div className="h-44 bg-slate-100 overflow-hidden relative">
+                          <img
+                            src={draft.image}
+                            alt={draft.title}
+                            className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-500"
+                          />
+                          <div className="absolute top-3 left-3 px-2.5 py-1 bg-amber-500/90 text-white backdrop-blur-md rounded-lg text-[10px] font-bold shadow-sm z-10">
+                            แบบร่าง
                           </div>
-
-                          <h3 className="text-lg font-bold text-slate-800 line-clamp-2 mb-2 group-hover:text-primary transition-colors">
-                            {draft.title}
-                          </h3>
-
-                          <p className="text-slate-500 text-xs font-medium line-clamp-2 mb-4 leading-relaxed">
-                            {draft.description}
-                          </p>
-                        </div>
-
-                        {/* ปุ่มดำเนินการของการ์ด */}
-                        <div className={`pt-3 border-t flex items-center justify-between gap-3 mt-auto ${dividerClass}`}>
-                          <span className={`text-[10px] font-medium ${subTextClass}`}>
-                            แก้ไขล่าสุด: {draft.created_at ? new Date(draft.created_at).toLocaleDateString('th-TH') : 'ไม่ระบุ'}
-                          </span>
-                          
-                          <div className="flex items-center gap-2">
-                            <button 
-                              onClick={() => navigate(`/post/edit/${draft.id}`)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-primary border border-blue-100 rounded-lg text-xs font-bold shadow-sm transition-all cursor-pointer"
-                            >
-                              <Edit className="h-3.5 w-3.5" /> แก้ไข
-                            </button>
-                            <button 
-                              onClick={() => handleDeletePost(draft.id)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-100 rounded-lg text-xs font-bold shadow-sm transition-all cursor-pointer"
-                              title="ลบแบบร่าง"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" /> ลบ
-                            </button>
+                          <div className="absolute top-3 right-3 px-2.5 py-1 bg-white/95 backdrop-blur-md rounded-lg text-[10px] font-bold text-slate-700 shadow-sm z-10">
+                            {draft.subject}
                           </div>
                         </div>
+
+                        {/* เนื้อหาการ์ด */}
+                        <div className="p-5 flex-1 flex flex-col justify-between">
+                          <div>
+                            <div className="flex items-center gap-2 mb-3">
+                              <span className="px-2 py-0.5 bg-slate-50 border border-slate-100 text-slate-600 rounded-md text-[10px] font-bold">
+                                {draft.level}
+                              </span>
+                              <span className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
+                                <Clock className="h-3 w-3" /> แบบร่าง
+                              </span>
+                            </div>
+
+                            <h3 className="text-lg font-bold text-slate-800 line-clamp-2 mb-2 group-hover:text-primary transition-colors">
+                              {draft.title}
+                            </h3>
+
+                            <p className="text-slate-500 text-xs font-medium line-clamp-2 mb-4 leading-relaxed">
+                              {draft.description}
+                            </p>
+                          </div>
+
+                          {/* ปุ่มดำเนินการของการ์ด */}
+                          <div
+                            className={`pt-3 border-t flex items-center justify-between gap-3 mt-auto ${dividerClass}`}
+                          >
+                            <span
+                              className={`text-[10px] font-medium ${subTextClass}`}
+                            >
+                              แก้ไขล่าสุด:{" "}
+                              {draft.created_at
+                                ? new Date(draft.created_at).toLocaleDateString(
+                                    "th-TH",
+                                  )
+                                : "ไม่ระบุ"}
+                            </span>
+
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() =>
+                                  navigate(`/post/edit/${draft.id}`)
+                                }
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-primary border border-blue-100 rounded-lg text-xs font-bold shadow-sm transition-all cursor-pointer"
+                              >
+                                <Edit className="h-3.5 w-3.5" /> แก้ไข
+                              </button>
+                              <button
+                                onClick={() => handleDeletePost(draft.id)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-100 rounded-lg text-xs font-bold shadow-sm transition-all cursor-pointer"
+                                title="ลบแบบร่าง"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" /> ลบ
+                              </button>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  )) : (
+                    ))
+                  ) : (
                     <div className="col-span-full flex flex-col items-center justify-center py-20 text-center bg-white rounded-3xl border border-slate-100">
                       <div className="h-24 w-24 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mb-4">
                         <FileText className="h-10 w-10" />
                       </div>
-                      <h3 className="text-xl font-bold text-slate-800 mb-2">ยังไม่มีแบบร่าง</h3>
-                      <p className="text-slate-500">คุณสามารถบันทึกสรุปความรู้เป็นแบบร่างเพื่อมาเขียนต่อได้ตลอดเวลา</p>
+                      <h3 className="text-xl font-bold text-slate-800 mb-2">
+                        ยังไม่มีแบบร่าง
+                      </h3>
+                      <p className="text-slate-500">
+                        คุณสามารถบันทึกสรุปความรู้เป็นแบบร่างเพื่อมาเขียนต่อได้ตลอดเวลา
+                      </p>
                     </div>
                   )}
                 </div>
               )}
 
-              {activeTab === 'bookmarks' && (
+              {activeTab === "bookmarks" && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {bookmarks.length > 0 ? bookmarks.map(post => (
-                    <PostCard key={post.id} post={post} viewMode="grid" />
-                  )) : (
+                  {bookmarks.length > 0 ? (
+                    bookmarks.map((post) => (
+                      <PostCard key={post.id} post={post} viewMode="grid" />
+                    ))
+                  ) : (
                     <div className="col-span-full flex flex-col items-center justify-center py-20 text-center bg-white rounded-3xl border border-slate-100">
                       <div className="h-24 w-24 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mb-4">
                         <Star className="h-10 w-10" />
                       </div>
-                      <h3 className="text-xl font-bold text-slate-800 mb-2">ยังไม่มีบุ๊คมาร์ก</h3>
-                      <p className="text-slate-500">ไปที่หน้า Explore หรือ Trending เพื่อค้นหาโพสต์ที่คุณสนใจ</p>
+                      <h3 className="text-xl font-bold text-slate-800 mb-2">
+                        ยังไม่มีบุ๊คมาร์ก
+                      </h3>
+                      <p className="text-slate-500">
+                        ไปที่หน้า Explore หรือ Trending
+                        เพื่อค้นหาโพสต์ที่คุณสนใจ
+                      </p>
                     </div>
                   )}
                 </div>
               )}
 
-              {activeTab === 'milestones' && (
+              {activeTab === "milestones" && (
                 <div className="space-y-6">
-                  {milestones.length > 0 ? milestones.map(m => (
-                    <div key={m.id} className="bg-white p-6 rounded-[24px] shadow-sm border border-slate-100 flex flex-col md:flex-row items-center gap-6 justify-between transition-all hover:shadow-md">
-                      <div className="flex items-center gap-6 w-full md:w-auto">
-                        <div className={`h-20 w-20 rounded-2xl flex items-center justify-center shrink-0 shadow-sm transition-colors duration-300 ${m.status === 'READY_TO_CLAIM' ? 'bg-amber-100 text-amber-500 ring-4 ring-amber-50' : m.status === 'CLAIMED' ? 'bg-emerald-100 text-emerald-500' : 'bg-slate-100 text-slate-400'}`}>
-                          {m.status === 'CLAIMED' ? <CheckCircle2 className="h-10 w-10" /> : <Gift className="h-10 w-10" />}
-                        </div>
-                        <div>
-                          <h3 className="text-xl font-extrabold text-slate-800 mb-1">{m.title}</h3>
-                          
-                          <div className="flex items-center flex-wrap gap-2">
-                            <p className={`font-medium ${m.status === 'READY_TO_CLAIM' || m.status === 'CLAIMED' ? 'text-amber-600' : 'text-slate-600'}`}>
-                              {m.description}
-                            </p>
-                            {(m.status === 'READY_TO_CLAIM' || m.status === 'CLAIMED') && (
-                              <span className="bg-amber-100 text-amber-700 text-xs px-2 py-1 rounded-md font-bold">
-                                พร้อมรับรางวัลแล้ว
-                              </span>
+                  {milestones.length > 0 ? (
+                    milestones.map((m) => (
+                      <div
+                        key={m.id}
+                        className="bg-white p-6 rounded-[24px] shadow-sm border border-slate-100 flex flex-col md:flex-row items-center gap-6 justify-between transition-all hover:shadow-md"
+                      >
+                        <div className="flex items-center gap-6 w-full md:w-auto">
+                          <div
+                            className={`h-20 w-20 rounded-2xl flex items-center justify-center shrink-0 shadow-sm transition-colors duration-300 ${m.status === "READY_TO_CLAIM" ? "bg-amber-100 text-amber-500 ring-4 ring-amber-50" : m.status === "CLAIMED" ? "bg-emerald-100 text-emerald-500" : "bg-slate-100 text-slate-400"}`}
+                          >
+                            {m.status === "CLAIMED" ? (
+                              <CheckCircle2 className="h-10 w-10" />
+                            ) : (
+                              <Gift className="h-10 w-10" />
                             )}
                           </div>
-                          
-                          {/* Subtitle Progress info for Locked items */}
-                          {m.status === 'LOCKED' && (
-                            <p className="text-sm font-bold text-blue-500 mt-3 bg-blue-50 px-3 py-1 rounded-full inline-block">
-                              ความคืบหน้า: {m.current} / {m.target}
-                            </p>
+                          <div>
+                            <h3 className="text-xl font-extrabold text-slate-800 mb-1">
+                              {m.title}
+                            </h3>
+
+                            <div className="flex items-center flex-wrap gap-2">
+                              <p
+                                className={`font-medium ${m.status === "READY_TO_CLAIM" || m.status === "CLAIMED" ? "text-amber-600" : "text-slate-600"}`}
+                              >
+                                {m.description}
+                              </p>
+                              {(m.status === "READY_TO_CLAIM" ||
+                                m.status === "CLAIMED") && (
+                                <span className="bg-amber-100 text-amber-700 text-xs px-2 py-1 rounded-md font-bold">
+                                  พร้อมรับรางวัลแล้ว
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Subtitle Progress info for Locked items */}
+                            {m.status === "LOCKED" && (
+                              <p className="text-sm font-bold text-blue-500 mt-3 bg-blue-50 px-3 py-1 rounded-full inline-block">
+                                ความคืบหน้า: {m.current} / {m.target}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="w-full md:w-auto shrink-0 mt-4 md:mt-0">
+                          {m.status === "LOCKED" && (
+                            <button
+                              disabled
+                              className="w-full md:w-auto px-8 py-3.5 bg-slate-100 text-slate-400 font-bold rounded-xl cursor-not-allowed"
+                            >
+                              ยังไม่สำเร็จ
+                            </button>
+                          )}
+                          {m.status === "READY_TO_CLAIM" && (
+                            <button
+                              onClick={() => handleClaimReward(m.id)}
+                              className="w-full md:w-auto px-8 py-3.5 bg-primary hover:bg-blue-600 text-white font-bold rounded-xl shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all animate-pulse"
+                            >
+                              รับรางวัลเลย!
+                            </button>
+                          )}
+                          {m.status === "CLAIMED" && (
+                            <button
+                              disabled
+                              className="w-full md:w-auto px-8 py-3.5 bg-emerald-50 text-emerald-600 font-bold rounded-xl flex items-center justify-center gap-2"
+                            >
+                              <CheckCircle2 className="h-5 w-5" /> รับรางวัลแล้ว
+                            </button>
                           )}
                         </div>
                       </div>
-                      
-                      <div className="w-full md:w-auto shrink-0 mt-4 md:mt-0">
-                        {m.status === 'LOCKED' && (
-                          <button disabled className="w-full md:w-auto px-8 py-3.5 bg-slate-100 text-slate-400 font-bold rounded-xl cursor-not-allowed">
-                            ยังไม่สำเร็จ
-                          </button>
-                        )}
-                        {m.status === 'READY_TO_CLAIM' && (
-                          <button onClick={() => handleClaimReward(m.id)} className="w-full md:w-auto px-8 py-3.5 bg-primary hover:bg-blue-600 text-white font-bold rounded-xl shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all animate-pulse">
-                            รับรางวัลเลย!
-                          </button>
-                        )}
-                        {m.status === 'CLAIMED' && (
-                          <button disabled className="w-full md:w-auto px-8 py-3.5 bg-emerald-50 text-emerald-600 font-bold rounded-xl flex items-center justify-center gap-2">
-                            <CheckCircle2 className="h-5 w-5" /> รับรางวัลแล้ว
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )) : (
+                    ))
+                  ) : (
                     <div className="text-center py-10 text-slate-500">
                       ยังไม่มีความสำเร็จ
                     </div>
