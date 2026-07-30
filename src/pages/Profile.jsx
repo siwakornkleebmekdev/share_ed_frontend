@@ -634,7 +634,7 @@ export default function Profile() {
                     completedAchievements.map((m) => {
                       const statusMeta = ACHIEVEMENT_STATUS_META[m.status];
                       const hasImage =
-                        m.reward.type === "WALLPAPER" && m.reward.previewUrl;
+                        m.reward?.type === "WALLPAPER" && m.reward.previewUrl;
                       return (
                         <div
                           key={m.id}
@@ -672,15 +672,17 @@ export default function Profile() {
                               {m.description}
                             </p>
                           </div>
-                          <div
-                            className={`flex items-center gap-1.5 text-xs font-semibold ${mutedTextClass}`}
-                          >
-                            <Gift className="h-3.5 w-3.5" />
-                            {m.reward.type === "FRAME"
-                              ? "กรอบรูป"
-                              : "ภาพพื้นหลัง"}
-                            : {m.reward.name}
-                          </div>
+                          {m.reward && (
+                            <div
+                              className={`flex items-center gap-1.5 text-xs font-semibold ${mutedTextClass}`}
+                            >
+                              <Gift className="h-3.5 w-3.5" />
+                              {m.reward.type === "FRAME"
+                                ? "กรอบรูป"
+                                : "ภาพพื้นหลัง"}
+                              : {m.reward.name}
+                            </div>
+                          )}
                         </div>
                       );
                     })

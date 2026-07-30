@@ -40,9 +40,9 @@ export default function SettingsProfile() {
     fetchMilestones();
   }, [fetchMilestones]);
 
-  const frameMilestones = milestones.filter((m) => m.reward.type === "FRAME");
+  const frameMilestones = milestones.filter((m) => m.reward?.type === "FRAME");
   const claimedWallpapers = milestones.filter(
-    (m) => m.status === "CLAIMED" && m.reward.type === "WALLPAPER",
+    (m) => m.status === "CLAIMED" && m.reward?.type === "WALLPAPER",
   );
   const currentAvatarSrc =
     media.avatar?.url ||
