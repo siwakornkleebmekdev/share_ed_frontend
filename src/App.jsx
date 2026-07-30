@@ -25,6 +25,7 @@ import SettingsAccount from "./pages/settings/SettingsAccount";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import UserManagement from "./pages/admin/UserManagement";
 import UserDetails from "./pages/admin/UserDetails";
+import AchievementManagement from "./pages/admin/AchievementManagement";
 import { authService } from "./services/auth.service";
 import { supabase } from "./utils/supabase";
 
@@ -349,6 +350,7 @@ function App() {
           <Route index element={<AdminDashboard />} />
           <Route path="users" element={<UserManagement />} />
           <Route path="users/:id" element={<UserDetails />} />
+          <Route path="achievements" element={<AchievementManagement />} />
         </Route>
       </Routes>
 

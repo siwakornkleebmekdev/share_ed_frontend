@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Trophy, Gift, Lock, CheckCircle2, Loader2 } from 'lucide-react';
+import { Trophy, Gift, Lock, CheckCircle2, Loader2, Palette } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useAchievementStore from '@/store/achievementStore';
 import useAuthStore from '@/store/authStore';
@@ -20,9 +20,13 @@ export default function Achievements() {
     fetchMilestones();
   }, [fetchMilestones]);
 
-  const handleClaim = (id) => {
-    claimReward(id);
-    toast.success('รับรางวัลสำเร็จ!');
+  const handleClaim = async (id) => {
+    try {
+      await claimReward(id);
+      toast.success('รับรางวัลสำเร็จ!');
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'ไม่สามารถรับรางวัลได้');
+    }
   };
 
   const claimedCount = milestones.filter((m) => m.status === 'CLAIMED').length;
@@ -52,7 +56,8 @@ export default function Achievements() {
           {milestones.map((milestone) => {
             const status = STATUS_META[milestone.status];
             const progress = Math.min(100, (milestone.current / milestone.target) * 100);
-            const hasImage = milestone.reward.type === 'WALLPAPER' && milestone.reward.previewUrl;
+            const hasReward = !!milestone.reward;
+            const hasImage = hasReward && milestone.reward.type !== 'FRAME' && !!milestone.reward.previewUrl;
             const locked = milestone.status === 'LOCKED';
 
             return (
@@ -75,29 +80,32 @@ export default function Achievements() {
                   </div>
 
                   {/* Reward icon overlapping the cover/body seam, like a
-                      game logo sitting in front of its banner art. */}
-                  <div className={`absolute left-5 -bottom-10 h-20 w-20 rounded-xl border-4 border-white overflow-hidden shadow-lg ${
-                    milestone.reward.type === 'FRAME' ? '' : 'bg-slate-100'
-                  }`}>
-                    {milestone.reward.type === 'FRAME' ? (
-                      <img
-                        src={avatarSrc}
-                        alt=""
-                        className="w-full h-full object-cover"
-                        style={locked ? { filter: 'grayscale(0.6) brightness(0.85)' } : undefined}
-                      />
-                    ) : (
-                      <img
-                        src={milestone.reward.previewUrl}
-                        alt={milestone.reward.name}
-                        className="w-full h-full object-cover"
-                        style={locked ? { filter: 'grayscale(0.6) brightness(0.85)' } : undefined}
-                      />
-                    )}
-                  </div>
+                      game logo sitting in front of its banner art. Skipped
+                      entirely when the milestone has no reward attached. */}
+                  {hasReward && (
+                    <div className="absolute left-5 -bottom-10 h-20 w-20 rounded-xl border-4 border-white overflow-hidden shadow-lg bg-slate-100 flex items-center justify-center">
+                      {milestone.reward.type === 'FRAME' ? (
+                        <img
+                          src={avatarSrc}
+                          alt=""
+                          className="w-full h-full object-cover"
+                          style={locked ? { filter: 'grayscale(0.6) brightness(0.85)' } : undefined}
+                        />
+                      ) : milestone.reward.previewUrl ? (
+                        <img
+                          src={milestone.reward.previewUrl}
+                          alt={milestone.reward.name}
+                          className="w-full h-full object-cover"
+                          style={locked ? { filter: 'grayscale(0.6) brightness(0.85)' } : undefined}
+                        />
+                      ) : (
+                        <Palette className="h-8 w-8 text-slate-400" />
+                      )}
+                    </div>
+                  )}
                 </div>
 
-                <div className="pt-12 px-5 pb-5 flex flex-col flex-1">
+                <div className={`${hasReward ? 'pt-12' : 'pt-5'} px-5 pb-5 flex flex-col flex-1`}>
                   <h3 className="font-bold text-slate-800 text-base line-clamp-1">{milestone.title}</h3>
                   <p className="text-sm text-slate-500 mt-1 line-clamp-2">{milestone.description}</p>
 
@@ -110,10 +118,12 @@ export default function Achievements() {
                     </div>
                   )}
 
-                  <div className="flex items-center gap-1.5 mt-3 text-xs font-semibold text-amber-600">
-                    <Gift className="h-3.5 w-3.5" />
-                    {milestone.reward.type === 'FRAME' ? 'กรอบรูป' : 'ภาพพื้นหลัง'}: {milestone.reward.name}
-                  </div>
+                  {hasReward && (
+                    <div className="flex items-center gap-1.5 mt-3 text-xs font-semibold text-amber-600">
+                      <Gift className="h-3.5 w-3.5" />
+                      {milestone.reward.type === 'FRAME' ? 'กรอบรูป' : milestone.reward.type === 'THEME' ? 'ธีม' : 'รางวัล'}: {milestone.reward.name}
+                    </div>
+                  )}
 
                   <div className="mt-auto pt-4 border-t border-slate-100">
                     {milestone.status === 'READY_TO_CLAIM' && (

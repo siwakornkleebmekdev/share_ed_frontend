@@ -3,6 +3,7 @@ import {
   BookOpen,
   LayoutDashboard,
   Users,
+  Award,
   Undo2,
   LogOut,
   ShieldCheck,
@@ -18,7 +19,10 @@ const NAV_GROUPS = [
   },
   {
     label: "จัดการ",
-    items: [{ to: "/admin/users", label: "จัดการผู้ใช้งาน", icon: Users }],
+    items: [
+      { to: "/admin/users", label: "จัดการผู้ใช้งาน", icon: Users },
+      { to: "/admin/achievements", label: "จัดการความสำเร็จ", icon: Award },
+    ],
   },
 ];
 

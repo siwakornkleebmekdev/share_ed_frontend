@@ -24,9 +24,11 @@ const useAchievementStore = create((set, get) => ({
     }
   },
 
-  // No real backend endpoint for claiming yet — optimistic local flip only,
-  // matching the mock-data fallback profileService.getMilestones() already uses.
-  claimReward: (id) => {
+  // Claims via the real POST /milestones/:id/claim endpoint, then flips the
+  // local copy to CLAIMED on success. Throws on failure so the caller can
+  // show the backend's actual error message (e.g. already claimed).
+  claimReward: async (id) => {
+    await profileService.claimMilestone(id);
     set((state) => ({
       milestones: state.milestones.map((m) =>
         m.id === id ? { ...m, status: 'CLAIMED' } : m

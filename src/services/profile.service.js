@@ -49,12 +49,22 @@ export const profileService = {
   // Fetch Milestones (Temporarily disabled due to RLS blocking direct access — falls back to mock data)
   getMilestones: async () => {
     try {
-      const response = await api.get("/achievements/my-milestones");
-      if (response.data.success) return response.data.data;
+      const response = await api.get("/milestones");
+      if (response.data.success) {
+        return response.data.data.map(mapMilestoneToAchievement);
+      }
       return MOCK_MILESTONES;
     } catch (error) {
+      console.log("Milestones fetch failed, falling back to mock:", error);
       return MOCK_MILESTONES;
     }
+  },
+
+  // Claim a completed milestone's reward — unlocks the reward server-side
+  // (see /milestones/:id/claim) and marks it CLAIMED.
+  claimMilestone: async (id) => {
+    const response = await api.post(`/milestones/${id}/claim`);
+    return response.data;
   },
 
   // Fetch User Stats (Temporarily disabled due to RLS blocking direct access)
@@ -191,6 +201,30 @@ const MOCK_MILESTONES = [
     },
   },
 ];
+
+// GET /milestones returns each Milestone spread with the current user's
+// progress (current_progress, is_completed, completed_at, claimed_at, status)
+// and a nested reward_item ({item_name, item_type: THEME|FRAME, image_url}).
+// Maps that real shape onto the shape Achievements.jsx/achievementStore.js
+// already render (current/target/status/reward.{type,name,previewUrl}).
+function mapMilestoneToAchievement(m) {
+  return {
+    id: m.id,
+    title: m.title,
+    description: m.description,
+    current: m.current_progress,
+    target: m.target_value,
+    status: m.status, // backend already computes LOCKED|READY_TO_CLAIM|CLAIMED
+    reward: m.reward_item
+      ? {
+          type: m.reward_item.item_type, // FRAME | THEME (no WALLPAPER on the real backend)
+          name: m.reward_item.item_name,
+          previewUrl: m.reward_item.image_url,
+        }
+      : null,
+    completedAt: m.completed_at,
+  };
+}
 
 // Helper function to format data for PostCard component
 function formatPosts(data) {
