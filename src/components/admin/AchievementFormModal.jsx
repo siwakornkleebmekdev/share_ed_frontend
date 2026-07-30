@@ -4,9 +4,9 @@ import { achievementService, SUGGESTED_MILESTONE_TYPES } from "@/services/achiev
 
 const REWARD_MODES = { NONE: "NONE", EXISTING: "EXISTING", NEW: "NEW" };
 
-// Add/edit modal for a single achievement (milestone) — structural clone of
-// WidgetModal.jsx (overlay, backdrop-click-to-close, staged local state).
-// Serves both add (initialData: null) and edit (initialData: achievement).
+// Modal เพิ่ม/แก้ไขความสำเร็จ (milestone) — โครงสร้างเดียวกับ WidgetModal.jsx
+// (มี overlay, ปิดได้ด้วยการคลิก backdrop, พักข้อมูลไว้ใน local state)
+// ใช้ modal เดียวทำได้ทั้งเพิ่ม (initialData: null) และแก้ไข (initialData: ข้อมูลความสำเร็จ)
 export default function AchievementFormModal({ isOpen, onClose, initialData, onConfirm }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -46,8 +46,8 @@ export default function AchievementFormModal({ isOpen, onClose, initialData, onC
 
     achievementService.getRewardItems().then((items) => {
       setRewardItems(items);
-      // Make sure the currently-attached reward shows up as an option even
-      // if it hasn't been seen in a loaded milestone list yet.
+      // เผื่อรางวัลที่ผูกไว้อยู่แล้วยังไม่เคยโผล่ใน milestone list ที่โหลดมา
+      // ให้ใส่เพิ่มเข้าไปเป็นตัวเลือกด้วย จะได้ไม่หายไปจาก dropdown
       if (initialData?.reward_item && !items.some((i) => i.id === initialData.reward_item.id)) {
         setRewardItems([initialData.reward_item, ...items]);
       }
