@@ -1,0 +1,184 @@
+/* Shared styles for the /admin/* area (Dashboard, User Management, User Details, sidebar).
+   Imported via @import in index.css (not via JS) so it compiles as part of
+   that same Tailwind entry and gets the correct cascade layer order. */
+
+@layer components {
+  .admin-page-title {
+    @apply text-2xl font-extrabold text-slate-800;
+  }
+
+  .admin-page-subtitle {
+    @apply text-slate-500 mt-1;
+  }
+
+  .admin-card {
+    @apply bg-white rounded-3xl shadow-sm border border-slate-100 p-6 sm:p-8;
+  }
+
+  .admin-filter-bar {
+    @apply bg-white rounded-3xl shadow-sm border border-slate-100 p-4 sm:p-6 flex flex-col sm:flex-row gap-3;
+  }
+
+  .admin-input {
+    @apply w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl
+      focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary
+      text-slate-800 font-medium;
+  }
+
+  .admin-select {
+    @apply px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-700
+      focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary;
+  }
+
+  .admin-select-sm {
+    @apply px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-semibold text-slate-700 text-xs
+      focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary disabled:opacity-50;
+  }
+
+  .admin-table-card {
+    @apply bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden;
+  }
+
+  .admin-table {
+    @apply w-full text-sm;
+  }
+
+  .admin-table thead tr {
+    @apply border-b border-slate-100 text-left text-slate-400 uppercase text-xs font-bold tracking-wide;
+  }
+
+  .admin-table th {
+    @apply px-6 py-4;
+  }
+
+  .admin-table td {
+    @apply px-6 py-4;
+  }
+
+  .admin-table-row {
+    @apply border-b border-slate-50 last:border-0 hover:bg-slate-50/60 transition-colors cursor-pointer;
+  }
+
+  .admin-table-empty {
+    @apply px-6 py-10 text-center text-slate-400;
+  }
+
+  .admin-badge {
+    @apply px-2.5 py-1 rounded-full text-xs font-bold;
+  }
+
+  .admin-badge-lg {
+    @apply px-3 py-1 rounded-full text-xs font-bold;
+  }
+
+  .admin-badge-active {
+    @apply bg-emerald-50 text-emerald-600;
+  }
+
+  .admin-badge-suspended {
+    @apply bg-amber-50 text-amber-600;
+  }
+
+  .admin-badge-banned {
+    @apply bg-red-50 text-red-600;
+  }
+
+  .admin-badge-default {
+    @apply bg-slate-100 text-slate-600;
+  }
+
+  .admin-icon-btn {
+    @apply p-2 rounded-lg transition-colors disabled:opacity-30 disabled:hover:bg-transparent;
+  }
+
+  .admin-icon-btn-danger {
+    @apply text-red-500 hover:bg-red-50;
+  }
+
+  .admin-icon-btn-success {
+    @apply text-emerald-500 hover:bg-emerald-50;
+  }
+
+  .admin-btn {
+    @apply flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-white transition-colors disabled:opacity-40;
+  }
+
+  .admin-btn-danger {
+    @apply bg-red-500 hover:bg-red-600;
+  }
+
+  .admin-btn-success {
+    @apply bg-emerald-500 hover:bg-emerald-600;
+  }
+
+  .admin-stat-tile {
+    @apply bg-white rounded-3xl shadow-sm border border-slate-100 p-6;
+  }
+
+  .admin-stat-value {
+    @apply text-2xl font-extrabold text-slate-800;
+  }
+
+  .admin-stat-label {
+    @apply text-sm text-slate-500 mt-1;
+  }
+
+  .admin-field-label {
+    @apply text-xs font-bold uppercase tracking-wide text-slate-400 mb-1 flex items-center gap-1.5;
+  }
+
+  .admin-field-value {
+    @apply font-semibold text-slate-700;
+  }
+
+  .admin-recent-row {
+    @apply flex items-center justify-between py-3 cursor-pointer hover:bg-slate-50/60 -mx-2 px-2 rounded-lg transition-colors;
+  }
+
+  .admin-back-link {
+    @apply flex items-center gap-1.5 text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors;
+  }
+
+  /* Layout + sidebar (mirrors SettingsLayout/SettingsSidebar) */
+
+  .admin-layout {
+    @apply flex min-h-screen bg-slate-50;
+  }
+
+  .admin-sidebar {
+    @apply w-72 shrink-0 h-screen sticky top-0 bg-white border-r border-slate-100 flex flex-col;
+  }
+
+  .admin-sidebar-brand {
+    @apply px-6 h-20 flex items-center gap-2 border-b border-slate-100 shrink-0;
+  }
+
+  .admin-sidebar-nav {
+    @apply flex-1 overflow-y-auto px-4 py-6 space-y-6;
+  }
+
+  .admin-sidebar-group-label {
+    @apply px-3.5 mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400;
+  }
+
+  .admin-sidebar-link {
+    @apply flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold transition-colors
+      text-slate-600 hover:bg-slate-50 hover:text-slate-900;
+  }
+
+  .admin-sidebar-link-active {
+    @apply bg-slate-900 text-white shadow-sm;
+  }
+
+  .admin-sidebar-footer {
+    @apply px-4 py-4 border-t border-slate-100 shrink-0 flex items-center gap-3;
+  }
+
+  .admin-sidebar-avatar {
+    @apply h-10 w-10 rounded-full bg-slate-100 overflow-hidden shrink-0 flex items-center justify-center text-slate-400 font-bold;
+  }
+
+  .admin-sidebar-logout {
+    @apply p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors shrink-0;
+  }
+}

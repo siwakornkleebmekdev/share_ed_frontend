@@ -106,22 +106,34 @@ export const authService = {
     if (!error && session?.user) {
       const user = session.user;
       const meta = user.user_metadata || {};
-      return {
-        success: true,
-        data: {
-          id: user.id,
-          user_id: user.id,
-          email: user.email,
-          name: meta.display_name || meta.full_name || meta.username || user.email?.split('@')[0],
-          avatar: meta.avatar_url,
-          display_name: meta.display_name || meta.full_name || meta.username,
-          username: meta.username || meta.display_name || meta.full_name,
-          education_level: meta.education_level,
-          age: meta.age,
-          bio: meta.bio,
-          user_metadata: meta
-        }
+      const supabaseUser = {
+        id: user.id,
+        user_id: user.id,
+        email: user.email,
+        name: meta.display_name || meta.full_name || meta.username || user.email?.split('@')[0],
+        avatar: meta.avatar_url,
+        display_name: meta.display_name || meta.full_name || meta.username,
+        username: meta.username || meta.display_name || meta.full_name,
+        education_level: meta.education_level,
+        age: meta.age,
+        bio: meta.bio,
+        user_metadata: meta
       };
+
+      // Supabase's session/JWT has no knowledge of the Mongoose-side role/status,
+      // so also ask the backend and merge those two fields in when available.
+      try {
+        const backendRes = await api.get('/auth/me');
+        const backendUser = backendRes.data?.data || backendRes.data?.user || backendRes.data;
+        if (backendUser) {
+          supabaseUser.role = backendUser.role;
+          supabaseUser.status = backendUser.status;
+        }
+      } catch (e) {
+        console.log('Background role sync via /auth/me failed:', e?.response?.data || e.message);
+      }
+
+      return { success: true, data: supabaseUser };
     }
 
     // Fallback: Check backend /auth/me

@@ -2,6 +2,16 @@
 
 @import "tailwindcss";
 
+/* Must come right after the "tailwindcss" import (so Tailwind's own
+   `@layer theme, base, components, utilities;` declaration registers the
+   layer order first) and before any non-import rule — @import statements
+   are only valid at the top of a stylesheet. See the comment near this
+   file's bottom-removed note: importing admin.css via JS in AdminLayout.jsx
+   instead of here let Vite concatenate it ahead of this declaration, which
+   locked in a wrong global layer order and made Preflight's `@layer base`
+   resets (padding, box-shadow) beat every admin.css component class. */
+@import "./pages/admin/admin.css";
+
 @theme {
   --color-background: #f8fafc;
   --color-primary: #3b82f6;
