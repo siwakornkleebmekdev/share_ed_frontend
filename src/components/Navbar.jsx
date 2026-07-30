@@ -11,6 +11,7 @@ import {
   Settings,
   FileText,
   Trophy,
+  ShieldCheck,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import useNotificationStore from "@/store/notificationStore";
@@ -285,14 +286,25 @@ export default function Navbar() {
                         <User className="h-4 w-4" />
                         โปรไฟล์ของฉัน
                       </Link>
-                      <Link
-                        to="/profile?tab=drafts"
-                        onClick={() => setShowProfileMenu(false)}
-                        className="flex items-center gap-3 w-full p-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors"
-                      >
-                        <FileText className="h-4 w-4" />
-                        แบบร่างของฉัน
-                      </Link>
+                      {user?.role === "ADMIN" ? (
+                        <Link
+                          to="/admin"
+                          onClick={() => setShowProfileMenu(false)}
+                          className="flex items-center gap-3 w-full p-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors"
+                        >
+                          <ShieldCheck className="h-4 w-4" />
+                          Admin Console
+                        </Link>
+                      ) : (
+                        <Link
+                          to="/profile?tab=drafts"
+                          onClick={() => setShowProfileMenu(false)}
+                          className="flex items-center gap-3 w-full p-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors"
+                        >
+                          <FileText className="h-4 w-4" />
+                          แบบร่างของฉัน
+                        </Link>
+                      )}
                       <Link
                         to="/settings/profile"
                         onClick={() => setShowProfileMenu(false)}

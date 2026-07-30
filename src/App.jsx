@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import useAuthStore from "./store/authStore";
 import MainLayout from "./layouts/MainLayout";
 import SettingsLayout from "./layouts/SettingsLayout";
+import AdminLayout from "./layouts/AdminLayout";
 import LandingPage from "./pages/LandingPage";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -21,6 +22,9 @@ import SettingsProfile from "./pages/settings/SettingsProfile";
 import SettingsAppearance from "./pages/settings/SettingsAppearance";
 import SettingsWidgets from "./pages/settings/SettingsWidgets";
 import SettingsAccount from "./pages/settings/SettingsAccount";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import UserManagement from "./pages/admin/UserManagement";
+import UserDetails from "./pages/admin/UserDetails";
 import { authService } from "./services/auth.service";
 import { supabase } from "./utils/supabase";
 
@@ -106,10 +110,35 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
+// Admin-only Route Guardian — waits for role to be sourced from the backend
+// (Supabase session/JWT has no knowledge of it) before deciding.
+const AdminRoute = ({ children }) => {
+  const { isAuthenticated, isInitializing, isRoleLoading, user } =
+    useAuthStore();
+
+  if (isInitializing || (isAuthenticated && isRoleLoading)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-sm text-slate-500 font-medium">
+            กำลังโหลดข้อมูล...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (user?.role !== "ADMIN") return <Navigate to="/home" replace />;
+  return children;
+};
+
 function App() {
   const loginAction = useAuthStore((state) => state.login);
   const logoutAction = useAuthStore((state) => state.logout);
   const setInitializing = useAuthStore((state) => state.setInitializing);
+  const setRoleLoading = useAuthStore((state) => state.setRoleLoading);
 
   useEffect(() => {
     const handleSession = async (session) => {
@@ -122,7 +151,7 @@ function App() {
           localStorage.setItem("access_token", session.access_token);
         }
 
-        loginAction({
+        const baseUser = {
           id: session.user.id,
           user_id: session.user.id,
           email: userEmail,
@@ -144,9 +173,24 @@ function App() {
           age: meta.age || 0,
           bio: meta.bio || "ยังไม่ได้ระบุ",
           user_metadata: meta,
-        });
+        };
 
+        loginAction(baseUser);
         setInitializing(false);
+
+        // Supabase's session doesn't know the Mongoose-side role/status, so
+        // fetch and merge that in the background (see authService.getMe).
+        try {
+          const res = await authService.getMe();
+          const dbUser = res?.data || res?.user;
+          if (dbUser) {
+            loginAction({ ...baseUser, ...dbUser });
+          }
+        } catch (e) {
+          console.log("Background role sync notice:", e);
+        } finally {
+          setRoleLoading(false);
+        }
         return;
       }
 
@@ -174,6 +218,8 @@ function App() {
             }
           } catch (e) {
             console.log("Background getMe check notice:", e);
+          } finally {
+            setRoleLoading(false);
           }
           return;
         }
@@ -182,6 +228,7 @@ function App() {
       // 3. Token is missing or expired -> log out cleanly
       logoutAction();
       setInitializing(false);
+      setRoleLoading(false);
     };
 
     // Initial check of Supabase session
@@ -199,6 +246,7 @@ function App() {
           logoutAction();
         }
         setInitializing(false);
+        setRoleLoading(false);
       });
 
     // Listen to Supabase Auth state changes
@@ -208,13 +256,14 @@ function App() {
       if (event === "SIGNED_OUT") {
         logoutAction();
         setInitializing(false);
+        setRoleLoading(false);
       } else if (session) {
         handleSession(session);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [loginAction, logoutAction, setInitializing]);
+  }, [loginAction, logoutAction, setInitializing, setRoleLoading]);
 
   return (
     <>
@@ -287,6 +336,19 @@ function App() {
           <Route path="appearance" element={<SettingsAppearance />} />
           <Route path="widgets" element={<SettingsWidgets />} />
           <Route path="account" element={<SettingsAccount />} />
+        </Route>
+
+        <Route
+          path="/admin"
+          element={
+            <AdminRoute>
+              <AdminLayout />
+            </AdminRoute>
+          }
+        >
+          <Route index element={<AdminDashboard />} />
+          <Route path="users" element={<UserManagement />} />
+          <Route path="users/:id" element={<UserDetails />} />
         </Route>
       </Routes>
 
