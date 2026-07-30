@@ -59,7 +59,7 @@ export default function Login() {
       });
       
       toast.success('เข้าสู่ระบบสำเร็จ!');
-      navigate('/explore');
+      navigate('/home');
     } catch (error) {
       setFieldErrors({ general: error.message || error.response?.data?.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' });
     } finally {
