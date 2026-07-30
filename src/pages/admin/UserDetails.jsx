@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
-import { ChevronLeft, Mail, MapPin, Briefcase, Calendar, Ban, RotateCcw } from "lucide-react";
+import { ChevronLeft, Mail, Calendar, Ban, RotateCcw } from "lucide-react";
 import toast from "react-hot-toast";
 import Swal from "sweetalert2";
 import { adminService } from "@/services/admin.service";
@@ -200,18 +200,6 @@ export default function UserDetails() {
             <p className="admin-field-value">
               {mapEducationLevel(user.education_level) || "ไม่ระบุ"}
             </p>
-          </div>
-          <div>
-            <p className="admin-field-label">
-              <MapPin className="h-3.5 w-3.5" /> ที่อยู่
-            </p>
-            <p className="admin-field-value">{user.location || "ไม่ระบุ"}</p>
-          </div>
-          <div>
-            <p className="admin-field-label">
-              <Briefcase className="h-3.5 w-3.5" /> อาชีพ
-            </p>
-            <p className="admin-field-value">{user.occupation || "ไม่ระบุ"}</p>
           </div>
           <div>
             <p className="admin-field-label">
