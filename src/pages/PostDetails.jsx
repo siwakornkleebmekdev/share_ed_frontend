@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router';
-import { FileText, Download, Heart, Share2, Tag, ChevronLeft, Calendar, Eye, Bookmark, X, Edit3, Trash2, Send, MessageSquare } from 'lucide-react';
+import { FileText, Download, Heart, Share2, Tag, ChevronLeft, Calendar, Eye, EyeOff, ExternalLink, Bookmark, X, Edit3, Trash2, Send, MessageSquare } from 'lucide-react';
 import { postService } from '@/services/post.service';
 import useAuthStore from '@/store/authStore';
 import api from '@/utils/api';
@@ -16,6 +16,7 @@ export default function PostDetails() {
   const [isBookmarked, setIsBookmarked] = useState(false);
 
   const [previewImage, setPreviewImage] = useState(null);
+  const [showPdfPreview, setShowPdfPreview] = useState(false);
 
   // Comments state
   const [comments, setComments] = useState([]);
@@ -36,12 +37,14 @@ export default function PostDetails() {
   useEffect(() => {
     const fetchPost = async () => {
       try {
-        setIsLoading(true);
+        if (!post || String(post.id) !== String(id)) {
+          setIsLoading(true);
+        }
         const data = await postService.getPostById(id);
         setPost(data);
         if (data) {
           setComments(data.comments || []);
-          if (user) {
+          if (user?.id) {
             const userLiked = data.rawLikes?.some(l => l.user_id === user.id);
             setIsLiked(!!userLiked);
           }
@@ -57,7 +60,7 @@ export default function PostDetails() {
       try {
         const response = await api.get('/bookmarks');
         if (response.data.success) {
-          const bookmarked = response.data.data.some(b => b.post_id === id);
+          const bookmarked = response.data.data.some(b => String(b.post_id) === String(id));
           setIsBookmarked(bookmarked);
         }
       } catch (err) {
@@ -71,7 +74,7 @@ export default function PostDetails() {
         checkBookmarkStatus();
       }
     }
-  }, [id, user, isAuthenticated]);
+  }, [id, user?.id, isAuthenticated]);
 
   // Subscribe to Supabase Realtime Broadcast for comments
   useEffect(() => {
@@ -336,24 +339,65 @@ export default function PostDetails() {
 
           {/* PDF Section */}
           {post.pdf && (
-            <div className="mb-10">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-primary" /> ไฟล์เอกสารแนบ ({post.pdf.name})
-                </h3>
-                <a href={post.pdf.url} target="_blank" rel="noreferrer" className="px-5 py-2.5 bg-blue-50 text-primary border border-blue-100 rounded-xl font-bold shadow-sm hover:bg-primary hover:text-white transition-all flex items-center gap-2 text-sm">
-                  <Download className="h-4 w-4" /> ดาวน์โหลด ({post.pdf.size || 'PDF'})
-                </a>
+            <div className="mb-10 p-6 bg-slate-50 border border-slate-200 rounded-2xl">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="p-3 bg-red-100 text-rose-600 rounded-xl shrink-0">
+                    <FileText className="h-6 w-6" />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-base font-bold text-slate-900 truncate">
+                      {post.pdf.name || 'เอกสารแนบ'}
+                    </h3>
+                    <p className="text-xs text-slate-500 font-medium">
+                      {post.pdf.size || 'ไฟล์ PDF'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setShowPdfPreview(!showPdfPreview)}
+                    className="flex-1 sm:flex-none px-4 py-2.5 bg-white text-slate-700 border border-slate-200 rounded-xl font-bold shadow-sm hover:bg-slate-100 transition-all flex items-center justify-center gap-2 text-sm cursor-pointer"
+                  >
+                    {showPdfPreview ? (
+                      <>
+                        <EyeOff className="h-4 w-4 text-slate-500" /> ซ่อนตัวอย่าง
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="h-4 w-4 text-primary" /> ดูตัวอย่างเอกสาร
+                      </>
+                    )}
+                  </button>
+
+                  <a
+                    href={post.pdf.url}
+                    download
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex-1 sm:flex-none px-4 py-2.5 bg-primary text-white rounded-xl font-bold shadow-sm hover:bg-blue-600 transition-all flex items-center justify-center gap-2 text-sm"
+                  >
+                    <Download className="h-4 w-4" /> ดาวน์โหลด
+                  </a>
+                </div>
               </div>
-              
-              {/* Embedded PDF Viewer */}
-              <div className="w-full h-[600px] sm:h-[800px] rounded-2xl border border-slate-200 overflow-hidden bg-slate-100 shadow-inner relative">
-                <iframe
-                  src={`${post.pdf.url}#toolbar=0`}
-                  className="w-full h-full border-0"
-                  title="PDF Document Viewer"
-                />
-              </div>
+
+              {/* Embedded PDF Viewer (Google Docs Viewer / Native Fallback) */}
+              {showPdfPreview && (
+                <div className="mt-6 w-full h-[600px] sm:h-[800px] rounded-xl border border-slate-200 overflow-hidden bg-white shadow-inner relative animate-in fade-in duration-200">
+                  <iframe
+                    src={
+                      post.pdf.url.startsWith('http') && !post.pdf.url.includes('localhost') && !post.pdf.url.includes('127.0.0.1')
+                        ? `https://docs.google.com/gview?url=${encodeURIComponent(post.pdf.url)}&embedded=true`
+                        : `${post.pdf.url}#toolbar=0`
+                    }
+                    className="w-full h-full border-0"
+                    title="PDF Document Viewer"
+                  />
+                </div>
+              )}
             </div>
           )}
 
