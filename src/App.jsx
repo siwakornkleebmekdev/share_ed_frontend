@@ -338,20 +338,6 @@ function App() {
           <Route path="widgets" element={<SettingsWidgets />} />
           <Route path="account" element={<SettingsAccount />} />
         </Route>
-
-        <Route
-          path="/admin"
-          element={
-            <AdminRoute>
-              <AdminLayout />
-            </AdminRoute>
-          }
-        >
-          <Route index element={<AdminDashboard />} />
-          <Route path="users" element={<UserManagement />} />
-          <Route path="users/:id" element={<UserDetails />} />
-          <Route path="achievements" element={<AchievementManagement />} />
-        </Route>
       </Routes>
 
       <Toaster
