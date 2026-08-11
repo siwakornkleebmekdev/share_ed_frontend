@@ -298,6 +298,8 @@ export default function EditPost() {
 
     if (Object.keys(newErrors).length > 0) {
       setFieldErrors(newErrors);
+      const firstErrorKey = Object.keys(newErrors)[0];
+      toast.error(newErrors[firstErrorKey] || 'กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน');
       return;
     }
 
@@ -380,10 +382,12 @@ export default function EditPost() {
     } catch (error) {
       Swal.close();
       console.error('Error updating post:', error);
+      const errMsg = error.response?.data?.message || error.message || 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้';
+      toast.error(errMsg);
       Swal.fire({
         icon: 'error',
         title: 'เกิดข้อผิดพลาด',
-        text: error.response?.data?.message || error.message || 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้',
+        text: errMsg,
         confirmButtonColor: '#3b82f6'
       });
     }

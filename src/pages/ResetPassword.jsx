@@ -30,6 +30,8 @@ export default function ResetPassword() {
 
     if (Object.keys(newErrors).length > 0) {
       setFieldErrors(newErrors);
+      const firstErrorKey = Object.keys(newErrors)[0];
+      toast.error(newErrors[firstErrorKey] || 'กรุณากรอกข้อมูลให้ถูกต้อง');
       return;
     }
 
@@ -46,7 +48,9 @@ export default function ResetPassword() {
       navigate('/login');
     } catch (error) {
       console.error('Reset Password Error:', error);
-      setFieldErrors({ general: error.message || 'เกิดข้อผิดพลาดในการตั้งรหัสผ่านใหม่ กรุณาลองใหม่อีกครั้ง' });
+      const errMsg = error.message || 'เกิดข้อผิดพลาดในการตั้งรหัสผ่านใหม่ กรุณาลองใหม่อีกครั้ง';
+      setFieldErrors({ general: errMsg });
+      toast.error(errMsg);
     } finally {
       setIsLoading(false);
     }
@@ -89,11 +93,10 @@ export default function ResetPassword() {
                     setPassword(e.target.value);
                     if (fieldErrors.password) setFieldErrors(prev => ({ ...prev, password: null }));
                   }}
-                  className={`block w-full pl-10 pr-3 py-2.5 border rounded-lg text-slate-900 focus:outline-none transition-colors text-sm ${
-                    fieldErrors.password
-                      ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
-                      : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
-                  }`}
+                  className={`block w-full pl-10 pr-3 py-2.5 border rounded-lg text-slate-900 focus:outline-none transition-colors text-sm ${fieldErrors.password
+                    ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+                    : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
+                    }`}
                   placeholder="ตั้งรหัสผ่านอย่างน้อย 8 ตัวอักษร"
                 />
               </div>
@@ -118,11 +121,10 @@ export default function ResetPassword() {
                     setConfirmPassword(e.target.value);
                     if (fieldErrors.confirmPassword) setFieldErrors(prev => ({ ...prev, confirmPassword: null }));
                   }}
-                  className={`block w-full pl-10 pr-3 py-2.5 border rounded-lg text-slate-900 focus:outline-none transition-colors text-sm ${
-                    fieldErrors.confirmPassword
-                      ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
-                      : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
-                  }`}
+                  className={`block w-full pl-10 pr-3 py-2.5 border rounded-lg text-slate-900 focus:outline-none transition-colors text-sm ${fieldErrors.confirmPassword
+                    ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+                    : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
+                    }`}
                   placeholder="กรอกรหัสผ่านใหม่อีกครั้งเพื่อยืนยัน"
                 />
               </div>
@@ -135,9 +137,8 @@ export default function ResetPassword() {
           <button
             type="submit"
             disabled={isLoading}
-            className={`w-full flex justify-center items-center gap-2 py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white ${
-              isLoading ? 'bg-blue-400 cursor-not-allowed' : 'bg-primary hover:bg-blue-600'
-            } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all`}
+            className={`w-full flex justify-center items-center gap-2 py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white ${isLoading ? 'bg-blue-400 cursor-not-allowed' : 'bg-primary hover:bg-blue-600'
+              } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all`}
           >
             {isLoading ? (
               <>

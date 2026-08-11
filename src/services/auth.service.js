@@ -46,6 +46,13 @@ export const authService = {
     }
 
     if (supError && !supData?.user) {
+      const errMsg = supError.message || '';
+      if (
+        errMsg.toLowerCase().includes('already registered') ||
+        errMsg.toLowerCase().includes('already exists')
+      ) {
+        throw new Error('อีเมลล์หรือชื่อผู้ใช้นี้เคยถูกใช้งานแล้ว');
+      }
       throw supError;
     }
 
@@ -71,11 +78,11 @@ export const authService = {
 
     if (!supError && supData?.session?.access_token) {
       localStorage.setItem('access_token', supData.session.access_token);
-      
+
       // Sync login with backend API in background if needed
       try {
         await api.post('/auth/login', { email, password });
-      } catch (e) {}
+      } catch (e) { }
 
       return supData;
     }
@@ -148,8 +155,8 @@ export const authService = {
   // Logout user
   logout: async () => {
     try {
-      await api.post('/auth/logout').catch(() => {});
-    } catch (e) {}
+      await api.post('/auth/logout').catch(() => { });
+    } catch (e) { }
 
     try {
       await supabase.auth.signOut({ scope: 'global' }).catch(() => {

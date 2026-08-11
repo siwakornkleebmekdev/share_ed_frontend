@@ -29,6 +29,8 @@ export default function Login() {
 
     if (Object.keys(newErrors).length > 0) {
       setFieldErrors(newErrors);
+      const firstErrorKey = Object.keys(newErrors)[0];
+      toast.error(newErrors[firstErrorKey] || 'กรุณากรอกข้อมูลให้ครบถ้วน');
       return;
     }
 
@@ -57,11 +59,13 @@ export default function Login() {
         username: meta.username || meta.display_name || meta.full_name || loggedInUser.username,
         user_metadata: meta
       });
-      
+
       toast.success('เข้าสู่ระบบสำเร็จ!');
       navigate('/home');
     } catch (error) {
-      setFieldErrors({ general: error.message || error.response?.data?.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' });
+      const errMsg = error.response?.data?.message || error.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
+      setFieldErrors({ general: errMsg });
+      toast.error(errMsg);
     } finally {
       setIsLoading(false);
     }
@@ -77,7 +81,9 @@ export default function Login() {
       });
       if (error) throw error;
     } catch (error) {
-      setFieldErrors({ general: error.message || 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้' });
+      const errMsg = error.message || 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้';
+      setFieldErrors({ general: errMsg });
+      toast.error(errMsg);
     }
   };
 
@@ -116,11 +122,10 @@ export default function Login() {
                     setEmail(e.target.value);
                     if (fieldErrors.email) setFieldErrors(prev => ({ ...prev, email: null }));
                   }}
-                  className={`block w-full pl-10 pr-3 py-2.5 border rounded-lg text-slate-900 focus:outline-none transition-colors ${
-                    fieldErrors.email
-                      ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
-                      : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
-                  }`}
+                  className={`block w-full pl-10 pr-3 py-2.5 border rounded-lg text-slate-900 focus:outline-none transition-colors ${fieldErrors.email
+                    ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+                    : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
+                    }`}
                   placeholder="name@example.com"
                 />
               </div>
@@ -145,11 +150,10 @@ export default function Login() {
                     setPassword(e.target.value);
                     if (fieldErrors.password) setFieldErrors(prev => ({ ...prev, password: null }));
                   }}
-                  className={`block w-full pl-10 pr-3 py-2.5 border rounded-lg text-slate-900 focus:outline-none transition-colors ${
-                    fieldErrors.password
-                      ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
-                      : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
-                  }`}
+                  className={`block w-full pl-10 pr-3 py-2.5 border rounded-lg text-slate-900 focus:outline-none transition-colors ${fieldErrors.password
+                    ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+                    : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
+                    }`}
                   placeholder="••••••••"
                 />
               </div>

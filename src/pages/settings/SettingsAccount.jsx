@@ -38,7 +38,9 @@ export default function SettingsAccount() {
       );
     } catch (error) {
       console.error("Update email error:", error);
-      setEmailError(error?.message || "ไม่สามารถเปลี่ยนอีเมลได้ในขณะนี้");
+      const errMsg = error?.message || "ไม่สามารถเปลี่ยนอีเมลได้ในขณะนี้";
+      setEmailError(errMsg);
+      toast.error(errMsg);
     } finally {
       setIsSavingEmail(false);
     }
@@ -49,11 +51,15 @@ export default function SettingsAccount() {
     setPasswordError(null);
 
     if (passwords.password.length < 8) {
-      setPasswordError("รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร");
+      const errMsg = "รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร";
+      setPasswordError(errMsg);
+      toast.error(errMsg);
       return;
     }
     if (passwords.password !== passwords.confirmPassword) {
-      setPasswordError("รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน");
+      const errMsg = "รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน";
+      setPasswordError(errMsg);
+      toast.error(errMsg);
       return;
     }
 
@@ -64,7 +70,9 @@ export default function SettingsAccount() {
       toast.success("เปลี่ยนรหัสผ่านสำเร็จ");
     } catch (error) {
       console.error("Update password error:", error);
-      setPasswordError(error?.message || "ไม่สามารถเปลี่ยนรหัสผ่านได้ในขณะนี้");
+      const errMsg = error?.message || "ไม่สามารถเปลี่ยนรหัสผ่านได้ในขณะนี้";
+      setPasswordError(errMsg);
+      toast.error(errMsg);
     } finally {
       setIsSavingPassword(false);
     }
