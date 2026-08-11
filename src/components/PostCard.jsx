@@ -87,7 +87,7 @@ export default function PostCard({ post, viewMode, rank = null, dark = false }) 
         style={cardGlassStyle}
       >
         <div className="w-full sm:w-56 h-36 flex-shrink-0 rounded-xl overflow-hidden bg-slate-100 relative">
-          <img src={post.image} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+          <img src={post.image} alt={post.title} className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300" />
           <div className={`absolute top-2 left-2 px-2.5 py-1 backdrop-blur-md rounded-lg text-[11px] font-bold shadow-sm ${dark ? 'bg-black/40 text-white border border-white/10' : 'bg-white/90 text-slate-700'}`}>
             {post.subject}
           </div>
@@ -131,7 +131,7 @@ export default function PostCard({ post, viewMode, rank = null, dark = false }) 
     <div onClick={handlePostClick} className={cardRankClasses} style={cardGlassStyle}>
       {getRankBadge()}
       <div className={`w-full relative bg-slate-100 overflow-hidden ${rank ? 'h-56 rounded-t-[14px]' : 'h-48'}`}>
-        <img src={post.image} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+        <img src={post.image} alt={post.title} className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300" />
         <div className={`absolute top-3 left-3 px-2.5 py-1 backdrop-blur-md rounded-lg text-[11px] font-bold shadow-sm z-10 ${dark ? 'bg-black/40 text-white border border-white/10' : 'bg-white/90 text-slate-700'}`}>
           {post.subject}
         </div>

@@ -379,7 +379,7 @@ export default function EditPost() {
           try {
             const url = await uploadFileToSupabase(img, 'posts', 'images');
             if (url) imageUrls.push(url);
-          } catch (e) {}
+          } catch (e) { }
         }
         if (imageUrls.length > 0) {
           formData.append('image_urls', JSON.stringify(imageUrls));
@@ -446,22 +446,24 @@ export default function EditPost() {
           {/* Title & Cover */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
             <div className="md:col-span-1">
-              <label className="flex items-center justify-between text-base font-bold text-slate-800 mb-3">
+              <label className="flex items-center justify-between text-base font-bold text-slate-800 mb-1">
                 <span>รูปปก <span className="text-rose-500">*</span></span>
                 <span className="text-xs font-normal text-slate-500">ไม่เกิน 2 MB</span>
               </label>
+              <p className="text-xs text-slate-400 mb-3">แนะนำอัตราส่วน 16:9 (เช่น 1280×720px) เพื่อให้แสดงผลสวยที่สุด</p>
               {!coverImage && !existingCoverImage ? (
                 <label className="flex flex-col items-center justify-center w-full aspect-video border-2 border-dashed border-slate-300 rounded-2xl hover:border-primary hover:bg-slate-50 cursor-pointer transition-all">
                   <ImageIcon className="h-10 w-10 text-slate-400 mb-3" />
                   <span className="text-sm font-medium text-slate-500">คลิกเพื่ออัปโหลดรูปปกใหม่</span>
+                  <span className="text-xs text-slate-400 mt-1">อัตราส่วนที่แนะนำ 16:9 (1280×720px) รูปภาพขนาดไม่เกิน 20 Mb</span>
                   <input type="file" className="hidden" accept=".jpg,.jpeg,.png" onChange={handleCoverUpload} />
                 </label>
               ) : (
-                <div className="relative w-full aspect-video rounded-2xl overflow-visible border border-slate-200 group">
+                <div className="relative w-full aspect-video rounded-2xl overflow-hidden border border-slate-200 group">
                   <img
                     src={coverImage ? URL.createObjectURL(coverImage) : existingCoverImage}
                     alt="Cover"
-                    className="w-full h-full object-cover rounded-2xl cursor-pointer"
+                    className="w-full h-full object-cover object-center rounded-2xl cursor-pointer transition-transform duration-300 group-hover:scale-[1.02]"
                     onClick={() => {
                       if (coverImage) openPreview(coverImage, 'image');
                       else setPreviewFile({ type: 'image', url: existingCoverImage });
@@ -473,121 +475,152 @@ export default function EditPost() {
                       setCoverImage(null);
                       setExistingCoverImage(null);
                     }}
-                    className="absolute -top-3 -right-3 p-1.5 bg-white text-slate-500 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-all z-10 shadow-sm border border-slate-200 hover:border-rose-200"
+                    className="absolute top-3 right-3 p-1.5 bg-white/90 backdrop-blur-sm text-slate-500 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-all z-10 shadow-sm border border-slate-200 hover:border-rose-200"
                     title="ลบรูปปก"
                   >
                     <X className="h-5 w-5" />
                   </button>
-                  <div className="absolute inset-0 bg-black/40 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none rounded-2xl">
+                  <div className="absolute inset-0 bg-black/30 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none rounded-2xl">
                     <Eye className="h-8 w-8" />
                   </div>
                 </div>
               )}
             </div>
 
-            <div className="md:col-span-1 flex flex-col gap-6">
-              <div>
-                <label className="flex items-center justify-between text-base font-bold text-slate-800 mb-3">
-                  <span>หัวข้อกระทู้สรุปความรู้ <span className="text-rose-500">*</span></span>
-                  <span className={`text-xs font-semibold ${title.length >= 100 ? 'text-rose-500' : 'text-slate-400'}`}>
-                    {title.length}/100 ตัวอักษร
-                  </span>
-                </label>
-                <input
-                  type="text"
-                  maxLength={100}
-                  value={title}
-                  onChange={(e) => {
-                    setTitle(e.target.value.slice(0, 100));
-                    if (fieldErrors.title) setFieldErrors(prev => ({ ...prev, title: null }));
-                  }}
-                  placeholder="เช่น สรุปสูตรตรีโกณมิติ ม.5"
-                  className={`w-full px-5 py-3.5 rounded-xl border focus:outline-none transition-all placeholder:text-slate-400 font-semibold text-slate-800 text-base ${
-                    fieldErrors.title
-                      ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
-                      : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
+            <div className="md:col-span-1">
+              <label className="flex items-center justify-between text-base font-bold text-slate-800 mb-3">
+                <span>ชื่อหัวข้อสรุป <span className="text-rose-500">*</span></span>
+                <span className={`text-xs font-semibold ${title.length >= 100 ? 'text-rose-500' : 'text-slate-400'}`}>
+                  {title.length}/100 ตัวอักษร
+                </span>
+              </label>
+              <input
+                type="text"
+                maxLength={100}
+                value={title}
+                onChange={(e) => {
+                  setTitle(e.target.value.slice(0, 100));
+                  if (fieldErrors.title) setFieldErrors(prev => ({ ...prev, title: null }));
+                }}
+                className={`w-full px-5 py-4 rounded-xl border focus:outline-none transition-colors text-base ${fieldErrors.title
+                  ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+                  : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
                   }`}
-                />
-                {fieldErrors.title && (
-                  <p className="mt-1.5 text-xs text-red-500 font-medium">{fieldErrors.title}</p>
-                )}
-              </div>
+                placeholder="เช่น สรุปสูตรฟิสิกส์ ม.4 เทอม 1"
+              />
+              {fieldErrors.title && (
+                <p className="mt-1.5 text-xs text-red-500 font-medium">{fieldErrors.title}</p>
+              )}
 
-              <div>
-                <label className="block text-base font-bold text-slate-800 mb-3">
-                  บทสรุปย่อ <span className="text-rose-500">*</span>
+              <div className="mt-6">
+                <label className="flex items-center gap-2 text-base font-bold text-slate-800 mb-3">
+                  <GraduationCap className="h-5 w-5 text-slate-400" /> ระดับชั้น <span className="text-rose-500">*</span>
                 </label>
-                <textarea
-                  value={summary}
+                <select
+                  value={level}
                   onChange={(e) => {
-                    setSummary(e.target.value);
-                    if (fieldErrors.summary) setFieldErrors(prev => ({ ...prev, summary: null }));
+                    setLevel(e.target.value);
+                    if (fieldErrors.level) setFieldErrors(prev => ({ ...prev, level: null }));
                   }}
-                  rows="3"
-                  placeholder="เขียนอธิบายคร่าวๆ เกี่ยวกับสรุปความรู้นี้..."
-                  className={`w-full px-5 py-3.5 rounded-xl border focus:outline-none transition-all placeholder:text-slate-400 font-medium text-slate-600 text-base resize-none ${
-                    fieldErrors.summary
-                      ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
-                      : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
-                  }`}
-                />
-                {fieldErrors.summary && (
-                  <p className="mt-1.5 text-xs text-red-500 font-medium">{fieldErrors.summary}</p>
+                  className={`w-full px-5 py-4 rounded-xl border focus:outline-none transition-colors bg-white font-medium text-slate-700 text-base ${fieldErrors.level
+                    ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+                    : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
+                    }`}
+                >
+                  <option value="" disabled>เลือกระดับชั้น</option>
+                  <option value="มัธยมศึกษาตอนต้น">มัธยมศึกษาตอนต้น</option>
+                  <option value="มัธยมศึกษาตอนปลาย">มัธยมศึกษาตอนปลาย</option>
+                  <option value="มหาวิทยาลัย">มหาวิทยาลัย</option>
+                </select>
+                {fieldErrors.level && (
+                  <p className="mt-1.5 text-xs text-red-500 font-medium">{fieldErrors.level}</p>
                 )}
               </div>
             </div>
           </div>
 
-          <hr className="border-slate-100" />
-
-          {/* Level & Settings trigger */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div>
-              <label className="flex items-center gap-2 text-base font-bold text-slate-800 mb-3">
-                <GraduationCap className="h-5 w-5 text-slate-400" /> ระดับชั้น <span className="text-rose-500">*</span>
-              </label>
-              <select
-                value={level}
-                onChange={(e) => {
-                  setLevel(e.target.value);
-                  if (fieldErrors.level) setFieldErrors(prev => ({ ...prev, level: null }));
-                }}
-                className={`w-full px-5 py-3.5 rounded-xl border focus:outline-none transition-all bg-white font-semibold text-slate-700 text-base ${
-                  fieldErrors.level
-                    ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
-                    : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
+          {/* Summary */}
+          <div>
+            <label className="flex items-center justify-between text-base font-bold text-slate-800 mb-3">
+              <span className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-slate-400" /> บทสรุปย่อ (Summary) <span className="text-rose-500">*</span>
+              </span>
+              <span className={`text-xs font-semibold ${summary.length >= 200 ? 'text-rose-500' : 'text-slate-400'}`}>
+                {summary.length}/200 ตัวอักษร
+              </span>
+            </label>
+            <textarea
+              value={summary}
+              onChange={(e) => {
+                setSummary(e.target.value.slice(0, 200));
+                if (fieldErrors.summary) setFieldErrors(prev => ({ ...prev, summary: null }));
+              }}
+              className={`w-full px-5 py-4 rounded-xl border focus:outline-none transition-colors text-base min-h-[100px] resize-y bg-white ${fieldErrors.summary
+                ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+                : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
                 }`}
-              >
-                <option value="" disabled>เลือกระดับชั้น</option>
-                <option value="มัธยมศึกษาตอนต้น">มัธยมศึกษาตอนต้น</option>
-                <option value="มัธยมศึกษาตอนปลาย">มัธยมศึกษาตอนปลาย</option>
-                <option value="มหาวิทยาลัย">มหาวิทยาลัย</option>
-              </select>
-              {fieldErrors.level && (
-                <p className="mt-1.5 text-xs text-red-500 font-medium">{fieldErrors.level}</p>
-              )}
-            </div>
+              placeholder="อธิบายสั้นๆ เกี่ยวกับไฟล์สรุปนี้ (จะนำไปแสดงบนการ์ดในหน้ารายการ) เช่น สรุปฟิสิกส์ ม.4 เทอม 1 เหมาะกับทบทวนสอบกลางภาค..."
+              rows={3}
+            />
+            {fieldErrors.summary && (
+              <p className="mt-1.5 text-xs text-red-500 font-medium">{fieldErrors.summary}</p>
+            )}
+          </div>
 
-            <div className="flex flex-col justify-end">
+          {/* Subject & Hashtags Section */}
+          <div>
+            <label className="flex items-center gap-2 text-base font-bold text-slate-800 mb-3">
+              <Tag className="h-5 w-5 text-slate-400" /> หมวดหมู่วิชาและแฮชแท็ก <span className="text-rose-500">*</span>
+            </label>
+            <div
+              onClick={() => {
+                setShowModal(true);
+                if (fieldErrors.category) setFieldErrors(prev => ({ ...prev, category: null }));
+              }}
+              className={`p-5 border border-dashed hover:border-primary rounded-2xl bg-white hover:bg-blue-50/10 cursor-pointer transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${fieldErrors.category ? 'border-red-500 bg-red-50/10' : 'border-slate-200'
+                }`}
+            >
+              <div className="flex flex-col gap-2">
+                {category ? (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-bold text-slate-400">วิชาที่เลือก:</span>
+                    <span className="px-3 py-1 bg-primary/10 text-primary font-bold text-xs rounded-full">{category}</span>
+                  </div>
+                ) : (
+                  <span className="text-sm text-rose-500 font-medium">กรุณาเลือกหมวดหมู่วิชา *</span>
+                )}
+
+                {hashtags.length > 0 ? (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-bold text-slate-400">แฮชแท็ก:</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {hashtags.map(tag => (
+                        <span key={tag} className="px-2.5 py-0.5 bg-slate-100 text-slate-600 rounded-md text-xs font-semibold border border-slate-200">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <span className="text-sm text-slate-400">ยังไม่มีแฮชแท็ก (สามารถเพิ่มแท็กช่วยให้ค้นหาง่ายขึ้น)</span>
+                )}
+              </div>
               <button
-                onClick={() => setShowModal(true)}
-                className="w-full px-5 py-4 border border-slate-200 rounded-xl font-bold text-slate-700 hover:bg-slate-50 transition-all flex items-center justify-center gap-2.5 shadow-sm bg-white"
+                type="button"
+                className="px-5 py-2.5 bg-primary/10 hover:bg-primary/20 text-primary font-bold rounded-xl text-sm transition-colors flex items-center gap-2 self-start sm:self-auto cursor-pointer"
               >
-                <Tag className="h-5 w-5 text-primary" />
-                {category ? `วิชา: ${category}` : 'ตั้งค่าวิชาและแท็ก'}
-                {hashtags.length > 0 && ` (+${hashtags.length} แท็ก)`}
+                <Plus className="h-4 w-4" />
+                ตั้งค่าวิชาและแท็ก
               </button>
             </div>
           </div>
 
-          <hr className="border-slate-100" />
-
-          {/* Content (Rich Text) */}
+          {/* Rich Text Editor */}
           <div>
             <label className="flex items-center gap-2 text-base font-bold text-slate-800 mb-3">
-              <AlignLeft className="h-5 w-5 text-primary" /> เนื้อหาเพิ่มเติม <span className="text-rose-500">*</span>
+              <AlignLeft className="h-5 w-5 text-slate-400" /> รายละเอียดเพิ่มเติม
             </label>
-            <div className="rounded-2xl border border-slate-200 overflow-hidden focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all">
+            <div className="border border-slate-200 rounded-xl overflow-hidden bg-white focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all">
               <ReactQuill
                 theme="snow"
                 value={content}
@@ -600,15 +633,14 @@ export default function EditPost() {
                     ['link', 'clean']
                   ]
                 }}
-                className="bg-white min-h-[300px] border-0"
+                className="h-48 pb-10 border-0"
+                placeholder="อธิบายเพิ่มเติมเกี่ยวกับเนื้อหา เทคนิคการจำ หรือที่มา..."
               />
             </div>
           </div>
 
-          <hr className="border-slate-100" />
-
           {/* Files (PDF & Images) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-8 border-t border-slate-100">
             {/* Left: PDF */}
             <div>
               <label className="flex items-center justify-between text-base font-bold text-slate-800 mb-3">

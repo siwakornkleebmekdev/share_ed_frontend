@@ -290,8 +290,8 @@ export default function PostDetails() {
       <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 overflow-hidden">
 
         {/* Cover Image */}
-        <div className="w-full aspect-video sm:h-[400px] bg-slate-100 relative">
-          <img src={post.coverImage} alt={post.title} className="w-full h-full object-cover" />
+        <div className="w-full aspect-video sm:aspect-[2.4/1] bg-slate-100 relative overflow-hidden">
+          <img src={post.coverImage} alt={post.title} className="w-full h-full object-cover object-center" />
           <div className="absolute top-4 left-4 flex gap-2">
             <span className="px-3 py-1.5 bg-white/90 backdrop-blur-sm text-primary rounded-full text-xs font-bold shadow-sm">
               {post.category}

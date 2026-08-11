@@ -133,7 +133,7 @@ function formatPostData(post) {
     subject: post.category?.category_name || post.category?.name || 'ทั่วไป',
     views: formatNumber(post.view_count),
     likes: post._count?.likes || post.likes || 0,
-    image: post.cover_image || 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=500&q=80',
+    image: post.cover_image || 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=1280&q=90',
     author: post.author?.username || 'ผู้ใช้งาน',
     created_at: post.created_at,
   };
@@ -154,7 +154,7 @@ function formatSinglePostData(post) {
     views: formatNumber(post.view_count),
     likes: post._count?.likes || (Array.isArray(post.likes) ? post.likes.length : post.likes) || 0,
     rawLikes: post.likes || [],
-    coverImage: post.cover_image || 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=500&q=80',
+    coverImage: post.cover_image || 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=1280&q=90',
     hashtags: hashtags,
     images: images,
     pdf: pdfMedia ? {
