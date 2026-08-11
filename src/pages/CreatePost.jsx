@@ -35,13 +35,23 @@ export default function CreatePost() {
   const handleCoverUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+    const allowedExtensions = ['jpg', 'jpeg', 'png'];
+    const fileExtension = file.name ? file.name.split('.').pop().toLowerCase() : '';
+    const fileType = file.type ? file.type.toLowerCase() : '';
+
+    const isValidType = allowedTypes.includes(fileType) || allowedExtensions.includes(fileExtension);
+
+    if (!isValidType) {
+      toast.error('สามารถอัปโหลดไฟล์ .jpg,.jpeg,.png เท่านั้น');
+      e.target.value = '';
+      return;
+    }
+
     if (file.size > 2 * 1024 * 1024) {
-      Swal.fire({
-        icon: 'error',
-        title: 'ขนาดไฟล์เกิน',
-        text: 'รูปปกต้องมีขนาดไม่เกิน 2 MB',
-        confirmButtonColor: '#3b82f6'
-      });
+      toast.error('รูปปกต้องมีขนาดไม่เกิน 2 MB');
+      e.target.value = '';
       return;
     }
     setCoverImage(file);
@@ -50,13 +60,19 @@ export default function CreatePost() {
   const handlePdfUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    const fileExtension = file.name ? file.name.split('.').pop().toLowerCase() : '';
+    const fileType = file.type ? file.type.toLowerCase() : '';
+
+    if (fileType !== 'application/pdf' && fileExtension !== 'pdf') {
+      toast.error('สามารถอัปโหลดไฟล์ .pdf เท่านั้น');
+      e.target.value = '';
+      return;
+    }
+
     if (file.size > 20 * 1024 * 1024) {
-      Swal.fire({
-        icon: 'error',
-        title: 'ขนาดไฟล์เกิน',
-        text: 'ไฟล์ PDF ต้องมีขนาดไม่เกิน 20 MB',
-        confirmButtonColor: '#3b82f6'
-      });
+      toast.error('ไฟล์ PDF ต้องมีขนาดไม่เกิน 20 MB');
+      e.target.value = '';
       return;
     }
     setPdfFile(file);
@@ -66,19 +82,29 @@ export default function CreatePost() {
     const files = Array.from(e.target.files);
     if (!files.length) return;
 
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+    const allowedExtensions = ['jpg', 'jpeg', 'png'];
+
     let newImages = [...images];
     let hasOversized = false;
+    let hasInvalidType = false;
+    let reachedLimit = false;
 
     for (const file of files) {
       if (newImages.length >= 15) {
-        Swal.fire({
-          icon: 'warning',
-          title: 'ข้อจำกัดจำนวนรูป',
-          text: 'คุณสามารถอัปโหลดรูปภาพประกอบได้สูงสุด 15 รูปเท่านั้น',
-          confirmButtonColor: '#3b82f6'
-        });
+        reachedLimit = true;
         break;
       }
+
+      const fileExtension = file.name ? file.name.split('.').pop().toLowerCase() : '';
+      const fileType = file.type ? file.type.toLowerCase() : '';
+      const isValidType = allowedTypes.includes(fileType) || allowedExtensions.includes(fileExtension);
+
+      if (!isValidType) {
+        hasInvalidType = true;
+        continue;
+      }
+
       if (file.size > 5 * 1024 * 1024) {
         hasOversized = true;
         continue;
@@ -86,16 +112,20 @@ export default function CreatePost() {
       newImages.push(file);
     }
 
+    if (reachedLimit) {
+      toast.error('คุณสามารถอัปโหลดรูปภาพประกอบได้สูงสุด 15 รูปเท่านั้น');
+    }
+
+    if (hasInvalidType) {
+      toast.error('สามารถอัปโหลดไฟล์ .jpg,.jpeg,.png เท่านั้น');
+    }
+
     if (hasOversized) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'ขนาดไฟล์เกิน',
-        text: 'รูปภาพบางรูปมีขนาดเกิน 5 MB และถูกข้ามไป',
-        confirmButtonColor: '#3b82f6'
-      });
+      toast.error('รูปภาพบางรูปมีขนาดเกิน 5 MB และถูกข้ามไป');
     }
 
     setImages(newImages);
+    e.target.value = '';
   };
 
   const removeImage = (index) => {
@@ -174,14 +204,13 @@ export default function CreatePost() {
     setFieldErrors({});
     const newErrors = {};
     if (!title.trim()) newErrors.title = 'กรุณากรอกชื่อหัวข้อสรุปความรู้';
+    else if (title.length > 100) newErrors.title = 'ชื่อหัวข้อต้องมีความยาวไม่เกิน 100 ตัวอักษร';
     if (!level) newErrors.level = 'กรุณาเลือกระดับชั้น';
     if (!summary.trim()) newErrors.summary = 'กรุณากรอกบทสรุปย่อ';
     if (!category) newErrors.category = 'กรุณาเลือกหมวดหมู่วิชา';
 
     if (Object.keys(newErrors).length > 0) {
       setFieldErrors(newErrors);
-      const firstErrorKey = Object.keys(newErrors)[0];
-      toast.error(newErrors[firstErrorKey] || 'กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน');
       return;
     }
 
@@ -262,7 +291,6 @@ export default function CreatePost() {
       Swal.close();
       console.error('Error submitting post:', error);
       const errMsg = error.response?.data?.message || error.message || 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้';
-      toast.error(errMsg);
       Swal.fire({
         icon: 'error',
         title: 'เกิดข้อผิดพลาด',
@@ -296,7 +324,7 @@ export default function CreatePost() {
                 <label className="flex flex-col items-center justify-center w-full aspect-video border-2 border-dashed border-slate-300 rounded-2xl hover:border-primary hover:bg-slate-50 cursor-pointer transition-all">
                   <ImageIcon className="h-10 w-10 text-slate-400 mb-3" />
                   <span className="text-sm font-medium text-slate-500">คลิกเพื่ออัปโหลดรูปปก</span>
-                  <input type="file" className="hidden" accept="image/*" onChange={handleCoverUpload} />
+                  <input type="file" className="hidden" accept=".jpg,.jpeg,.png" onChange={handleCoverUpload} />
                 </label>
               ) : (
                 <div className="relative w-full aspect-video rounded-2xl overflow-visible border border-slate-200 group">
@@ -313,14 +341,18 @@ export default function CreatePost() {
             </div>
 
             <div className="md:col-span-1">
-              <label className="flex items-center gap-2 text-base font-bold text-slate-800 mb-3">
-                ชื่อหัวข้อสรุป <span className="text-rose-500">*</span>
+              <label className="flex items-center justify-between text-base font-bold text-slate-800 mb-3">
+                <span>ชื่อหัวข้อสรุป <span className="text-rose-500">*</span></span>
+                <span className={`text-xs font-semibold ${title.length >= 100 ? 'text-rose-500' : 'text-slate-400'}`}>
+                  {title.length}/100 ตัวอักษร
+                </span>
               </label>
               <input
                 type="text"
+                maxLength={100}
                 value={title}
                 onChange={(e) => {
-                  setTitle(e.target.value);
+                  setTitle(e.target.value.slice(0, 100));
                   if (fieldErrors.title) setFieldErrors(prev => ({ ...prev, title: null }));
                 }}
                 className={`w-full px-5 py-4 rounded-xl border focus:outline-none transition-colors text-base ${
@@ -523,7 +555,7 @@ export default function CreatePost() {
                     <input
                       type="file"
                       className="hidden"
-                      accept="image/*"
+                      accept=".jpg,.jpeg,.png"
                       multiple
                       onChange={handleImagesUpload}
                       disabled={images.length >= 15}

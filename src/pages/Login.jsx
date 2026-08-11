@@ -29,8 +29,6 @@ export default function Login() {
 
     if (Object.keys(newErrors).length > 0) {
       setFieldErrors(newErrors);
-      const firstErrorKey = Object.keys(newErrors)[0];
-      toast.error(newErrors[firstErrorKey] || 'กรุณากรอกข้อมูลให้ครบถ้วน');
       return;
     }
 
@@ -63,9 +61,7 @@ export default function Login() {
       toast.success('เข้าสู่ระบบสำเร็จ!');
       navigate('/home');
     } catch (error) {
-      const errMsg = error.response?.data?.message || error.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
-      setFieldErrors({ general: errMsg });
-      toast.error(errMsg);
+      setFieldErrors({ general: error.message || error.response?.data?.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' });
     } finally {
       setIsLoading(false);
     }
@@ -81,9 +77,7 @@ export default function Login() {
       });
       if (error) throw error;
     } catch (error) {
-      const errMsg = error.message || 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้';
-      setFieldErrors({ general: errMsg });
-      toast.error(errMsg);
+      setFieldErrors({ general: error.message || 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้' });
     }
   };
 

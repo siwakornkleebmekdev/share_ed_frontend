@@ -40,7 +40,6 @@ export default function SettingsAccount() {
       console.error("Update email error:", error);
       const errMsg = error?.message || "ไม่สามารถเปลี่ยนอีเมลได้ในขณะนี้";
       setEmailError(errMsg);
-      toast.error(errMsg);
     } finally {
       setIsSavingEmail(false);
     }
@@ -53,13 +52,11 @@ export default function SettingsAccount() {
     if (passwords.password.length < 8) {
       const errMsg = "รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร";
       setPasswordError(errMsg);
-      toast.error(errMsg);
       return;
     }
     if (passwords.password !== passwords.confirmPassword) {
       const errMsg = "รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน";
       setPasswordError(errMsg);
-      toast.error(errMsg);
       return;
     }
 
@@ -72,7 +69,6 @@ export default function SettingsAccount() {
       console.error("Update password error:", error);
       const errMsg = error?.message || "ไม่สามารถเปลี่ยนรหัสผ่านได้ในขณะนี้";
       setPasswordError(errMsg);
-      toast.error(errMsg);
     } finally {
       setIsSavingPassword(false);
     }
@@ -106,11 +102,10 @@ export default function SettingsAccount() {
               setEmail(e.target.value);
               if (emailError) setEmailError(null);
             }}
-            className={`w-full px-4 py-3 bg-slate-50 border rounded-xl focus:outline-none transition-all text-slate-800 font-medium ${
-              emailError
+            className={`w-full px-4 py-3 bg-slate-50 border rounded-xl focus:outline-none transition-all text-slate-800 font-medium ${emailError
                 ? "border-red-500 focus:ring-4 focus:ring-red-500/10 focus:border-red-500"
                 : "border-slate-200 focus:ring-4 focus:ring-primary/10 focus:border-primary"
-            }`}
+              }`}
             placeholder="you@example.com"
           />
           {emailError ? (
@@ -152,11 +147,10 @@ export default function SettingsAccount() {
                 setPasswords((prev) => ({ ...prev, password: e.target.value }));
                 if (passwordError) setPasswordError(null);
               }}
-              className={`w-full px-4 py-3 bg-slate-50 border rounded-xl focus:outline-none transition-all text-slate-800 font-medium ${
-                passwordError
+              className={`w-full px-4 py-3 bg-slate-50 border rounded-xl focus:outline-none transition-all text-slate-800 font-medium ${passwordError
                   ? "border-red-500 focus:ring-4 focus:ring-red-500/10 focus:border-red-500"
                   : "border-slate-200 focus:ring-4 focus:ring-primary/10 focus:border-primary"
-              }`}
+                }`}
               placeholder="อย่างน้อย 8 ตัวอักษร"
             />
           </div>
@@ -174,11 +168,10 @@ export default function SettingsAccount() {
                 }));
                 if (passwordError) setPasswordError(null);
               }}
-              className={`w-full px-4 py-3 bg-slate-50 border rounded-xl focus:outline-none transition-all text-slate-800 font-medium ${
-                passwordError
+              className={`w-full px-4 py-3 bg-slate-50 border rounded-xl focus:outline-none transition-all text-slate-800 font-medium ${passwordError
                   ? "border-red-500 focus:ring-4 focus:ring-red-500/10 focus:border-red-500"
                   : "border-slate-200 focus:ring-4 focus:ring-primary/10 focus:border-primary"
-              }`}
+                }`}
               placeholder="กรอกรหัสผ่านใหม่อีกครั้ง"
             />
           </div>
