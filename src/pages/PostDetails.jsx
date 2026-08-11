@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router';
-import { FileText, Download, Heart, Share2, Tag, ChevronLeft, Calendar, Eye, EyeOff, ExternalLink, Bookmark, X, Edit3, Trash2, Send, MessageSquare } from 'lucide-react';
+import { FileText, Download, Heart, Share2, Tag, ChevronLeft, Calendar, Eye, EyeOff, ExternalLink, Bookmark, X, Edit3, Trash2, Send, MessageSquare, AlignLeft, ImageIcon } from 'lucide-react';
 import { postService } from '@/services/post.service';
 import useAuthStore from '@/store/authStore';
 import api from '@/utils/api';
@@ -256,7 +256,7 @@ export default function PostDetails() {
   if (isLoading) {
     return <div className="text-center py-20 text-slate-500 font-medium">กำลังโหลดข้อมูล...</div>;
   }
-  
+
   if (!post) {
     return <div className="text-center py-20 text-slate-500 font-medium">ไม่พบโพสต์ที่คุณต้องการ</div>;
   }
@@ -323,88 +323,35 @@ export default function PostDetails() {
             </div>
           </div>
 
-          {/* Hashtags */}
-          <div className="flex flex-wrap gap-2 mb-8">
-            {(post.hashtags || []).map(tag => (
-              <span key={tag} className="px-3 py-1 bg-blue-50 text-primary rounded-full text-sm font-semibold flex items-center gap-1">
-                <Tag className="h-3.5 w-3.5" /> {tag}
-              </span>
-            ))}
-          </div>
 
-          {/* Details (Rich Text) */}
-          <div className="prose prose-slate max-w-none prose-p:text-slate-600 prose-headings:text-slate-900 prose-a:text-primary mb-10">
-            <div dangerouslySetInnerHTML={{ __html: post.details || post.content || '' }} />
-          </div>
-
-          {/* PDF Section */}
-          {post.pdf && (
-            <div className="mb-10 p-6 bg-slate-50 border border-slate-200 rounded-2xl">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="p-3 bg-red-100 text-rose-600 rounded-xl shrink-0">
-                    <FileText className="h-6 w-6" />
-                  </div>
-                  <div className="min-w-0">
-                    <h3 className="text-base font-bold text-slate-900 truncate">
-                      {post.pdf.name || 'เอกสารแนบ'}
-                    </h3>
-                    <p className="text-xs text-slate-500 font-medium">
-                      {post.pdf.size || 'ไฟล์ PDF'}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => setShowPdfPreview(!showPdfPreview)}
-                    className="flex-1 sm:flex-none px-4 py-2.5 bg-white text-slate-700 border border-slate-200 rounded-xl font-bold shadow-sm hover:bg-slate-100 transition-all flex items-center justify-center gap-2 text-sm cursor-pointer"
-                  >
-                    {showPdfPreview ? (
-                      <>
-                        <EyeOff className="h-4 w-4 text-slate-500" /> ซ่อนตัวอย่าง
-                      </>
-                    ) : (
-                      <>
-                        <Eye className="h-4 w-4 text-primary" /> ดูตัวอย่างเอกสาร
-                      </>
-                    )}
-                  </button>
-
-                  <a
-                    href={post.pdf.url}
-                    download
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex-1 sm:flex-none px-4 py-2.5 bg-primary text-white rounded-xl font-bold shadow-sm hover:bg-blue-600 transition-all flex items-center justify-center gap-2 text-sm"
-                  >
-                    <Download className="h-4 w-4" /> ดาวน์โหลด
-                  </a>
-                </div>
+          {/* Summary */}
+          {post.description && (
+            <div className="mb-8">
+              <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2 mb-3">
+                <FileText className="h-5 w-5 text-primary" /> บทสรุปย่อ
+              </h3>
+              <div className="p-5 bg-slate-50 border border-slate-100 rounded-2xl text-slate-700 leading-relaxed shadow-sm font-medium">
+                {post.description}
               </div>
-
-              {/* Embedded PDF Viewer (Google Docs Viewer / Native Fallback) */}
-              {showPdfPreview && (
-                <div className="mt-6 w-full h-[600px] sm:h-[800px] rounded-xl border border-slate-200 overflow-hidden bg-white shadow-inner relative animate-in fade-in duration-200">
-                  <iframe
-                    src={
-                      post.pdf.url.startsWith('http') && !post.pdf.url.includes('localhost') && !post.pdf.url.includes('127.0.0.1')
-                        ? `https://docs.google.com/gview?url=${encodeURIComponent(post.pdf.url)}&embedded=true`
-                        : `${post.pdf.url}#toolbar=0`
-                    }
-                    className="w-full h-full border-0"
-                    title="PDF Document Viewer"
-                  />
-                </div>
-              )}
             </div>
           )}
+
+          {/* Details (Rich Text) */}
+          <div className="mb-10">
+            <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2 mb-4">
+              <AlignLeft className="h-5 w-5 text-primary" /> รายละเอียดเพิ่มเติม
+            </h3>
+            <div className="prose prose-slate max-w-none prose-p:text-slate-600 prose-headings:text-slate-900 prose-a:text-primary p-6 bg-white border border-slate-100 shadow-sm rounded-2xl">
+              <div dangerouslySetInnerHTML={{ __html: post.details || post.content || '<p className="text-slate-400 italic">ไม่มีรายละเอียดเพิ่มเติม</p>' }} />
+            </div>
+          </div>
 
           {/* Image Gallery */}
           {post.images && post.images.length > 0 && (
             <div className="mb-10">
-              <h3 className="text-lg font-bold text-slate-900 mb-4">รูปภาพประกอบ ({post.images.length})</h3>
+              <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2 mb-4">
+                <ImageIcon className="h-5 w-5 text-primary" /> รูปภาพประกอบ ({post.images.length})
+              </h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {post.images.map((img, idx) => (
                   <div key={idx} className="relative aspect-square rounded-2xl overflow-hidden group cursor-pointer border border-slate-200" onClick={() => setPreviewImage(img)}>
@@ -417,6 +364,84 @@ export default function PostDetails() {
               </div>
             </div>
           )}
+
+          {/* PDF Section */}
+          {post.pdf && (
+            <div className="mb-10">
+              <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2 mb-4">
+                <FileText className="h-5 w-5 text-primary" /> ไฟล์เอกสาร PDF
+              </h3>
+              <div className="p-6 bg-slate-50 border border-slate-200 rounded-2xl">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="p-3 bg-red-100 text-rose-600 rounded-xl shrink-0">
+                      <FileText className="h-6 w-6" />
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="text-base font-bold text-slate-900 truncate">
+                        {post.pdf.name || 'เอกสารแนบ'}
+                      </h3>
+                      <p className="text-xs text-slate-500 font-medium">
+                        {post.pdf.size || 'ไฟล์ PDF'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setShowPdfPreview(!showPdfPreview)}
+                      className="flex-1 sm:flex-none px-4 py-2.5 bg-white text-slate-700 border border-slate-200 rounded-xl font-bold shadow-sm hover:bg-slate-100 transition-all flex items-center justify-center gap-2 text-sm cursor-pointer"
+                    >
+                      {showPdfPreview ? (
+                        <>
+                          <EyeOff className="h-4 w-4 text-slate-500" /> ซ่อนตัวอย่าง
+                        </>
+                      ) : (
+                        <>
+                          <Eye className="h-4 w-4 text-primary" /> ดูตัวอย่างเอกสาร
+                        </>
+                      )}
+                    </button>
+
+                    <a
+                      href={post.pdf.url}
+                      download
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex-1 sm:flex-none px-4 py-2.5 bg-primary text-white rounded-xl font-bold shadow-sm hover:bg-blue-600 transition-all flex items-center justify-center gap-2 text-sm"
+                    >
+                      <Download className="h-4 w-4" /> ดาวน์โหลด
+                    </a>
+                  </div>
+                </div>
+
+                {/* Embedded PDF Viewer (Google Docs Viewer / Native Fallback) */}
+                {showPdfPreview && (
+                  <div className="mt-6 w-full h-[600px] sm:h-[800px] rounded-xl border border-slate-200 overflow-hidden bg-white shadow-inner relative animate-in fade-in duration-200">
+                    <iframe
+                      src={
+                        post.pdf.url.startsWith('http') && !post.pdf.url.includes('localhost') && !post.pdf.url.includes('127.0.0.1')
+                          ? `https://docs.google.com/gview?url=${encodeURIComponent(post.pdf.url)}&embedded=true`
+                          : `${post.pdf.url}#toolbar=0`
+                      }
+                      className="w-full h-full border-0"
+                      title="PDF Document Viewer"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Hashtags */}
+          <div className="flex flex-wrap gap-2 mb-8">
+            {(post.hashtags || []).map(tag => (
+              <span key={tag} className="px-3 py-1 bg-blue-50 text-primary rounded-full text-sm font-semibold flex items-center gap-1">
+                <Tag className="h-3.5 w-3.5" /> {tag}
+              </span>
+            ))}
+          </div>
 
           {/* Comments Section */}
           <div className="border-t border-slate-100 my-8 pt-8">
