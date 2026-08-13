@@ -19,9 +19,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: 'npm'
+          cache: "npm"
 
-# 3. ติดตั้ง Dependencies และ Build โปรเจกต์
+      # 3. ติดตั้ง Dependencies และ Build โปรเจกต์
       - name: Install & Build
         env:
           VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
@@ -29,8 +29,11 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: |
           npm ci
+          # สร้างไฟล์ .env.production เพื่อให้ Vite ฝังค่า Env เข้าใน Build Bundle อย่างแน่นอน
+          echo "VITE_API_BASE_URL=$VITE_API_BASE_URL" >> .env.production
+          echo "VITE_SUPABASE_URL=$VITE_SUPABASE_URL" >> .env.production
+          echo "VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY" >> .env.production
           npm run build
-          
 
       # 4. ตั้งค่า AWS Credentials โดยดึงค่าจาก Secrets
       - name: Configure AWS Credentials
@@ -40,7 +43,12 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      # 5. ซิงค์ไฟล์ที่ Build แล้วไปยัง S3 Bucket
-      - name: Deploy to S3
+      # 5. ซิงค์ไฟล์ Static/Assets ทั้งหมด ยกเว้น index.html
+      - name: Deploy Assets to S3
         run: |
-          aws s3 sync dist/ s3://share-ed --delete
+          aws s3 sync dist/ s3://share-ed --delete --exclude "index.html"
+
+      # 6. อัปโหลด index.html แยก พร้อมตั้งค่าสั่งห้าม Browser จำ Cache
+      - name: Deploy index.html with No-Cache
+        run: |
+          aws s3 cp dist/index.html s3://share-ed/index.html --metadata-directive REPLACE --cache-control "max-age=0, no-cache, no-store, must-revalidate"
