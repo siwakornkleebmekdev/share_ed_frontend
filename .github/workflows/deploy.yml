@@ -21,11 +21,16 @@ jobs:
           node-version: 22
           cache: 'npm'
 
-      # 3. ติดตั้ง Dependencies และ Build โปรเจกต์
+# 3. ติดตั้ง Dependencies และ Build โปรเจกต์
       - name: Install & Build
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: |
           npm ci
           npm run build
+          
 
       # 4. ตั้งค่า AWS Credentials โดยดึงค่าจาก Secrets
       - name: Configure AWS Credentials
