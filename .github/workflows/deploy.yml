@@ -43,4 +43,4 @@ jobs:
       # 5. ซิงค์ไฟล์ที่ Build แล้วไปยัง S3 Bucket
       - name: Deploy to S3
         run: |
-          aws s3 sync dist/ s3://aws-sharehub-app-2026-frontend --delete
+          aws s3 sync dist/ s3://share-ed --delete
