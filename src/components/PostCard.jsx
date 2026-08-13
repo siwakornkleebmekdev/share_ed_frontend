@@ -54,13 +54,8 @@ export default function PostCard({ post, viewMode, rank = null, dark = false }) 
   };
 
   const handlePostClick = () => {
-    if (!isAuthenticated) {
-      toast.error('กรุณาสมัครสมาชิกเพื่อดูเนื้อหานี้');
-      navigate('/register');
-    } else {
-      toast.success('กำลังเปิดเนื้อหา...', { icon: '📄' });
-      navigate(`/post/${post.id}`);
-    }
+    // Allows both guests and logged-in users to view the post
+    navigate(`/post/${post.id}`);
   };
 
   const getRankBadge = () => {

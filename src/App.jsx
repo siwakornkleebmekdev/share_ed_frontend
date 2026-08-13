@@ -177,19 +177,24 @@ function App() {
         };
 
         loginAction(baseUser);
-        setInitializing(false);
 
         // Supabase's session doesn't know the Mongoose-side role/status, so
         // fetch and merge that in the background (see authService.getMe).
         try {
           const res = await authService.getMe();
-          const dbUser = res?.data || res?.user;
+          const dbUser = res?.data || res?.user || (res?.id ? res : null);
+          
           if (dbUser) {
-            loginAction({ ...baseUser, ...dbUser });
+            loginAction({
+              ...baseUser,
+              ...dbUser,
+              display_name: dbUser.nickname || dbUser.username || baseUser.display_name,
+              });
           }
         } catch (e) {
           console.log("Background role sync notice:", e);
         } finally {
+          setInitializing(false);
           setRoleLoading(false);
         }
         return;
@@ -202,24 +207,28 @@ function App() {
         if (tokenUser) {
           // Token is valid and not expired -> keep user logged in!
           loginAction(tokenUser);
-          setInitializing(false);
 
           // Asynchronously attempt to refresh user profile from server
           try {
             const res = await authService.getMe();
-            if (res && (res.data || res.user)) {
-              const dbUser = res.data || res.user;
+            const dbUser = res?.data || res?.user || (res?.id ? res : null);
+            if (dbUser) {
               loginAction({
                 ...tokenUser,
                 ...dbUser,
                 id: dbUser.id || dbUser._id || dbUser.user_id || tokenUser.id,
                 user_id:
                   dbUser.id || dbUser._id || dbUser.user_id || tokenUser.id,
+                user_metadata: {
+                  ...tokenUser.user_metadata,
+                  ...dbUser.user_metadata,
+                },
               });
             }
           } catch (e) {
             console.log("Background getMe check notice:", e);
           } finally {
+            setInitializing(false);
             setRoleLoading(false);
           }
           return;
@@ -259,7 +268,14 @@ function App() {
         setInitializing(false);
         setRoleLoading(false);
       } else if (session) {
-        handleSession(session);
+        const currentUser = useAuthStore.getState().user;
+        // ป้องกันการรีโหลดหน้า/กระพริบ เมื่อสลับแท็บแล้ว Supabase ยิง event ซ้ำ
+        if (!currentUser || currentUser.id !== session.user.id) {
+          handleSession(session);
+        } else if (session.access_token) {
+          // อัปเดตเฉพาะ Token เงียบๆ ไม่ต้องโหลดโปรไฟล์ใหม่
+          localStorage.setItem("access_token", session.access_token);
+        }
       }
     });
 

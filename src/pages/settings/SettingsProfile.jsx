@@ -7,6 +7,8 @@ import {
   Tag,
   X,
   Sparkles,
+  Trash2,
+  RotateCcw,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import useAuthStore from "@/store/authStore";
@@ -15,6 +17,33 @@ import { profileService } from "@/services/profile.service";
 import { AVATAR_SHAPES, DEFAULT_THEME } from "./themeConstants";
 import ProfilePreview from "@/components/settings/ProfilePreview";
 import FrameDecorationModal from "@/components/settings/FrameDecorationModal";
+
+const generateGradientFile = (filename, width, height, color1, color2) => {
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  
+  if (color1 === "transparent") {
+    ctx.clearRect(0, 0, width, height);
+  } else {
+    const gradient = ctx.createLinearGradient(0, 0, width, height);
+    gradient.addColorStop(0, color1);
+    gradient.addColorStop(1, color2);
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+  }
+  
+  const dataUrl = canvas.toDataURL("image/png");
+  const byteString = atob(dataUrl.split(',')[1]);
+  const ab = new ArrayBuffer(byteString.length);
+  const ia = new Uint8Array(ab);
+  for (let i = 0; i < byteString.length; i++) {
+    ia[i] = byteString.charCodeAt(i);
+  }
+  const blob = new Blob([ab], { type: 'image/png' });
+  return new File([blob], filename, { type: "image/png" });
+};
 
 export default function SettingsProfile() {
   const { user, login } = useAuthStore();
@@ -126,7 +155,29 @@ export default function SettingsProfile() {
     }
 
     const url = URL.createObjectURL(file);
-    setMedia((prev) => ({ ...prev, [type]: { file, url, type: file.type } }));
+    setMedia((prev) => ({ ...prev, [type]: { file, url, type: file.type, remove: false } }));
+  };
+
+  const handleRemoveMedia = (type) => {
+    let file;
+    if (type === "wallpaper") {
+      file = generateGradientFile("default_wallpaper.png", 1920, 1080, "#ffffff", "#ffffff");
+    } else if (type === "banner") {
+      file = generateGradientFile("blank_banner.png", 1, 1, "transparent", "transparent");
+    } else {
+      file = generateGradientFile(`default_${type}.png`, 400, 400, "#94a3b8", "#475569");
+    }
+    const url = URL.createObjectURL(file);
+
+    setMedia((prev) => ({ 
+      ...prev, 
+      [type]: { 
+        file, 
+        url, 
+        type: file.type, 
+        remove: true 
+      } 
+    }));
   };
 
   const updateTheme = (key, value) => {
@@ -153,25 +204,25 @@ export default function SettingsProfile() {
       );
 
       if (response && response.success !== false) {
+        const resData = response.data || {};
+
         login({
           ...user,
           display_name: formData.nickname,
-          username: formData.nickname,
-          bio: formData.bio,
-          education_level: formData.education_level,
-          avatar_url:
-            response.data?.avatar_url || media.avatar?.url || user.avatar_url,
+          username: resData.username || formData.nickname,
+          bio: resData.bio || formData.bio,
+          education_level: resData.education_level || formData.education_level,
+          avatar_url: resData.avatar_url || resData.profile_image || user.avatar_url,
           user_metadata: {
             ...user.user_metadata,
-
             theme_settings: formData.theme_settings,
             wallpaper_url:
-              response.data?.wallpaper_url ||
-              media.wallpaper?.url ||
+              resData.user_metadata?.wallpaper_url ||
+              resData.wallpaper ||
               user.user_metadata?.wallpaper_url,
             banner_url:
-              response.data?.banner_url ||
-              media.banner?.url ||
+              resData.user_metadata?.banner_url ||
+              resData.profile_banner ||
               user.user_metadata?.banner_url,
           },
         });
@@ -181,24 +232,11 @@ export default function SettingsProfile() {
       }
     } catch (error) {
       console.error("Update profile error:", error);
-      login({
-        ...user,
-        display_name: formData.nickname,
-        username: formData.nickname,
-        bio: formData.bio,
-        education_level: formData.education_level,
-        avatar_url: media.avatar?.url || user.avatar_url,
-        user_metadata: {
-          ...user.user_metadata,
-          theme_settings: formData.theme_settings,
-          wallpaper_url:
-            media.wallpaper?.url || user.user_metadata?.wallpaper_url,
-          banner_url: media.banner?.url || user.user_metadata?.banner_url,
-        },
-      });
-      toast.success(
-        "บันทึกข้อมูลสำเร็จ (โหมดจำลองเนื่องจาก API อาจยังไม่พร้อม)",
-      );
+      const errMsg =
+        error?.response?.data?.message ||
+        error?.message ||
+        "เกิดข้อผิดพลาดในการบันทึกข้อมูล";
+      toast.error(errMsg);
     } finally {
       setIsSaving(false);
     }
@@ -364,7 +402,7 @@ export default function SettingsProfile() {
                       </span>
                     </div>
                   )}
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center backdrop-blur-sm">
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center backdrop-blur-sm gap-3">
                     <label className="cursor-pointer px-4 py-2 bg-white rounded-xl text-sm font-bold text-slate-800 shadow-lg flex items-center gap-2 hover:bg-slate-50 transition-colors">
                       <Upload className="h-4 w-4" /> เปลี่ยนพื้นหลัง
                       <input
@@ -374,6 +412,15 @@ export default function SettingsProfile() {
                         onChange={(e) => handleFileChange(e, "wallpaper")}
                       />
                     </label>
+                    {(!media.wallpaper?.remove && (media.wallpaper?.url || user?.user_metadata?.wallpaper_url)) && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveMedia("wallpaper")}
+                        className="px-4 py-2 bg-white/20 backdrop-blur-md rounded-xl text-sm font-bold text-white shadow-lg flex items-center gap-2 hover:bg-white/30 transition-colors border border-white/30"
+                      >
+                        <RotateCcw className="h-4 w-4" /> ค่าเริ่มต้น
+                      </button>
+                    )}
                   </div>
                 </div>
                 {claimedWallpapers.length > 0 && (
@@ -414,7 +461,14 @@ export default function SettingsProfile() {
                   แบนเนอร์
                 </label>
                 <div className="relative h-32 w-full rounded-2xl bg-slate-100 overflow-hidden border border-slate-200 flex items-center justify-center group shadow-sm">
-                  {media.banner?.url || user?.user_metadata?.banner_url ? (
+                  {media.banner?.remove ? (
+                    <div className="text-center">
+                      <ImageIcon className="h-6 w-6 text-slate-400 mx-auto mb-1" />
+                      <span className="text-slate-500 text-xs font-medium">
+                        รูปภาพ (ไม่เกิน 8MB)
+                      </span>
+                    </div>
+                  ) : media.banner?.url || user?.user_metadata?.banner_url ? (
                     <img
                       src={media.banner?.url || user?.user_metadata?.banner_url}
                       alt="Banner"
@@ -428,7 +482,7 @@ export default function SettingsProfile() {
                       </span>
                     </div>
                   )}
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center backdrop-blur-sm">
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center backdrop-blur-sm gap-3">
                     <label className="cursor-pointer px-4 py-2 bg-white rounded-xl text-sm font-bold text-slate-800 shadow-lg flex items-center gap-2 hover:bg-slate-50 transition-colors">
                       <Upload className="h-4 w-4" /> เปลี่ยนแบนเนอร์
                       <input
@@ -438,6 +492,15 @@ export default function SettingsProfile() {
                         onChange={(e) => handleFileChange(e, "banner")}
                       />
                     </label>
+                    {(!media.banner?.remove && (media.banner?.url || user?.user_metadata?.banner_url)) && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveMedia("banner")}
+                        className="px-4 py-2 bg-red-500 rounded-xl text-sm font-bold text-white shadow-lg flex items-center gap-2 hover:bg-red-600 transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4" /> นำออก
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

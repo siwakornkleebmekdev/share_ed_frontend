@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { AVATAR_SHAPES, DEFAULT_THEME } from '@/pages/settings/themeConstants';
 import { hexToRgba } from '@/utils/colorUtils';
 
@@ -24,6 +25,7 @@ export default function ProfilePreview({ user, formData }) {
   const bannerUrl = user?.user_metadata?.banner_url;
   const avatarUrl = user?.avatar_url;
   const hasFrame = !!user?.user_metadata?.profile_frame_id;
+  const [isBannerBlank, setIsBannerBlank] = useState(false);
 
   // "ปรับสีการ์ดเอง" off falls back to the default color/opacity instead of
   // whatever custom values are still saved but not currently in effect.
@@ -100,7 +102,7 @@ export default function ProfilePreview({ user, formData }) {
           className={`absolute left-4 right-4 top-1/2 -translate-y-1/2 p-4 overflow-hidden ${styleClass} ${needsForcedBorder ? 'border-2' : ''}`}
           style={cardStyle}
         >
-          {bannerUrl && (
+          {bannerUrl && !isBannerBlank && (
             <div
               className="absolute inset-x-0 top-0 h-2/3 pointer-events-none"
               style={{
@@ -108,7 +110,18 @@ export default function ProfilePreview({ user, formData }) {
                 WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 35%, transparent 90%)',
               }}
             >
-              <img src={bannerUrl} alt="" className="w-full h-full object-cover" />
+              <img 
+                src={bannerUrl} 
+                alt="" 
+                className="w-full h-full object-cover opacity-0 transition-opacity duration-300" 
+                onLoad={(e) => {
+                  if (e.target.naturalWidth === 1 && e.target.naturalHeight === 1) {
+                    setIsBannerBlank(true);
+                  } else {
+                    e.target.classList.remove('opacity-0');
+                  }
+                }}
+              />
             </div>
           )}
 

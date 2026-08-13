@@ -113,6 +113,7 @@ export default function PostDetails() {
   const handleLike = async () => {
     if (!isAuthenticated) {
       toast.error('กรุณาสมัครสมาชิกเพื่อกดถูกใจ');
+      navigate('/register');
       return;
     }
     if (isLiking) return;
@@ -140,6 +141,7 @@ export default function PostDetails() {
   const handleBookmark = async () => {
     if (!isAuthenticated) {
       toast.error('กรุณาสมัครสมาชิกเพื่อบันทึกโพสต์');
+      navigate('/register');
       return;
     }
     if (isBookmarking) return;
@@ -211,6 +213,11 @@ export default function PostDetails() {
 
   const handleSubmitComment = async (e) => {
     e.preventDefault();
+    if (!isAuthenticated) {
+      toast.error('กรุณาสมัครสมาชิกเพื่อแสดงความคิดเห็น');
+      navigate('/register');
+      return;
+    }
     if (!newCommentText.trim()) return;
 
     try {
@@ -460,15 +467,16 @@ export default function PostDetails() {
                 <textarea
                   value={newCommentText}
                   onChange={(e) => setNewCommentText(e.target.value)}
-                  placeholder="เขียนความคิดเห็นที่เป็นประโยชน์..."
+                  placeholder={isAuthenticated ? "เขียนความคิดเห็นที่เป็นประโยชน์..." : "กรุณาเข้าสู่ระบบเพื่อแสดงความคิดเห็น"}
                   rows={3}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors text-sm resize-none"
+                  disabled={!isAuthenticated}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors text-sm resize-none disabled:bg-slate-50 disabled:cursor-not-allowed"
                 />
                 <div className="flex justify-end mt-2">
                   <button
                     type="submit"
-                    disabled={isSubmittingComment || !newCommentText.trim()}
-                    className={`px-5 py-2.5 rounded-xl font-bold text-white transition-all flex items-center gap-2 text-sm shadow-sm ${!newCommentText.trim() ? 'bg-slate-300 cursor-not-allowed' : 'bg-primary hover:bg-blue-600 hover:shadow'}`}
+                    disabled={isSubmittingComment || !newCommentText.trim() || !isAuthenticated}
+                    className={`px-5 py-2.5 rounded-xl font-bold text-white transition-all flex items-center gap-2 text-sm shadow-sm ${(!newCommentText.trim() || !isAuthenticated) ? 'bg-slate-300 cursor-not-allowed' : 'bg-primary hover:bg-blue-600 hover:shadow'}`}
                   >
                     <Send className="h-4 w-4" />
                     {isSubmittingComment ? 'กำลังส่ง...' : 'ส่งความคิดเห็น'}

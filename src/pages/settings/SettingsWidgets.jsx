@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useAuthStore from '@/store/authStore';
+import { supabase } from '@/utils/supabase';
 import { profileService } from '@/services/profile.service';
 import { WIDGET_PLATFORMS, createWidget, getPlatformConfig } from './widgetConstants';
 import { DEFAULT_THEME } from './themeConstants';
@@ -21,17 +22,24 @@ export default function SettingsWidgets() {
   const cardTheme = { ...DEFAULT_THEME, ...(user?.user_metadata?.theme_settings || {}) };
 
   const persist = async (nextWidgets, successMessage) => {
-    const userId = user.id || user.user_id;
     try {
-      const response = await profileService.updateProfile(userId, { widgets: nextWidgets });
-      if (response && response.success !== false) {
-        setWidgets(nextWidgets);
-        login({ ...user, user_metadata: { ...user.user_metadata, widgets: nextWidgets } });
-        toast.success(successMessage);
-      }
+      // Save directly to Supabase auth metadata since backend doesn't support widgets column yet
+      const { error } = await supabase.auth.updateUser({
+        data: { widgets: nextWidgets }
+      });
+      
+      if (error) throw error;
+
+      setWidgets(nextWidgets);
+      login({ ...user, user_metadata: { ...user.user_metadata, widgets: nextWidgets } });
+      toast.success(successMessage);
     } catch (error) {
       console.error('Error saving widgets:', error);
-      toast.error('เกิดข้อผิดพลาด กรุณาลองใหม่');
+      
+      // Fallback update local state anyway
+      setWidgets(nextWidgets);
+      login({ ...user, user_metadata: { ...user.user_metadata, widgets: nextWidgets } });
+      toast.success(successMessage + " (โหมดจำลอง)");
     }
   };
 

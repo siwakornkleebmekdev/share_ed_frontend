@@ -252,9 +252,9 @@ export default function Navbar() {
                   className={`flex items-center justify-center p-2.5 rounded-full transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 ${isDarkHero ? "text-slate-300 hover:text-white bg-white/10 hover:bg-white/20" : "text-slate-500 hover:text-primary bg-slate-100 hover:bg-slate-200"}`}
                   title="เมนูผู้ใช้"
                 >
-                  {user?.user_metadata?.avatar_url || user?.avatar ? (
+                  {user?.avatar_url || user?.user_metadata?.avatar_url || user?.avatar ? (
                     <img
-                      src={user?.user_metadata?.avatar_url || user?.avatar}
+                      src={user?.avatar_url || user?.user_metadata?.avatar_url || user?.avatar}
                       alt="Profile"
                       className="h-4 w-4 sm:h-5 sm:w-5 rounded-full object-cover"
                     />
@@ -268,7 +268,9 @@ export default function Navbar() {
                   <div className="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
                     <div className="p-4 border-b border-slate-100 bg-slate-50/50">
                       <p className="font-bold text-slate-800 truncate">
-                        {user?.user_metadata?.full_name ||
+                        {user?.display_name ||
+                          user?.username ||
+                          user?.user_metadata?.full_name ||
                           user?.name ||
                           "ผู้ใช้งาน"}
                       </p>

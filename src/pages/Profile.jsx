@@ -48,6 +48,15 @@ const AVATAR_SHAPE_CLASS = {
   circle: "rounded-full",
 };
 
+const getEducationLevelLabel = (level) => {
+  switch(level) {
+    case 'MIDDLE_SCHOOL': return 'มัธยมศึกษาตอนต้น';
+    case 'HIGH_SCHOOL': return 'มัธยมศึกษาตอนปลาย';
+    case 'UNIVERSITY': return 'มหาวิทยาลัย';
+    default: return level || 'ไม่ระบุ';
+  }
+};
+
 export default function Profile() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -58,6 +67,7 @@ export default function Profile() {
     AVATAR_SHAPE_CLASS[theme.avatarShape] || AVATAR_SHAPE_CLASS.circle;
   const enterScreenEnabled = !!user?.user_metadata?.enter_screen_enabled;
   const [hasEntered, setHasEntered] = useState(!enterScreenEnabled);
+  const [isBannerBlank, setIsBannerBlank] = useState(false);
 
   useEffect(() => {
     setHasEntered(!enterScreenEnabled);
@@ -187,7 +197,7 @@ export default function Profile() {
         )}
         <div className="relative z-10 max-w-md w-full text-center bg-slate-900/70 backdrop-blur-xl border border-white/10 rounded-3xl p-10 shadow-2xl">
           <DoorOpen className="h-10 w-10 text-primary mx-auto mb-4" />
-          <h2 className="text-2xl font-extrabold text-white mb-3">
+          <h2 className="text-2xl font-extrabold text-black mb-3">
             {user?.display_name || user?.username || "ผู้ใช้งาน"}
           </h2>
           <p className="text-slate-300 mb-8">
@@ -243,7 +253,7 @@ export default function Profile() {
             backgroundColor: cardGlassColor,
           }}
         >
-          {user?.user_metadata?.banner_url && (
+          {user?.user_metadata?.banner_url && !isBannerBlank && (
             <div
               className="-mx-6 sm:-mx-10 -mt-6 sm:-mt-10 mb-6 h-48 sm:h-64 pointer-events-none"
               style={{
@@ -256,7 +266,14 @@ export default function Profile() {
               <img
                 src={user.user_metadata.banner_url}
                 alt="Banner"
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover opacity-0 transition-opacity duration-300"
+                onLoad={(e) => {
+                  if (e.target.naturalWidth === 1 && e.target.naturalHeight === 1) {
+                    setIsBannerBlank(true);
+                  } else {
+                    e.target.classList.remove('opacity-0');
+                  }
+                }}
               />
             </div>
           )}
@@ -333,7 +350,7 @@ export default function Profile() {
               >
                 <div className="flex items-center gap-1.5">
                   <GraduationCap className="h-4 w-4 text-primary" />{" "}
-                  {user?.education_level || "มัธยมศึกษาตอนปลาย"}
+                  {getEducationLevelLabel(user?.education_level)}
                 </div>
 
                 {user?.user_metadata?.occupation && (

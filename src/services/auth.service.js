@@ -127,14 +127,19 @@ export const authService = {
         user_metadata: meta
       };
 
-      // Supabase's session/JWT has no knowledge of the Mongoose-side role/status,
-      // so also ask the backend and merge those two fields in when available.
+      // Supabase's session/JWT has no knowledge of the DB-side role/status/metadata,
+      // so also ask the backend and merge all those fields in when available.
       try {
         const backendRes = await api.get('/auth/me');
         const backendUser = backendRes.data?.data || backendRes.data?.user || backendRes.data;
         if (backendUser) {
-          supabaseUser.role = backendUser.role;
-          supabaseUser.status = backendUser.status;
+          Object.assign(supabaseUser, backendUser);
+          if (backendUser.user_metadata) {
+            supabaseUser.user_metadata = {
+              ...meta,
+              ...backendUser.user_metadata
+            };
+          }
         }
       } catch (e) {
         console.log('Background role sync via /auth/me failed:', e?.response?.data || e.message);

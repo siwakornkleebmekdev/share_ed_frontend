@@ -1,5 +1,4 @@
 import api from "../utils/api";
-import { supabase } from "../utils/supabase";
 
 export const profileService = {
   // Fetch My Posts (Active/Published)
@@ -80,68 +79,35 @@ export const profileService = {
   // Update Profile Info
   updateProfile: async (userId, data) => {
     try {
-      // Create FormData if there are files
-      if (data.avatarFile || data.wallpaperFile) {
-        // Normally we'd use formData here to send files to the backend
-        // const formData = new FormData();
-        // Object.keys(data).forEach(key => formData.append(key, data[key]));
-        // return await api.put('/users/profile/with-media', formData, {
-        //   headers: { 'Content-Type': 'multipart/form-data' }
-        // });
-      }
+      const hasFiles = data.avatarFile || data.wallpaperFile || data.bannerFile;
 
-      // Fallback: If no dedicated file API exists, try standard update
-      // Since backend endpoint isn't fully confirmed, we'll try API first, then Supabase
-      try {
-        const response = await api.put("/users/profile", data);
+      if (hasFiles) {
+        // Build FormData for file upload
+        const formData = new FormData();
+
+        if (data.avatarFile) formData.append("avatar", data.avatarFile);
+        if (data.wallpaperFile) formData.append("wallpaper", data.wallpaperFile);
+        if (data.bannerFile) formData.append("banner", data.bannerFile);
+
+        // Append text fields
+        if (data.username !== undefined) formData.append("username", data.username);
+        if (data.bio !== undefined) formData.append("bio", data.bio);
+        if (data.education_level !== undefined) formData.append("education_level", data.education_level);
+        if (data.location !== undefined) formData.append("location", data.location);
+        if (data.occupation !== undefined) formData.append("occupation", data.occupation);
+
+        // Social links
+        if (data.facebook_url !== undefined) formData.append("facebook_url", data.facebook_url);
+        if (data.instagram_url !== undefined) formData.append("instagram_url", data.instagram_url);
+        if (data.discord_url !== undefined) formData.append("discord_url", data.discord_url);
+
+        const response = await api.put("/users/profile/with-media", formData);
         return response.data;
-      } catch (apiError) {
-        console.log(
-          "API /users/profile update failed or doesn't exist, falling back to Supabase",
-          apiError,
-        );
-
-        const updatePayload = {
-          nickname: data.nickname,
-          bio: data.bio,
-          education_level: data.education_level,
-          updated_at: new Date(),
-        };
-
-        // In Supabase, if we have custom fields, we might need a separate query
-        // We update basic fields in `users` table
-        const { data: updatedData, error } = await supabase
-          .from("users")
-          .update(updatePayload)
-          .eq("id", userId)
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        // Also update auth metadata
-        await supabase.auth.updateUser({
-          data: {
-            education_level: data.education_level,
-            bio: data.bio,
-            username: data.nickname,
-            instagram_url: data.instagram_url,
-            facebook_url: data.facebook_url,
-            profile_frame_id: data.profile_frame_id,
-            wallpaper_url: data.wallpaper_url,
-            widgets: data.widgets,
-            occupation: data.occupation,
-            location: data.location,
-            tags: data.tags,
-            enter_screen_enabled: data.enter_screen_enabled,
-            enter_screen_message: data.enter_screen_message,
-            theme_settings: data.theme_settings,
-            notification_preferences: data.notification_preferences,
-          },
-        });
-
-        return { success: true, data: updatedData };
       }
+
+      // No files — use standard JSON update
+      const response = await api.put("/users/profile", data);
+      return response.data;
     } catch (error) {
       console.error("Error updating profile:", error);
       throw error;
