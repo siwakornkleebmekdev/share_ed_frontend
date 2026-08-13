@@ -1,0 +1,46 @@
+name: Deploy React Frontend to AWS S3
+
+on:
+  push:
+    branches:
+      - develop # หรือ master (ขึ้นอยู่กับชื่อ branch หลักใน GitHub ของคุณ)
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. ดึงโค้ดจาก Repository
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 2. ตั้งค่า Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+# 3. ติดตั้ง Dependencies และ Build โปรเจกต์
+      - name: Install & Build
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          npm ci
+          npm run build
+          
+
+      # 4. ตั้งค่า AWS Credentials โดยดึงค่าจาก Secrets
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      # 5. ซิงค์ไฟล์ที่ Build แล้วไปยัง S3 Bucket
+      - name: Deploy to S3
+        run: |
+          aws s3 sync dist/ s3://share-ed --delete
