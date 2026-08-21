@@ -1,9 +1,9 @@
-name: Deploy React Frontend to AWS S3
+name: Deploy to Vercel
 
 on:
   push:
     branches:
-      - develop # หรือ master (ขึ้นอยู่กับชื่อ branch หลักใน GitHub ของคุณ)
+      - develop # หรือเปลี่ยนเป็น main / master ตาม branch ที่คุณใช้งาน
 
 jobs:
   deploy:
@@ -21,34 +21,32 @@ jobs:
           node-version: 22
           cache: "npm"
 
-      # 3. ติดตั้ง Dependencies และ Build โปรเจกต์
-      - name: Install & Build
+      # 3. ติดตั้ง Vercel CLI
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      # 4. ดึง Environment Information จาก Vercel มาเตรียมไว้
+      - name: Pull Vercel Environment Information
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      # 5. สร้างไฟล์ .env.production สำหรับ Vite (ดึงค่าจาก GitHub Secrets ของคุณ)
+      - name: Create Env File
         env:
           VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: |
-          npm ci
-          # สร้างไฟล์ .env.production เพื่อให้ Vite ฝังค่า Env เข้าใน Build Bundle อย่างแน่นอน
           echo "VITE_API_BASE_URL=$VITE_API_BASE_URL" >> .env.production
           echo "VITE_SUPABASE_URL=$VITE_SUPABASE_URL" >> .env.production
           echo "VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY" >> .env.production
-          npm run build
 
-      # 4. ตั้งค่า AWS Credentials โดยดึงค่าจาก Secrets
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+      # 6. Build โปรเจกต์ผ่าน Vercel
+      - name: Build Project Artifacts
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
 
-      # 5. ซิงค์ไฟล์ Static/Assets ทั้งหมด ยกเว้น index.html
-      - name: Deploy Assets to S3
-        run: |
-          aws s3 sync dist/ s3://share-ed --delete --exclude "index.html"
-
-      # 6. อัปโหลด index.html แยก พร้อมตั้งค่าสั่งห้าม Browser จำ Cache
-      - name: Deploy index.html with No-Cache
-        run: |
-          aws s3 cp dist/index.html s3://share-ed/index.html --metadata-directive REPLACE --cache-control "max-age=0, no-cache, no-store, must-revalidate"
+      # 7. Deploy ขึ้น Vercel พร้อมส่งค่า Org ID และ Project ID
+      - name: Deploy Project to Vercel
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
