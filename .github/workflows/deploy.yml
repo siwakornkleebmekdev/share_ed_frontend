@@ -19,13 +19,11 @@ jobs:
           node-version: 22
           cache: "npm"
 
-      - name: Install Vercel CLI
-        run: npm install --global vercel@latest
+      # 1. ติดตั้ง Dependencies ทั้งหมด
+      - name: Install Dependencies
+        run: npm ci
 
-      - name: Pull Vercel Environment Information
-        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-
-      # สร้างไฟล์ .env.production เพื่อฝังค่า VITE_ เข้าไปในโค้ดตอน Build ชัวร์ที่สุด
+      # 2. สร้างไฟล์ .env.production และฝังค่าจาก GitHub Secrets ก่อน Build
       - name: Create Env File
         env:
           VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
@@ -36,11 +34,17 @@ jobs:
           echo "VITE_SUPABASE_URL=$VITE_SUPABASE_URL" >> .env.production
           echo "VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY" >> .env.production
 
-      - name: Build Project Artifacts
-        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+      # 3. สั่ง Build โปรเจกต์ด้วย Vite (ตัวแปร VITE_ จะถูกฝังลงในโค้ดตอนนี้ชัวร์ 100%)
+      - name: Build Project
+        run: npm run build
 
-      - name: Deploy Project to Vercel
-        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+      # 4. ติดตั้ง Vercel CLI
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      # 5. Deploy โฟลเดอร์ที่ Build เสร็จแล้ว (dist) ขึ้น Vercel โดยตรง
+      - name: Deploy to Vercel
+        run: vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
