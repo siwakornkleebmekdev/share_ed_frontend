@@ -141,8 +141,9 @@ function formatPostData(post) {
 
 function formatSinglePostData(post) {
   const pdfMedia = post.media?.find(m => m.media_type === 'PDF');
-  const hashtags = post.tags?.map(t => t.tag?.tag_name) || [];
+  const hashtags = post.tags?.map(t => typeof t === 'string' ? t : (t.tag?.tag_name || t.name)) || [];
   const images = post.media?.filter(m => m.media_type === 'IMAGE').map(m => m.media_url) || [];
+  const authorId = post.author?.id || post.author?.user_id || post.author_id || post.user_id || post.userId;
 
   return {
     id: post.id,
@@ -157,13 +158,18 @@ function formatSinglePostData(post) {
     coverImage: post.cover_image || 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=1280&q=90',
     hashtags: hashtags,
     images: images,
+    media: post.media || [],
+    author_id: authorId,
+    user_id: authorId,
+    authorId: authorId,
     pdf: pdfMedia ? {
+      id: pdfMedia.id,
       name: 'เอกสารประกอบการเรียน.pdf',
       url: pdfMedia.media_url,
       size: '2MB'
     } : null,
     author: {
-      id: post.author?.id,
+      id: authorId,
       name: post.author?.username || 'ผู้ใช้งาน',
       role: 'Contributor',
       avatar: post.author?.profile_image || 'https://ui-avatars.com/api/?name=' + (post.author?.username || 'User'),

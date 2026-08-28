@@ -7,6 +7,7 @@ import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import { postService } from '@/services/post.service';
 import { uploadFileToSupabase } from '@/utils/storage';
+import useAuthStore from '@/store/authStore';
 import api from '../utils/api';
 
 const SUGGESTED_TAGS = ['#AI', '#เรียนรู้ไปด้วยกัน', '#เตรียมสอบ', '#TCAS67', '#สรุปย่อ', '#แชร์ความรู้', '#เด็กซิ่ว', '#สรุปชีท'];
@@ -14,6 +15,7 @@ const SUGGESTED_TAGS = ['#AI', '#เรียนรู้ไปด้วยก�
 export default function EditPost() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user, isAuthenticated, isInitializing } = useAuthStore();
 
   // Loading states
   const [isPageLoading, setIsPageLoading] = useState(true);
@@ -43,75 +45,91 @@ export default function EditPost() {
   const [showModal, setShowModal] = useState(false);
   const [previewFile, setPreviewFile] = useState(null);
 
-  // Fetch post details on mount
+  // Fetch post details on mount & check authorization
   useEffect(() => {
-    const fetchPostDetails = async () => {
+    // Wait for auth initialization to complete
+    if (isInitializing) return;
+
+    if (!isAuthenticated) {
+      navigate('/login', { replace: true });
+      return;
+    }
+
+    const fetchPostDetailsAndAuthorize = async () => {
       try {
         setIsPageLoading(true);
-        const response = await postService.getPostById(id);
-        if (response) {
-          setTitle(response.title || '');
-          setSummary(response.description || '');
-          setContent(response.details || '');
-          setCategory(response.category || '');
-          let uiLevel = 'มหาวิทยาลัย';
-          if (response.level === 'มัธยมศึกษาตอนต้น' || response.level === 'MIDDLE_SCHOOL') {
-            uiLevel = 'มัธยมศึกษาตอนต้น';
-          } else if (response.level === 'มัธยมศึกษาตอนปลาย' || response.level === 'HIGH_SCHOOL') {
-            uiLevel = 'มัธยมศึกษาตอนปลาย';
-          }
-          setLevel(uiLevel);
+        const resObj = await api.get(`/posts/${id}`);
+        const data = resObj.data;
 
-          setHashtags(response.hashtags || []);
-          setExistingCoverImage(response.coverImage || null);
+        if (!data || !data.success || !data.data) {
+          navigate('/home', { replace: true });
+          return;
         }
+
+        const post = data.data;
+        const currentUserId = user?.id || user?.user_id;
+        const postAuthorId = post.author?.id || post.author?.user_id || post.author_id || post.user_id || post.userId;
+        const isAdmin = user?.role === 'ADMIN';
+
+        const isAuthor = Boolean(
+          currentUserId &&
+          postAuthorId &&
+          String(currentUserId) === String(postAuthorId)
+        );
+
+        if (!isAuthor && !isAdmin) {
+          navigate('/home', { replace: true });
+          return;
+        }
+
+        // Populate fields
+        setTitle(post.title || '');
+        setSummary(post.summary || post.description || '');
+        setContent(post.content || post.details || '');
+        setCategory(post.category?.category_name || post.category?.name || post.category || '');
+
+        let uiLevel = 'มหาวิทยาลัย';
+        const rawLevel = post.education_level || post.level;
+        if (rawLevel === 'มัธยมศึกษาตอนต้น' || rawLevel === 'MIDDLE_SCHOOL') {
+          uiLevel = 'มัธยมศึกษาตอนต้น';
+        } else if (rawLevel === 'มัธยมศึกษาตอนปลาย' || rawLevel === 'HIGH_SCHOOL') {
+          uiLevel = 'มัธยมศึกษาตอนปลาย';
+        }
+        setLevel(uiLevel);
+
+        const postTags = post.tags?.map(t => typeof t === 'string' ? t : (t.tag?.tag_name || t.tag_name || t.name)) || post.hashtags || [];
+        setHashtags(postTags);
+        setExistingCoverImage(post.cover_image || null);
+
+        // Extract existing PDF
+        const pdfMedia = post.media?.find(m => m.media_type === 'PDF');
+        if (pdfMedia) {
+          setExistingPdf({
+            id: pdfMedia.id,
+            name: 'เอกสารประกอบการเรียน.pdf',
+            url: pdfMedia.media_url,
+            size: 'PDF'
+          });
+        }
+
+        // Extract existing Images
+        const imgMedias = post.media?.filter(m => m.media_type === 'IMAGE') || [];
+        setExistingImages(imgMedias.map(m => ({
+          id: m.id,
+          url: m.media_url
+        })));
       } catch (error) {
         console.error('Error fetching post for editing:', error);
-        toast.error('ไม่สามารถโหลดข้อมูลโพสต์ได้');
-        navigate('/explore');
+        navigate('/home', { replace: true });
       } finally {
         setIsPageLoading(false);
       }
     };
-    if (id) {
-      fetchPostDetails();
-    }
-  }, [id, navigate]);
 
-  // Load raw media mapping
-  useEffect(() => {
-    const fetchRawPost = async () => {
-      try {
-        const resObj = await api.get(`/posts/${id}`);
-        const data = resObj.data;
-        if (data && data.success) {
-          const post = data.data;
-          // Extract existing PDF
-          const pdfMedia = post.media?.find(m => m.media_type === 'PDF');
-          if (pdfMedia) {
-            setExistingPdf({
-              id: pdfMedia.id,
-              name: 'เอกสารประกอบการเรียน.pdf',
-              url: pdfMedia.media_url,
-              size: 'PDF'
-            });
-          }
-
-          // Extract existing Images
-          const imgMedias = post.media?.filter(m => m.media_type === 'IMAGE') || [];
-          setExistingImages(imgMedias.map(m => ({
-            id: m.id,
-            url: m.media_url
-          })));
-        }
-      } catch (err) {
-        console.error("Failed to load raw post media:", err);
-      }
-    };
     if (id) {
-      fetchRawPost();
+      fetchPostDetailsAndAuthorize();
     }
-  }, [id]);
+  }, [id, user, isAuthenticated, isInitializing, navigate]);
 
   // File Handlers
   const handleCoverUpload = (e) => {
@@ -421,8 +439,13 @@ export default function EditPost() {
     }
   };
 
-  if (isPageLoading) {
-    return <div className="text-center py-20 text-slate-500 font-medium">กำลังโหลดข้อมูลโพสต์...</div>;
+  if (isPageLoading || isInitializing) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-sm text-slate-500 font-medium">กำลังตรวจสอบสิทธิ์และโหลดข้อมูลโพสต์...</p>
+      </div>
+    );
   }
 
   return (
