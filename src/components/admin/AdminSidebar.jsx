@@ -22,7 +22,6 @@ const NAV_GROUPS = [
     items: [
       { to: "/admin/users", label: "จัดการผู้ใช้งาน", icon: Users },
       { to: "/admin/achievements", label: "จัดการความสำเร็จ", icon: Award },
-      { to: "/admin/users", label: "จัดการผู้ใช้งาน", icon: Users },
     ],
   },
 ];

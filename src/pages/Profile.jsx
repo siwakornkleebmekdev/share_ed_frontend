@@ -25,6 +25,7 @@ import useAchievementStore from "@/store/achievementStore";
 import {
   profileService,
   normalizeFollowCounts,
+  DEFAULT_FRAMES,
 } from "@/services/profile.service";
 import { Loader2 } from "lucide-react";
 import { getPlatformConfig } from "@/pages/settings/widgetConstants";
@@ -143,7 +144,32 @@ export default function Profile() {
   useEffect(() => {
     fetchMilestones();
   }, [fetchMilestones]);
-  const completedAchievements = milestones.filter((m) => m.status !== "LOCKED");
+  const allMilestones = [
+    ...DEFAULT_FRAMES,
+    ...milestones.filter(
+      (m) =>
+        !DEFAULT_FRAMES.some(
+          (df) =>
+            df.id === m.id ||
+            df.reward_item_id === m.reward_item_id ||
+            df.reward?.previewUrl === m.reward?.previewUrl,
+        ),
+    ),
+  ];
+  const completedAchievements = allMilestones.filter((m) => m.status !== "LOCKED");
+  const currentUserId = user?.user_id || user?.id;
+  const equippedFrameId =
+    user?.user_metadata?.profile_frame_id ||
+    user?.current_frame_id ||
+    (currentUserId ? localStorage.getItem(`profile_frame_id_${currentUserId}`) : null) ||
+    localStorage.getItem("profile_frame_id") ||
+    null;
+  const equippedFrame = allMilestones.find(
+    (m) =>
+      m.id === equippedFrameId ||
+      m.reward_item_id === equippedFrameId ||
+      m.reward?.id === equippedFrameId,
+  );
   const avatarSrc =
     user?.avatar_url ||
     `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.display_name || user?.username || "User")}&background=1e293b&color=38bdf8`;
@@ -292,10 +318,18 @@ export default function Profile() {
                 />
 
                 {/* แสดงกรอบรูปโปรไฟล์ ถ้าผู้ใช้เลือกไว้ */}
-                {user?.user_metadata?.profile_frame_id && (
-                  <div
-                    className={`absolute inset-0 border-4 border-amber-400 mix-blend-overlay pointer-events-none ${avatarShapeClass}`}
-                  ></div>
+                {equippedFrameId && (
+                  (equippedFrame?.reward?.previewUrl || user?.current_frame?.image_url) ? (
+                    <img
+                      src={equippedFrame?.reward?.previewUrl || user?.current_frame?.image_url}
+                      alt={equippedFrame?.reward?.name || "Frame"}
+                      className="absolute inset-0 w-full h-full object-cover pointer-events-none z-10"
+                    />
+                  ) : (
+                    <div
+                      className={`absolute inset-0 border-4 border-amber-400 mix-blend-overlay pointer-events-none ${avatarShapeClass}`}
+                    ></div>
+                  )
                 )}
               </div>
             </div>
@@ -668,11 +702,20 @@ export default function Profile() {
                                   className="w-full h-full object-cover"
                                 />
                               ) : (
-                                <img
-                                  src={avatarSrc}
-                                  alt=""
-                                  className="w-full h-full object-cover"
-                                />
+                                <div className="relative w-full h-full">
+                                  <img
+                                    src={avatarSrc}
+                                    alt=""
+                                    className="w-full h-full object-cover"
+                                  />
+                                  {m.reward?.type === "FRAME" && m.reward.previewUrl && (
+                                    <img
+                                      src={m.reward.previewUrl}
+                                      alt={m.reward.name}
+                                      className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+                                    />
+                                  )}
+                                </div>
                               )}
                             </div>
                             <span

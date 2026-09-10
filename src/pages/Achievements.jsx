@@ -85,12 +85,21 @@ export default function Achievements() {
                   {hasReward && (
                     <div className="absolute left-5 -bottom-10 h-20 w-20 rounded-xl border-4 border-white overflow-hidden shadow-lg bg-slate-100 flex items-center justify-center">
                       {milestone.reward.type === 'FRAME' ? (
-                        <img
-                          src={avatarSrc}
-                          alt=""
-                          className="w-full h-full object-cover"
-                          style={locked ? { filter: 'grayscale(0.6) brightness(0.85)' } : undefined}
-                        />
+                        <div className="relative w-full h-full">
+                          <img
+                            src={avatarSrc}
+                            alt=""
+                            className="w-full h-full object-cover"
+                            style={locked ? { filter: 'grayscale(0.6) brightness(0.85)' } : undefined}
+                          />
+                          {milestone.reward.previewUrl && (
+                            <img
+                              src={milestone.reward.previewUrl}
+                              alt={milestone.reward.name}
+                              className={`absolute inset-0 w-full h-full object-cover pointer-events-none ${locked ? 'grayscale opacity-40' : ''}`}
+                            />
+                          )}
+                        </div>
                       ) : milestone.reward.previewUrl ? (
                         <img
                           src={milestone.reward.previewUrl}

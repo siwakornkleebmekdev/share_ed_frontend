@@ -1,9 +1,15 @@
 import { useState, useEffect, useMemo } from "react";
-import { Search, Pencil, Trash2, Plus } from "lucide-react";
+import { Search, Pencil, Trash2, Plus, Gift } from "lucide-react";
 import toast from "react-hot-toast";
 import Swal from "sweetalert2";
-import { achievementService } from "@/services/achievement.service";
+import {
+  achievementService,
+  getMilestoneTypeInfo,
+  getMilestoneTypeLabel,
+} from "@/services/achievement.service";
 import AchievementFormModal from "@/components/admin/AchievementFormModal";
+import RewardManagementModal from "@/components/admin/RewardManagementModal";
+import { getValidImageUrl } from "@/utils/imageUtils";
 
 export default function AchievementManagement() {
   const [achievements, setAchievements] = useState([]);
@@ -12,6 +18,7 @@ export default function AchievementManagement() {
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [busyId, setBusyId] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isRewardModalOpen, setIsRewardModalOpen] = useState(false);
   const [editingAchievement, setEditingAchievement] = useState(null);
 
   const fetchAchievements = async () => {
@@ -33,7 +40,13 @@ export default function AchievementManagement() {
   }, []);
 
   const availableTypes = useMemo(() => {
-    return Array.from(new Set(achievements.map((a) => a.milestone_type).filter(Boolean)));
+    return Array.from(
+      new Set(
+        achievements
+          .map((a) => a.milestone_type || a.achievement_type)
+          .filter(Boolean),
+      ),
+    );
   }, [achievements]);
 
   const filteredAchievements = useMemo(() => {
@@ -43,7 +56,8 @@ export default function AchievementManagement() {
         !q ||
         a.title?.toLowerCase().includes(q) ||
         a.description?.toLowerCase().includes(q);
-      const matchesType = typeFilter === "ALL" || a.milestone_type === typeFilter;
+      const itemType = a.milestone_type || a.achievement_type;
+      const matchesType = typeFilter === "ALL" || itemType === typeFilter;
       return matchesQuery && matchesType;
     });
   }, [achievements, search, typeFilter]);
@@ -113,12 +127,22 @@ export default function AchievementManagement() {
             สร้าง แก้ไข และลบภารกิจ/ความสำเร็จที่ผู้ใช้งานสามารถปลดล็อกได้
           </p>
         </div>
-        <button
-          onClick={openCreateModal}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-white bg-primary hover:bg-blue-600 shadow-sm transition-colors"
-        >
-          <Plus className="h-4 w-4" /> เพิ่มความสำเร็จใหม่
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setIsRewardModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 shadow-sm transition-colors"
+          >
+            <Gift className="h-4 w-4 text-primary" /> จัดการของรางวัล
+          </button>
+          <button
+            type="button"
+            onClick={openCreateModal}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-white bg-primary hover:bg-blue-600 shadow-sm transition-colors"
+          >
+            <Plus className="h-4 w-4" /> เพิ่มความสำเร็จใหม่
+          </button>
+        </div>
       </div>
 
       <div className="admin-filter-bar">
@@ -137,10 +161,10 @@ export default function AchievementManagement() {
           onChange={(e) => setTypeFilter(e.target.value)}
           className="admin-select"
         >
-          <option value="ALL">ทุกประเภท</option>
+          <option value="ALL">ทุกประเภทภารกิจ</option>
           {availableTypes.map((type) => (
             <option key={type} value={type}>
-              {type}
+              {getMilestoneTypeLabel(type)}
             </option>
           ))}
         </select>
@@ -153,7 +177,7 @@ export default function AchievementManagement() {
               <tr>
                 <th>ชื่อภารกิจ</th>
                 <th>เป้าหมาย</th>
-                <th>ประเภท</th>
+                <th>ประเภทภารกิจ</th>
                 <th>รางวัล</th>
                 <th className="text-right">การจัดการ</th>
               </tr>
@@ -172,20 +196,89 @@ export default function AchievementManagement() {
                   </td>
                 </tr>
               ) : (
-                filteredAchievements.map((a) => (
-                  <tr key={a.id} className="admin-table-row" onClick={() => openEditModal(a)}>
-                    <td>
-                      <p className="font-bold text-slate-800">{a.title}</p>
-                      <p className="text-xs text-slate-400 line-clamp-1">{a.description}</p>
-                    </td>
-                    <td className="text-slate-500">{a.target_value}</td>
-                    <td>
-                      <span className="admin-badge admin-badge-default">
-                        {a.milestone_type}
-                      </span>
-                    </td>
-                    <td className="text-slate-500">
-                      {a.reward_item?.item_name || "ไม่มีรางวัล"}
+                filteredAchievements.map((a) => {
+                  const rawType = a.milestone_type || a.achievement_type;
+                  const typeInfo = getMilestoneTypeInfo(rawType);
+
+                  return (
+                    <tr key={a.id} className="admin-table-row" onClick={() => openEditModal(a)}>
+                      <td>
+                        <p className="font-bold text-slate-800">{a.title}</p>
+                        <p className="text-xs text-slate-400 line-clamp-1">{a.description}</p>
+                      </td>
+                      <td className="text-slate-700">
+                        <div className="flex items-baseline gap-1">
+                          <span className="font-extrabold text-slate-900 text-sm">
+                            {a.target_value}
+                          </span>
+                          <span className="text-xs font-semibold text-slate-500">
+                            {typeInfo?.unit || "หน่วย"}
+                          </span>
+                        </div>
+                      </td>
+                      <td>
+                        <div className="inline-flex flex-col items-start gap-0.5">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold border ${
+                              typeInfo?.color || "bg-slate-100 text-slate-700 border-slate-200"
+                            }`}
+                          >
+                            {typeInfo?.shortLabel || rawType}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-mono tracking-tight">
+                            {rawType}
+                          </span>
+                        </div>
+                      </td>
+                    <td className="text-slate-600">
+                      {a.reward_item ? (
+                        <div className="flex items-center gap-2.5">
+                          <div className="h-9 w-9 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center shadow-inner">
+                            {getValidImageUrl(a.reward_item.image_url) ? (
+                              a.reward_item.item_type === "FRAME" ? (
+                                <div className="relative w-7 h-7 rounded-full overflow-hidden bg-slate-200">
+                                  <img
+                                    src="https://ui-avatars.com/api/?name=User&background=1e293b&color=38bdf8"
+                                    alt=""
+                                    className="w-full h-full object-cover"
+                                  />
+                                  <img
+                                    src={getValidImageUrl(a.reward_item.image_url)}
+                                    alt={a.reward_item.item_name}
+                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                    className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+                                  />
+                                </div>
+                              ) : (
+                                <img
+                                  src={getValidImageUrl(a.reward_item.image_url)}
+                                  alt={a.reward_item.item_name}
+                                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                  className="w-full h-full object-cover"
+                                />
+                              )
+                            ) : (
+                              <Gift className="h-4 w-4 text-slate-400" />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-semibold text-xs text-slate-800 truncate max-w-[150px]">
+                              {a.reward_item.item_name}
+                            </p>
+                            <span
+                              className={`inline-block text-[9px] font-extrabold px-1.5 py-0.2 rounded-full ${
+                                a.reward_item.item_type === "FRAME"
+                                  ? "bg-amber-100 text-amber-700"
+                                  : "bg-indigo-100 text-indigo-700"
+                              }`}
+                            >
+                              {a.reward_item.item_type === "FRAME" ? "กรอบรูป" : a.reward_item.item_type || "ของรางวัล"}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-400 italic">ไม่มีรางวัล</span>
+                      )}
                     </td>
                     <td onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-end gap-2">
@@ -208,8 +301,9 @@ export default function AchievementManagement() {
                       </div>
                     </td>
                   </tr>
-                ))
-              )}
+                );
+              })
+            )}
             </tbody>
           </table>
         </div>
@@ -220,6 +314,12 @@ export default function AchievementManagement() {
         onClose={() => setIsModalOpen(false)}
         initialData={editingAchievement}
         onConfirm={handleModalConfirm}
+      />
+
+      <RewardManagementModal
+        isOpen={isRewardModalOpen}
+        onClose={() => setIsRewardModalOpen(false)}
+        onRewardDeleted={() => fetchAchievements()}
       />
     </div>
   );
