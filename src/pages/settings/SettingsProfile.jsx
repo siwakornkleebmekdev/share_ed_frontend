@@ -13,10 +13,11 @@ import {
 import toast from "react-hot-toast";
 import useAuthStore from "@/store/authStore";
 import useAchievementStore from "@/store/achievementStore";
-import { profileService } from "@/services/profile.service";
+import { profileService, DEFAULT_FRAMES } from "@/services/profile.service";
 import { AVATAR_SHAPES, DEFAULT_THEME } from "./themeConstants";
 import ProfilePreview from "@/components/settings/ProfilePreview";
 import FrameDecorationModal from "@/components/settings/FrameDecorationModal";
+import { supabase } from "@/utils/supabase";
 
 const generateGradientFile = (filename, width, height, color1, color2) => {
   const canvas = document.createElement("canvas");
@@ -69,8 +70,33 @@ export default function SettingsProfile() {
     fetchMilestones();
   }, [fetchMilestones]);
 
-  const frameMilestones = milestones.filter((m) => m.reward?.type === "FRAME");
-  const claimedWallpapers = milestones.filter(
+  const allMilestones = [
+    ...DEFAULT_FRAMES,
+    ...milestones.filter(
+      (m) =>
+        !DEFAULT_FRAMES.some(
+          (df) =>
+            df.id === m.id ||
+            df.reward_item_id === m.reward_item_id ||
+            df.reward?.previewUrl === m.reward?.previewUrl,
+        ),
+    ),
+  ];
+  const frameMilestones = allMilestones.filter((m) => m.reward?.type === "FRAME");
+  const currentUserId = user?.id || user?.user_id;
+  const equippedFrameId =
+    user?.user_metadata?.profile_frame_id ||
+    user?.current_frame_id ||
+    (currentUserId ? localStorage.getItem(`profile_frame_id_${currentUserId}`) : null) ||
+    localStorage.getItem("profile_frame_id") ||
+    null;
+  const equippedFrame = allMilestones.find(
+    (m) =>
+      m.id === equippedFrameId ||
+      m.reward_item_id === equippedFrameId ||
+      m.reward?.id === equippedFrameId,
+  );
+  const claimedWallpapers = allMilestones.filter(
     (m) => m.status === "CLAIMED" && m.reward?.type === "WALLPAPER",
   );
   const currentAvatarSrc =
@@ -82,20 +108,61 @@ export default function SettingsProfile() {
   // rather than going through the big form's "บันทึกข้อมูล" button — same
   // instant-apply pattern the Achievements page already uses for claiming.
   const handleEquipFrame = async (frameId) => {
-    const userId = user.id || user.user_id;
+    const userId = user?.id || user?.user_id;
     try {
-      const response = await profileService.updateProfile(userId, {
-        profile_frame_id: frameId,
-      });
-      if (response && response.success !== false) {
-        login({
-          ...user,
-          user_metadata: { ...user.user_metadata, profile_frame_id: frameId },
-        });
-        toast.success(
-          frameId ? "เปลี่ยนกรอบโปรไฟล์แล้ว" : "นำกรอบโปรไฟล์ออกแล้ว",
-        );
+      // 1. Persist to LocalStorage immediately so refresh retains frame even offline
+      if (frameId) {
+        if (userId) localStorage.setItem(`profile_frame_id_${userId}`, frameId);
+        localStorage.setItem("profile_frame_id", frameId);
+      } else {
+        if (userId) localStorage.removeItem(`profile_frame_id_${userId}`);
+        localStorage.removeItem("profile_frame_id");
       }
+
+      // 2. Persist to Supabase Auth metadata for permanent cloud persistence across devices/refreshes
+      try {
+        await supabase.auth.updateUser({
+          data: { profile_frame_id: frameId || null },
+        });
+      } catch (sbErr) {
+        console.warn("Supabase updateUser frame notice:", sbErr);
+      }
+
+      // 3. Notify backend API via /users/equip
+      const selectedMilestone = milestones.find(
+        (m) =>
+          m.id === frameId ||
+          m.reward_item_id === frameId ||
+          m.reward?.id === frameId,
+      );
+      const rewardItemId =
+        selectedMilestone?.reward_item_id ||
+        selectedMilestone?.reward?.id ||
+        frameId;
+
+      try {
+        if (frameId) {
+          await profileService.equipItem(rewardItemId, "FRAME");
+        } else {
+          await profileService.equipItem(null, "FRAME");
+        }
+      } catch (apiErr) {
+        console.warn("Backend equipItem frame notice:", apiErr);
+      }
+
+      // 4. Update in-memory Zustand store
+      login({
+        ...user,
+        current_frame_id: frameId || null,
+        user_metadata: {
+          ...user?.user_metadata,
+          profile_frame_id: frameId || null,
+        },
+      });
+
+      toast.success(
+        frameId ? "เปลี่ยนกรอบโปรไฟล์แล้ว" : "นำกรอบโปรไฟล์ออกแล้ว",
+      );
     } catch (error) {
       console.error("Error equipping frame:", error);
       toast.error("เกิดข้อผิดพลาด กรุณาลองใหม่");
@@ -103,18 +170,37 @@ export default function SettingsProfile() {
   };
 
   const handleEquipWallpaper = async (url) => {
-    const userId = user.id || user.user_id;
+    const userId = user?.id || user?.user_id;
     try {
-      const response = await profileService.updateProfile(userId, {
-        wallpaper_url: url,
-      });
-      if (response && response.success !== false) {
-        login({
-          ...user,
-          user_metadata: { ...user.user_metadata, wallpaper_url: url },
-        });
-        toast.success("เปลี่ยนภาพพื้นหลังแล้ว");
+      if (url) {
+        if (userId) localStorage.setItem(`wallpaper_url_${userId}`, url);
+        localStorage.setItem("wallpaper_url", url);
+      } else {
+        if (userId) localStorage.removeItem(`wallpaper_url_${userId}`);
+        localStorage.removeItem("wallpaper_url");
       }
+
+      try {
+        await supabase.auth.updateUser({
+          data: { wallpaper_url: url || null },
+        });
+      } catch (sbErr) {
+        console.warn("Supabase updateUser wallpaper notice:", sbErr);
+      }
+
+      try {
+        await profileService.updateProfile(userId, {
+          wallpaper_url: url,
+        });
+      } catch (apiErr) {
+        console.warn("Backend updateProfile wallpaper notice:", apiErr);
+      }
+
+      login({
+        ...user,
+        user_metadata: { ...user?.user_metadata, wallpaper_url: url },
+      });
+      toast.success("เปลี่ยนภาพพื้นหลังแล้ว");
     } catch (error) {
       console.error("Error equipping wallpaper:", error);
       toast.error("เกิดข้อผิดพลาด กรุณาลองใหม่");
@@ -206,6 +292,18 @@ export default function SettingsProfile() {
       if (response && response.success !== false) {
         const resData = response.data || {};
 
+        // Sync theme_settings and display_name to Supabase auth metadata so they persist after refresh
+        try {
+          await supabase.auth.updateUser({
+            data: {
+              display_name: formData.nickname,
+              theme_settings: formData.theme_settings,
+            },
+          });
+        } catch (sbErr) {
+          console.warn("Supabase updateUser metadata notice:", sbErr);
+        }
+
         login({
           ...user,
           display_name: formData.nickname,
@@ -216,6 +314,7 @@ export default function SettingsProfile() {
           user_metadata: {
             ...user.user_metadata,
             theme_settings: formData.theme_settings,
+            profile_frame_id: equippedFrameId,
             wallpaper_url:
               resData.user_metadata?.wallpaper_url ||
               resData.wallpaper ||
@@ -254,8 +353,13 @@ export default function SettingsProfile() {
     avatar_url: media.avatar?.url || user?.avatar_url,
     user_metadata: {
       ...user?.user_metadata,
-      wallpaper_url: media.wallpaper?.url || user?.user_metadata?.wallpaper_url,
-      banner_url: media.banner?.url || user?.user_metadata?.banner_url,
+      profile_frame_id: equippedFrameId,
+      wallpaper_url: media.wallpaper?.remove
+        ? null
+        : (media.wallpaper?.url || user?.user_metadata?.wallpaper_url),
+      banner_url: media.banner?.remove
+        ? null
+        : (media.banner?.url || user?.user_metadata?.banner_url),
     },
   };
   const previewFormData = {
@@ -309,10 +413,18 @@ export default function SettingsProfile() {
                     <ImageIcon className="h-8 w-8" />
                   </div>
                 )}
-                {user?.user_metadata?.profile_frame_id && (
-                  <div
-                    className={`absolute inset-0 border-4 border-amber-400 mix-blend-overlay pointer-events-none ${activeAvatarShape.className}`}
-                  ></div>
+                {equippedFrameId && (
+                  equippedFrame?.reward?.previewUrl ? (
+                    <img
+                      src={equippedFrame.reward.previewUrl}
+                      alt={equippedFrame.reward.name || "Frame"}
+                      className="absolute inset-0 w-full h-full object-cover pointer-events-none z-10"
+                    />
+                  ) : (
+                    <div
+                      className={`absolute inset-0 border-4 border-amber-400 mix-blend-overlay pointer-events-none ${activeAvatarShape.className}`}
+                    ></div>
+                  )
                 )}
               </div>
               <div className="flex flex-col gap-2">
@@ -370,8 +482,9 @@ export default function SettingsProfile() {
                   ภาพพื้นหลัง
                 </label>
                 <div className="relative h-32 w-full rounded-2xl bg-slate-100 overflow-hidden border border-slate-200 flex items-center justify-center group shadow-sm">
-                  {media.wallpaper?.url ||
-                  user?.user_metadata?.wallpaper_url ? (
+                  {!media.wallpaper?.remove &&
+                  (media.wallpaper?.url ||
+                  user?.user_metadata?.wallpaper_url) ? (
                     media.wallpaper?.type?.startsWith("video") ||
                     user?.user_metadata?.wallpaper_url?.endsWith(".mp4") ? (
                       <video
@@ -580,7 +693,7 @@ export default function SettingsProfile() {
         isOpen={isFrameModalOpen}
         onClose={() => setIsFrameModalOpen(false)}
         frames={frameMilestones}
-        currentFrameId={user?.user_metadata?.profile_frame_id ?? null}
+        currentFrameId={equippedFrameId ?? null}
         avatarSrc={currentAvatarSrc}
         avatarShapeClass={activeAvatarShape.className}
         onConfirm={handleEquipFrame}

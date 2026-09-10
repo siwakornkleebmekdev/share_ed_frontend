@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <defs>
+    <!-- Cosmic Gradients -->
+    <linearGradient id="cosmicGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#06b6d4" />
+      <stop offset="35%" stop-color="#8b5cf6" />
+      <stop offset="70%" stop-color="#ec4899" />
+      <stop offset="100%" stop-color="#3b82f6" />
+    </linearGradient>
+
+    <linearGradient id="saturnRingGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.2" />
+      <stop offset="50%" stop-color="#f472b6" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#c084fc" stop-opacity="0.2" />
+    </linearGradient>
+
+    <radialGradient id="nebulaCore" cx="50%" cy="50%" r="50%">
+      <stop offset="65%" stop-color="#6366f1" stop-opacity="0" />
+      <stop offset="88%" stop-color="#a855f7" stop-opacity="0.35" />
+      <stop offset="100%" stop-color="#06b6d4" stop-opacity="0.8" />
+    </radialGradient>
+
+    <filter id="cosmicGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <style>
+      @keyframes cosmicRotate {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      @keyframes orbitReverse {
+        0% { transform: rotate(360deg); }
+        100% { transform: rotate(0deg); }
+      }
+      @keyframes starBlink {
+        0%, 100% { opacity: 0.3; transform: scale(0.6); }
+        50% { opacity: 1; transform: scale(1.3); }
+      }
+      @keyframes pulsarWave {
+        0%, 100% { transform: scale(1); opacity: 0.8; }
+        50% { transform: scale(1.02); opacity: 1; filter: drop-shadow(0 0 7px #8b5cf6); }
+      }
+      .cosmic-ring {
+        transform-origin: 100px 100px;
+        animation: pulsarWave 3.2s ease-in-out infinite;
+      }
+      .ring-saturn {
+        transform-origin: 100px 100px;
+        animation: cosmicRotate 16s linear infinite;
+      }
+      .orbit-planets {
+        transform-origin: 100px 100px;
+        animation: orbitReverse 10s linear infinite;
+      }
+      .star-blink-1 { transform-origin: 40px 40px; animation: starBlink 2s infinite ease-in-out; }
+      .star-blink-2 { transform-origin: 160px 40px; animation: starBlink 2.4s infinite ease-in-out 0.6s; }
+      .star-blink-3 { transform-origin: 165px 155px; animation: starBlink 1.8s infinite ease-in-out 1.2s; }
+      .star-blink-4 { transform-origin: 35px 160px; animation: starBlink 2.6s infinite ease-in-out 0.3s; }
+    </style>
+  </defs>
+
+  <!-- Nebula Background Aura -->
+  <circle cx="100" cy="100" r="92" fill="none" stroke="url(#nebulaCore)" stroke-width="7" />
+
+  <!-- Outer Dotted Constellation Arc -->
+  <circle cx="100" cy="100" r="93" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="2 6" opacity="0.75" />
+
+  <!-- Elliptical Planetary Orbit Rings -->
+  <g class="ring-saturn" opacity="0.7">
+    <ellipse cx="100" cy="100" rx="94" ry="85" fill="none" stroke="url(#saturnRingGrad)" stroke-width="2.5" stroke-dasharray="40 30" />
+  </g>
+
+  <!-- Base Glowing Cosmic Ring -->
+  <circle cx="100" cy="100" r="88" fill="none" stroke="#7c3aed" stroke-width="8" opacity="0.6" filter="url(#cosmicGlow)" />
+
+  <!-- Main Metallic Starlight Ring -->
+  <circle class="cosmic-ring" cx="100" cy="100" r="88" fill="none" stroke="url(#cosmicGrad)" stroke-width="6.5" />
+
+  <!-- Inner Cyan Neon Rim -->
+  <circle cx="100" cy="100" r="84" fill="none" stroke="#67e8f9" stroke-width="1.8" opacity="0.9" />
+
+  <!-- Orbiting Satellites & Planets -->
+  <g class="orbit-planets">
+    <!-- Mini Saturn Planet at Top Left -->
+    <g transform="translate(100, 7)">
+      <circle cx="0" cy="0" r="5" fill="#ec4899" filter="url(#cosmicGlow)" />
+      <ellipse cx="0" cy="0" rx="9" ry="3" fill="none" stroke="#67e8f9" stroke-width="1.5" transform="rotate(-25)" />
+      <circle cx="0" cy="0" r="2" fill="#ffffff" />
+    </g>
+    <!-- Cyan Gas Giant at Bottom Right -->
+    <g transform="translate(100, 193)">
+      <circle cx="0" cy="0" r="4.5" fill="#06b6d4" filter="url(#cosmicGlow)" />
+      <ellipse cx="0" cy="0" rx="7" ry="2.5" fill="none" stroke="#e879f9" stroke-width="1.2" transform="rotate(20)" />
+      <circle cx="0" cy="0" r="1.5" fill="#ffffff" />
+    </g>
+    <!-- Golden Moon at Left -->
+    <circle cx="7" cy="100" r="3.5" fill="#facc15" stroke="#a855f7" stroke-width="1" />
+    <!-- Violet Crystal Moon at Right -->
+    <circle cx="193" cy="100" r="3.5" fill="#a855f7" stroke="#38bdf8" stroke-width="1" />
+  </g>
+
+  <!-- Top Galactic Core Sigil -->
+  <g transform="translate(100, 18)" filter="url(#cosmicGlow)">
+    <path d="M-6 -6 L0 -12 L6 -6 L12 0 L6 6 L0 12 L-6 6 L-12 0 Z" fill="#ffffff" />
+    <circle cx="0" cy="0" r="3" fill="#8b5cf6" />
+  </g>
+
+  <!-- Twinkling Constellation Stars -->
+  <g class="star-blink-1">
+    <polygon points="40,32 42,38 48,40 42,42 40,48 38,42 32,40 38,38" fill="#ffffff" filter="url(#cosmicGlow)" />
+  </g>
+  <g class="star-blink-2">
+    <polygon points="160,34 161.5,38.5 166,40 161.5,41.5 160,46 158.5,41.5 154,40 158.5,38.5" fill="#67e8f9" filter="url(#cosmicGlow)" />
+  </g>
+  <g class="star-blink-3">
+    <polygon points="165,150 166.5,153.5 170,155 166.5,156.5 165,160 163.5,156.5 160,155 163.5,153.5" fill="#f472b6" />
+  </g>
+  <g class="star-blink-4">
+    <polygon points="35,155 36.5,158.5 40,160 36.5,161.5 35,165 33.5,161.5 30,160 33.5,158.5" fill="#e0e7ff" />
+  </g>
+</svg>

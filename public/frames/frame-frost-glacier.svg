@@ -1,0 +1,119 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <defs>
+    <!-- Frost Gradients -->
+    <linearGradient id="frostIce" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="35%" stop-color="#bae6fd" />
+      <stop offset="70%" stop-color="#0284c7" />
+      <stop offset="100%" stop-color="#e0f2fe" />
+    </linearGradient>
+
+    <linearGradient id="crystalShine" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0" />
+      <stop offset="50%" stop-color="#ffffff" stop-opacity="0.95" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
+    </linearGradient>
+
+    <radialGradient id="frostAura" cx="50%" cy="50%" r="50%">
+      <stop offset="68%" stop-color="#0284c7" stop-opacity="0" />
+      <stop offset="88%" stop-color="#38bdf8" stop-opacity="0.35" />
+      <stop offset="100%" stop-color="#e0f2fe" stop-opacity="0.8" />
+    </radialGradient>
+
+    <filter id="frostGlow" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur stdDeviation="3.2" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <style>
+      @keyframes icePulse {
+        0%, 100% { transform: scale(1); opacity: 0.88; }
+        50% { transform: scale(1.025); opacity: 1; filter: drop-shadow(0 0 7px #38bdf8); }
+      }
+      @keyframes snowSpin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      @keyframes flakeTwinkle {
+        0%, 100% { opacity: 0.25; transform: scale(0.65); }
+        50% { opacity: 1; transform: scale(1.25); }
+      }
+      .ice-ring {
+        transform-origin: 100px 100px;
+        animation: icePulse 3s ease-in-out infinite;
+      }
+      .snow-spin {
+        transform-origin: 100px 100px;
+        animation: snowSpin 20s linear infinite;
+      }
+      .flake-1 { transform-origin: 38px 38px; animation: flakeTwinkle 2.2s infinite ease-in-out; }
+      .flake-2 { transform-origin: 162px 38px; animation: flakeTwinkle 2.6s infinite ease-in-out 0.7s; }
+      .flake-3 { transform-origin: 165px 160px; animation: flakeTwinkle 2s infinite ease-in-out 1.2s; }
+      .flake-4 { transform-origin: 35px 160px; animation: flakeTwinkle 2.8s infinite ease-in-out 0.4s; }
+    </style>
+  </defs>
+
+  <!-- Glacial Frost Aura -->
+  <circle cx="100" cy="100" r="92" fill="none" stroke="url(#frostAura)" stroke-width="6.5" />
+
+  <!-- Outer Faceted Hexagonal Rings -->
+  <polygon points="100,6 181,52 181,148 100,194 19,148 19,52" fill="none" stroke="#7dd3fc" stroke-width="1.2" stroke-dasharray="6 8" opacity="0.65" />
+
+  <!-- Base Shimmer Glow Ring -->
+  <circle cx="100" cy="100" r="88" fill="none" stroke="#0284c7" stroke-width="8" opacity="0.6" filter="url(#frostGlow)" />
+
+  <!-- Main Crystalline Ice Ring -->
+  <circle class="ice-ring" cx="100" cy="100" r="88" fill="none" stroke="url(#frostIce)" stroke-width="6.5" />
+
+  <!-- Inner Diamond Frost Border -->
+  <circle cx="100" cy="100" r="84" fill="none" stroke="#e0f2fe" stroke-width="1.8" opacity="0.95" />
+
+  <!-- Top Arctic Ice Shard Crown -->
+  <g class="ice-ring" filter="url(#frostGlow)">
+    <polygon points="100,8 106,24 114,14 112,28 100,24 88,28 86,14 94,24" fill="url(#frostIce)" stroke="#ffffff" stroke-width="1" />
+    <polygon points="100,10 103,20 100,23 97,20" fill="#ffffff" />
+    <circle cx="100" cy="27" r="3.5" fill="#38bdf8" stroke="#ffffff" stroke-width="1" />
+  </g>
+
+  <!-- Left & Right Ice Crystals -->
+  <g filter="url(#frostGlow)">
+    <!-- Left Crystal Spear -->
+    <polygon points="10,100 24,93 22,100 24,107" fill="url(#frostIce)" stroke="#ffffff" stroke-width="0.8" />
+    <circle cx="23" cy="100" r="2.5" fill="#e0f2fe" />
+    <!-- Right Crystal Spear -->
+    <polygon points="190,100 176,93 178,100 176,107" fill="url(#frostIce)" stroke="#ffffff" stroke-width="0.8" />
+    <circle cx="177" cy="100" r="2.5" fill="#e0f2fe" />
+  </g>
+
+  <!-- Bottom Hanging Icicle Crest -->
+  <g transform="translate(100, 184)" filter="url(#frostGlow)">
+    <polygon points="0,14 -7,-2 0,2 7,-2" fill="url(#frostIce)" stroke="#ffffff" stroke-width="0.8" />
+    <polygon points="-12,8 -16,-2 -10,0" fill="#7dd3fc" />
+    <polygon points="12,8 10,0 16,-2" fill="#7dd3fc" />
+    <circle cx="0" cy="0" r="3" fill="#ffffff" />
+  </g>
+
+  <!-- Rotating Snowflake Particles in the background -->
+  <g class="snow-spin" opacity="0.75">
+    <circle cx="100" cy="8" r="1.8" fill="#ffffff" />
+    <circle cx="188" cy="100" r="1.8" fill="#bae6fd" />
+    <circle cx="100" cy="192" r="1.8" fill="#ffffff" />
+    <circle cx="12" cy="100" r="1.8" fill="#bae6fd" />
+  </g>
+
+  <!-- Twinkling Ice Flakes -->
+  <g class="flake-1">
+    <path d="M38 30 L38 46 M30 38 L46 38 M32 32 L44 44 M32 44 L44 32" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" filter="url(#frostGlow)" />
+  </g>
+  <g class="flake-2">
+    <path d="M162 32 L162 44 M156 38 L168 38 M157 33 L167 43 M157 43 L167 33" stroke="#e0f2fe" stroke-width="1.2" stroke-linecap="round" filter="url(#frostGlow)" />
+  </g>
+  <g class="flake-3">
+    <circle cx="165" cy="160" r="3.2" fill="#ffffff" filter="url(#frostGlow)" />
+    <circle cx="165" cy="160" r="1.5" fill="#0284c7" />
+  </g>
+  <g class="flake-4">
+    <circle cx="35" cy="160" r="3" fill="#ffffff" filter="url(#frostGlow)" />
+    <circle cx="35" cy="160" r="1.4" fill="#0284c7" />
+  </g>
+</svg>

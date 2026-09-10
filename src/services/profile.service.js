@@ -1,5 +1,232 @@
 import api from "../utils/api";
 
+export const DEFAULT_FRAMES = [
+  {
+    id: "m1",
+    reward_item_id: "m1",
+    title: "นักเรียนดีเด่น",
+    description: "มีผู้ติดตามครบ 10 คน",
+    current: 10,
+    target: 10,
+    status: "CLAIMED",
+    reward: {
+      id: "m1",
+      type: "FRAME",
+      name: "กรอบทองพรีเมียม",
+      previewUrl: "/frames/frame-gold-luxury.svg",
+    },
+    completedAt: "2026-07-01T17:29:00",
+  },
+  {
+    id: "m2",
+    reward_item_id: "m2",
+    title: "ยอดนักอ่าน",
+    description: "มียอดไลก์รวมครบ 50 ครั้ง",
+    current: 50,
+    target: 50,
+    status: "CLAIMED",
+    reward: {
+      id: "m2",
+      type: "FRAME",
+      name: "กรอบคริสตัลเวทมนตร์",
+      previewUrl: "/frames/frame-crystal-magic.svg",
+    },
+    completedAt: "2026-07-05T09:14:00",
+  },
+  {
+    id: "m5",
+    reward_item_id: "m5",
+    title: "ผู้ร่วมแบ่งปันความรู้",
+    description: "สร้างโพสต์แบ่งปันชีทสรุปบทเรียน",
+    current: 10,
+    target: 10,
+    status: "CLAIMED",
+    reward: {
+      id: "m5",
+      type: "FRAME",
+      name: "กรอบน่ารักสดใสการศึกษา",
+      previewUrl: "/frames/frame-friendly-edu.svg",
+    },
+    completedAt: "2026-07-10T14:20:00",
+  },
+  {
+    id: "m6",
+    reward_item_id: "m6",
+    title: "นักท่องโลกไซเบอร์",
+    description: "เข้าสู่ระบบและมีปฏิสัมพันธ์ในชุมชนอย่างต่อเนื่อง",
+    current: 5,
+    target: 5,
+    status: "CLAIMED",
+    reward: {
+      id: "m6",
+      type: "FRAME",
+      name: "กรอบนีออนไซเบอร์",
+      previewUrl: "/frames/frame-cyber-neon.svg",
+    },
+    completedAt: "2026-07-12T11:00:00",
+  },
+  {
+    id: "m7",
+    reward_item_id: "m7",
+    title: "เพลิงสุริยะร้อนแรง",
+    description: "สร้างความร้อนแรงในการมีส่วนร่วมกับชุมชน",
+    current: 1,
+    target: 1,
+    status: "CLAIMED",
+    reward: {
+      id: "m7",
+      type: "FRAME",
+      name: "กรอบเพลิงสุริยะ",
+      previewUrl: "/frames/frame-inferno-flame.svg",
+    },
+    completedAt: "2026-07-15T12:00:00",
+  },
+  {
+    id: "m8",
+    reward_item_id: "m8",
+    title: "ท่องห้วงอวกาศ",
+    description: "สำรวจความรู้ไร้ที่สิ้นสุดในกาแล็กซี่",
+    current: 1,
+    target: 1,
+    status: "CLAIMED",
+    reward: {
+      id: "m8",
+      type: "FRAME",
+      name: "กรอบกาแล็กซี่ห้วงอวกาศ",
+      previewUrl: "/frames/frame-galaxy-cosmic.svg",
+    },
+    completedAt: "2026-07-15T12:30:00",
+  },
+  {
+    id: "m9",
+    reward_item_id: "m9",
+    title: "ผู้พิทักษ์พฤกษา",
+    description: "เติบโตและผลิบานไปกับความรู้ใหม่ๆ",
+    current: 1,
+    target: 1,
+    status: "CLAIMED",
+    reward: {
+      id: "m9",
+      type: "FRAME",
+      name: "กรอบมรกตพฤกษา",
+      previewUrl: "/frames/frame-emerald-nature.svg",
+    },
+    completedAt: "2026-07-15T13:00:00",
+  },
+  {
+    id: "m10",
+    reward_item_id: "m10",
+    title: "ผู้พิชิตเหมันต์",
+    description: "เยือกเย็นและเฉียบคมในการเรียนรู้",
+    current: 1,
+    target: 1,
+    status: "CLAIMED",
+    reward: {
+      id: "m10",
+      type: "FRAME",
+      name: "กรอบธารน้ำแข็งเหมันต์",
+      previewUrl: "/frames/frame-frost-glacier.svg",
+    },
+    completedAt: "2026-07-15T13:30:00",
+  },
+  {
+    id: "m11",
+    reward_item_id: "m11",
+    title: "ซากุระแรกแย้ม",
+    description: "ส่งต่อความสดใสและมิตรภาพในชุมชน",
+    current: 1,
+    target: 1,
+    status: "CLAIMED",
+    reward: {
+      id: "m11",
+      type: "FRAME",
+      name: "กรอบซากุระผลิบาน",
+      previewUrl: "/frames/frame-sakura-blossom.svg",
+    },
+    completedAt: "2026-07-15T14:00:00",
+  },
+  {
+    id: "m12",
+    reward_item_id: "m12",
+    title: "พลังแห่งความมืด",
+    description: "ครอบครองพลังลึกลับแห่งห้วงอเวจี",
+    current: 1,
+    target: 1,
+    status: "CLAIMED",
+    reward: {
+      id: "m12",
+      type: "FRAME",
+      name: "กรอบเงาทมิฬแอ็บบิส",
+      previewUrl: "/frames/frame-void-shadow.svg",
+    },
+    completedAt: "2026-07-15T14:30:00",
+  },
+  {
+    id: "m13",
+    reward_item_id: "m13",
+    title: "ประกายรุ้งเจิดจรัส",
+    description: "เปล่งประกายสีสันอันสดใสสู่โลกการเรียนรู้",
+    current: 1,
+    target: 1,
+    status: "CLAIMED",
+    reward: {
+      id: "m13",
+      type: "FRAME",
+      name: "กรอบแสงเหนือรุ้งประกาย",
+      previewUrl: "/frames/frame-aurora-rainbow.svg",
+    },
+    completedAt: "2026-07-15T15:00:00",
+  },
+  {
+    id: "m14",
+    reward_item_id: "m14",
+    title: "วิศวกรเครื่องกล",
+    description: "ขับเคลื่อนฟันเฟืองแห่งปัญญาและความคิดสร้างสรรค์",
+    current: 1,
+    target: 1,
+    status: "CLAIMED",
+    reward: {
+      id: "m14",
+      type: "FRAME",
+      name: "กรอบเฟืองกลสตีมพังก์",
+      previewUrl: "/frames/frame-steampunk-gear.svg",
+    },
+    completedAt: "2026-07-15T15:30:00",
+  },
+  {
+    id: "m15",
+    reward_item_id: "m15",
+    title: "เพชรน้ำหนึ่ง",
+    description: "ยอดเยี่ยม เลอค่า และเปล่งประกายไร้ที่ติ",
+    current: 1,
+    target: 1,
+    status: "CLAIMED",
+    reward: {
+      id: "m15",
+      type: "FRAME",
+      name: "กรอบเพชรแพลทินัมเลอค่า",
+      previewUrl: "/frames/frame-diamond-platinum.svg",
+    },
+    completedAt: "2026-07-15T16:00:00",
+  },
+  {
+    id: "m16",
+    reward_item_id: "m16",
+    title: "แฮกเกอร์โค้ดดิ้ง",
+    description: "เจาะทะลุทุกมิติข้อมูลด้วยพลังแห่งดิจิทัล",
+    current: 1,
+    target: 1,
+    status: "CLAIMED",
+    reward: {
+      id: "m16",
+      type: "FRAME",
+      name: "กรอบไซเบอร์เมทริกซ์",
+      previewUrl: "/frames/frame-glitch-matrix.svg",
+    },
+    completedAt: "2026-07-15T16:30:00",
+  },
+];
+
 export const profileService = {
   // Fetch My Posts (Active/Published)
   getMyPosts: async () => {
@@ -45,25 +272,121 @@ export const profileService = {
     return response.data?.data;
   },
 
-  // Fetch Milestones (Temporarily disabled due to RLS blocking direct access — falls back to mock data)
+  // Fetch Achievements / Milestones from Backend (GET /achievements)
   getMilestones: async () => {
     try {
-      const response = await api.get("/milestones");
-      if (response.data.success) {
-        return response.data.data.map(mapMilestoneToAchievement);
+      let response;
+      try {
+        response = await api.get("/achievements");
+      } catch (err) {
+        if (err.response?.status === 404) {
+          response = await api.get("/milestones");
+        } else {
+          throw err;
+        }
       }
-      return MOCK_MILESTONES;
+
+      let list = [];
+      if (
+        response.data?.success &&
+        Array.isArray(response.data?.data) &&
+        response.data.data.length > 0
+      ) {
+        list = response.data.data.map(mapMilestoneToAchievement);
+      } else {
+        list = [...MOCK_MILESTONES];
+      }
+
+      // Merge user unlocked items from inventory if available
+      try {
+        const invRes = await api.get("/users/me/inventory");
+        const invList = invRes.data?.data || [];
+        invList.forEach((inv) => {
+          if (inv.item && (inv.item.item_type === "FRAME" || inv.item.item_type === "THEME")) {
+            const existing = list.find((x) => x.id === inv.item.id || x.reward_item_id === inv.item.id);
+            if (!existing) {
+              list.push({
+                id: inv.item.id,
+                reward_item_id: inv.item.id,
+                title: inv.item.item_name,
+                description: inv.item.metadata?.description || "ของรางวัลสะสม",
+                current: 1,
+                target: 1,
+                status: "CLAIMED",
+                reward: {
+                  id: inv.item.id,
+                  type: inv.item.item_type,
+                  name: inv.item.item_name,
+                  previewUrl: inv.item.image_url,
+                },
+                completedAt: inv.unlocked_at,
+              });
+            } else {
+              existing.status = "CLAIMED";
+            }
+          }
+        });
+      } catch (invErr) {
+        // Inventory fetch is optional
+      }
+
+      // Ensure default starter frames are ALWAYS included and claimed so the user has frames to wear!
+      DEFAULT_FRAMES.forEach((df) => {
+        const alreadyExists = list.some(
+          (item) =>
+            item.id === df.id ||
+            item.reward?.previewUrl === df.reward?.previewUrl ||
+            item.reward_item_id === df.id,
+        );
+        if (!alreadyExists) {
+          list.unshift(df);
+        }
+      });
+
+      return list;
     } catch (error) {
-      console.log("Milestones fetch failed, falling back to mock:", error);
+      console.log("Achievements fetch notice, using fallback:", error);
       return MOCK_MILESTONES;
     }
   },
 
-  // Claim a completed milestone's reward — unlocks the reward server-side
-  // (see /milestones/:id/claim) and marks it CLAIMED.
+  // Claim achievement reward (POST /achievements/:id/claim)
   claimMilestone: async (id) => {
-    const response = await api.post(`/milestones/${id}/claim`);
-    return response.data;
+    try {
+      const response = await api.post(`/achievements/${id}/claim`);
+      return response.data;
+    } catch (err) {
+      if (err.response?.status === 404) {
+        const fallbackRes = await api.post(`/milestones/${id}/claim`);
+        return fallbackRes.data;
+      }
+      throw err;
+    }
+  },
+
+  // Get user's unlocked reward items (GET /users/me/inventory)
+  getUserInventory: async () => {
+    try {
+      const response = await api.get("/users/me/inventory");
+      return response.data?.data || [];
+    } catch (error) {
+      console.warn("Error fetching inventory:", error);
+      return [];
+    }
+  },
+
+  // Equip a Frame or Theme via Backend API (PUT /users/equip)
+  equipItem: async (itemId, type = "FRAME") => {
+    try {
+      const response = await api.put("/users/equip", {
+        itemId: itemId || null,
+        type,
+      });
+      return response.data;
+    } catch (error) {
+      console.warn(`Backend equip ${type} notice:`, error?.response?.data || error.message);
+      return { success: false, error };
+    }
   },
 
   // Fetch User Stats (Temporarily disabled due to RLS blocking direct access)
@@ -91,6 +414,7 @@ export const profileService = {
 
         // Append text fields
         if (data.username !== undefined) formData.append("username", data.username);
+        if (data.nickname !== undefined) formData.append("nickname", data.nickname);
         if (data.bio !== undefined) formData.append("bio", data.bio);
         if (data.education_level !== undefined) formData.append("education_level", data.education_level);
         if (data.location !== undefined) formData.append("location", data.location);
@@ -125,7 +449,11 @@ const MOCK_MILESTONES = [
     current: 12,
     target: 10,
     status: "CLAIMED",
-    reward: { type: "FRAME", name: "กรอบทอง", previewUrl: null },
+    reward: {
+      type: "FRAME",
+      name: "กรอบทองพรีเมียม",
+      previewUrl: "/frames/frame-gold-luxury.svg",
+    },
     completedAt: "2026-07-01T17:29:00",
   },
   {
@@ -135,8 +463,40 @@ const MOCK_MILESTONES = [
     current: 50,
     target: 50,
     status: "READY_TO_CLAIM",
-    reward: { type: "FRAME", name: "กรอบไพลิน", previewUrl: null },
+    reward: {
+      type: "FRAME",
+      name: "กรอบคริสตัลเวทมนตร์",
+      previewUrl: "/frames/frame-crystal-magic.svg",
+    },
     completedAt: "2026-07-05T09:14:00",
+  },
+  {
+    id: "m5",
+    title: "ผู้ร่วมแบ่งปันความรู้",
+    description: "สร้างโพสต์แบ่งปันชีทสรุปบทเรียน",
+    current: 10,
+    target: 10,
+    status: "CLAIMED",
+    reward: {
+      type: "FRAME",
+      name: "กรอบน่ารักสดใสการศึกษา",
+      previewUrl: "/frames/frame-friendly-edu.svg",
+    },
+    completedAt: "2026-07-10T14:20:00",
+  },
+  {
+    id: "m6",
+    title: "นักท่องโลกไซเบอร์",
+    description: "เข้าสู่ระบบและมีปฏิสัมพันธ์ในชุมชนอย่างต่อเนื่อง",
+    current: 5,
+    target: 5,
+    status: "CLAIMED",
+    reward: {
+      type: "FRAME",
+      name: "กรอบนีออนไซเบอร์",
+      previewUrl: "/frames/frame-cyber-neon.svg",
+    },
+    completedAt: "2026-07-12T11:00:00",
   },
   {
     id: "m3",
