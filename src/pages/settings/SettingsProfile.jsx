@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Upload,
   Image as ImageIcon,
@@ -70,32 +70,59 @@ export default function SettingsProfile() {
     fetchMilestones();
   }, [fetchMilestones]);
 
-  const allMilestones = [
-    ...DEFAULT_FRAMES,
-    ...milestones.filter(
-      (m) =>
-        !DEFAULT_FRAMES.some(
-          (df) =>
-            df.id === m.id ||
-            df.reward_item_id === m.reward_item_id ||
-            df.reward?.previewUrl === m.reward?.previewUrl,
-        ),
-    ),
-  ];
+  // Merge live milestones with DEFAULT_FRAMES, honoring local & backend claimed state
+  const allMilestones = useMemo(() => {
+    const map = new Map();
+    DEFAULT_FRAMES.forEach((df) => {
+      map.set(df.id, { ...df });
+    });
+    milestones.forEach((m) => {
+      const key = m.id || m.reward_item_id;
+      if (map.has(key)) {
+        map.set(key, { ...map.get(key), ...m });
+      } else {
+        map.set(key, m);
+      }
+    });
+
+    try {
+      const claimedLocal = JSON.parse(localStorage.getItem("claimed_milestones") || "[]");
+      claimedLocal.forEach((claimedId) => {
+        for (const [, v] of map.entries()) {
+          if (
+            v.id === claimedId ||
+            v.reward_item_id === claimedId ||
+            v.reward?.id === claimedId
+          ) {
+            v.status = "CLAIMED";
+          }
+        }
+      });
+    } catch (_) {}
+
+    return Array.from(map.values());
+  }, [milestones]);
+
   const frameMilestones = allMilestones.filter((m) => m.reward?.type === "FRAME");
   const currentUserId = user?.id || user?.user_id;
-  const equippedFrameId =
+  const rawEquippedFrameId =
     user?.user_metadata?.profile_frame_id ||
     user?.current_frame_id ||
     (currentUserId ? localStorage.getItem(`profile_frame_id_${currentUserId}`) : null) ||
     localStorage.getItem("profile_frame_id") ||
     null;
-  const equippedFrame = allMilestones.find(
+
+  const foundFrame = allMilestones.find(
     (m) =>
-      m.id === equippedFrameId ||
-      m.reward_item_id === equippedFrameId ||
-      m.reward?.id === equippedFrameId,
+      m.id === rawEquippedFrameId ||
+      m.reward_item_id === rawEquippedFrameId ||
+      m.reward?.id === rawEquippedFrameId,
   );
+
+  // Enforce: only claimed frames can be actively equipped
+  const equippedFrame = foundFrame && foundFrame.status === "CLAIMED" ? foundFrame : null;
+  const equippedFrameId = equippedFrame ? (equippedFrame.reward_item_id || equippedFrame.id) : null;
+
   const claimedWallpapers = allMilestones.filter(
     (m) => m.status === "CLAIMED" && m.reward?.type === "WALLPAPER",
   );
