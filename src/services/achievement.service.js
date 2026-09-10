@@ -218,20 +218,66 @@ async function resolvePayloadReward(payload) {
 
 export const achievementService = {
   getAllAchievements: async () => {
+    let backendAchievements = [];
     try {
       const response = await api.get("/admin/achievements");
       const data = response.data?.data || response.data;
-      const achievements = Array.isArray(data) ? data : [];
-      achievements.forEach((a) => {
+      backendAchievements = Array.isArray(data) ? data : [];
+      backendAchievements.forEach((a) => {
         if (!a.milestone_type && a.achievement_type) a.milestone_type = a.achievement_type;
         if (!a.achievement_type && a.milestone_type) a.achievement_type = a.milestone_type;
         if (a.reward_item?.id) rewardItemCache.set(a.reward_item.id, a.reward_item);
+        a.is_default_template = false;
       });
-      return achievements;
     } catch (error) {
-      console.error("Error fetching achievements:", error);
-      throw error;
+      console.warn("Could not fetch /admin/achievements from backend, using templates:", error);
     }
+
+    // Read any hidden template IDs from localStorage
+    let hiddenIds = [];
+    try {
+      hiddenIds = JSON.parse(localStorage.getItem("shareed_hidden_achievement_templates") || "[]");
+    } catch (_) {}
+
+    const mergedList = [...backendAchievements];
+
+    // Merge DEFAULT_FRAMES so admin sees all 14 designed achievements
+    DEFAULT_FRAMES.forEach((df) => {
+      if (hiddenIds.includes(df.id)) return;
+
+      const alreadyExists = backendAchievements.some((ba) => {
+        const titleMatch =
+          ba.title && ba.title.trim().toLowerCase() === df.title.trim().toLowerCase();
+        const idMatch = ba.id === df.id;
+        const rewardMatch =
+          ba.reward_item?.item_name &&
+          df.reward?.name &&
+          ba.reward_item.item_name.trim().toLowerCase() === df.reward.name.trim().toLowerCase();
+        return titleMatch || idMatch || rewardMatch;
+      });
+
+      if (!alreadyExists) {
+        mergedList.push({
+          id: df.id,
+          title: df.title,
+          description: df.description,
+          target_value: df.target,
+          achievement_type: df.achievement_type || df.milestone_type || "POSTS_CREATED",
+          milestone_type: df.milestone_type || df.achievement_type || "POSTS_CREATED",
+          reward_item_id: df.reward_item_id || df.reward?.id,
+          reward_item: {
+            id: df.reward?.id || df.id,
+            item_name: df.reward?.name,
+            item_type: df.reward?.type || "FRAME",
+            image_url: df.reward?.previewUrl,
+            is_active: true,
+          },
+          is_default_template: true,
+        });
+      }
+    });
+
+    return mergedList;
   },
 
   getRewardItems: async () => {
@@ -264,9 +310,22 @@ export const achievementService = {
   updateAchievement: async (id, payload) => {
     try {
       const resolvedPayload = await resolvePayloadReward(payload);
+      // If it is a template item not yet created in backend DB, create it directly
+      if (String(id).startsWith("m")) {
+        return await achievementService.createAchievement(resolvedPayload);
+      }
+
       const formData = buildAchievementFormData(resolvedPayload);
-      const response = await api.put(`/admin/achievements/${id}`, formData);
-      return response.data?.data || response.data;
+      try {
+        const response = await api.put(`/admin/achievements/${id}`, formData);
+        return response.data?.data || response.data;
+      } catch (err) {
+        if (err.response?.status === 404) {
+          // If backend returned 404, fallback to creating it in the database
+          return await achievementService.createAchievement(resolvedPayload);
+        }
+        throw err;
+      }
     } catch (error) {
       console.error("Error updating achievement:", error);
       throw error;
@@ -274,6 +333,20 @@ export const achievementService = {
   },
 
   deleteAchievement: async (id) => {
+    if (String(id).startsWith("m")) {
+      // Template item: mark as hidden in localStorage
+      try {
+        const hidden = JSON.parse(
+          localStorage.getItem("shareed_hidden_achievement_templates") || "[]"
+        );
+        if (!hidden.includes(id)) {
+          hidden.push(id);
+          localStorage.setItem("shareed_hidden_achievement_templates", JSON.stringify(hidden));
+        }
+      } catch (_) {}
+      return { success: true, message: "Template removed" };
+    }
+
     try {
       const response = await api.delete(`/admin/achievements/${id}`);
       return response.data;
@@ -281,6 +354,59 @@ export const achievementService = {
       console.error("Error deleting achievement:", error);
       throw error;
     }
+  },
+
+  syncDefaultAchievementsToBackend: async () => {
+    let existingAchievements = [];
+    try {
+      const res = await api.get("/admin/achievements");
+      const data = res.data?.data || res.data;
+      existingAchievements = Array.isArray(data) ? data : [];
+    } catch (err) {
+      console.warn("Could not fetch existing achievements:", err);
+    }
+
+    const existingTitles = new Set(
+      existingAchievements
+        .map((a) => a.title && a.title.trim().toLowerCase())
+        .filter(Boolean)
+    );
+    const existingRewardNames = new Set(
+      existingAchievements
+        .map((a) => a.reward_item?.item_name && a.reward_item.item_name.trim().toLowerCase())
+        .filter(Boolean)
+    );
+
+    let syncedCount = 0;
+    const errors = [];
+
+    for (const df of DEFAULT_FRAMES) {
+      const titleLower = df.title?.trim()?.toLowerCase();
+      const rewardLower = df.reward?.name?.trim()?.toLowerCase();
+
+      if (existingTitles.has(titleLower) || (rewardLower && existingRewardNames.has(rewardLower))) {
+        continue;
+      }
+
+      try {
+        const payload = {
+          title: df.title,
+          description: df.description,
+          target_value: df.target,
+          achievement_type: df.achievement_type || df.milestone_type || "POSTS_CREATED",
+          milestone_type: df.milestone_type || df.achievement_type || "POSTS_CREATED",
+          reward_item_id: df.reward_item_id || df.reward?.id,
+        };
+
+        await achievementService.createAchievement(payload);
+        syncedCount++;
+      } catch (err) {
+        console.error(`Failed to sync achievement "${df.title}":`, err);
+        errors.push({ title: df.title, error: err?.response?.data?.message || err.message });
+      }
+    }
+
+    return { success: true, count: syncedCount, errors };
   },
 
   deleteRewardItem: async (id) => {
