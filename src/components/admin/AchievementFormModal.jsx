@@ -357,7 +357,7 @@ export default function AchievementFormModal({ isOpen, onClose, initialData, onC
                               : "bg-indigo-100 text-indigo-700"
                           }`}
                         >
-                          {selectedReward.item_type === "FRAME" ? "กรอบรูป" : "ธีม"}
+                          {selectedReward.item_type === "FRAME" ? "กรอบรูป" : selectedReward.item_type || "ของรางวัล"}
                         </span>
                       </div>
                       <p className="text-xs text-slate-500 truncate mt-0.5">
@@ -469,7 +469,7 @@ export default function AchievementFormModal({ isOpen, onClose, initialData, onC
                                     : "bg-indigo-100 text-indigo-700"
                                 }`}
                               >
-                                {item.item_type === "FRAME" ? "กรอบรูป" : "ธีม"}
+                                {item.item_type === "FRAME" ? "กรอบรูป" : item.item_type || "ของรางวัล"}
                               </span>
                               {item.item_description && (
                                 <span className="text-[10px] text-slate-400 truncate">
@@ -522,14 +522,10 @@ export default function AchievementFormModal({ isOpen, onClose, initialData, onC
                   placeholder="ชื่อรางวัล เช่น กรอบทอง"
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary text-slate-800 font-medium"
                 />
-                <select
-                  value={itemType}
-                  onChange={(e) => setItemType(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary text-slate-800 font-medium"
-                >
-                  <option value="FRAME">FRAME (กรอบรูป)</option>
-                  <option value="THEME">THEME (ธีม)</option>
-                </select>
+                <div className="w-full px-4 py-3 bg-slate-100/70 border border-slate-200 rounded-xl text-slate-700 font-medium text-sm flex items-center justify-between select-none">
+                  <span className="text-slate-700 font-semibold">กรอบรูป (FRAME)</span>
+                  <span className="text-[11px] text-slate-400">ประเภทรางวัล</span>
+                </div>
                 <input
                   type="text"
                   value={itemDescription}
