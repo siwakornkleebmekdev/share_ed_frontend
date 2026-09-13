@@ -98,7 +98,7 @@ export default function ProfilePreview({ user, formData }) {
 
   const nameBlock = (align) => (
     <>
-      <h3 className={`text-xl font-black ${align}`} style={{ color: theme.nameColor }}>{formData.nickname || 'ผู้ใช้งาน'}</h3>
+      <h3 className={`text-xl font-black ${align}`} style={{ color: theme.nameColor }}>{formData.username || formData.nickname || 'ผู้ใช้งาน'}</h3>
       {formData.bio && (
         <p className={`text-sm line-clamp-2 ${align}`} style={{ color: theme.textColor }}>{formData.bio}</p>
       )}

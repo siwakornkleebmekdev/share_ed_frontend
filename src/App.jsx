@@ -176,7 +176,7 @@ function App() {
             `https://ui-avatars.com/api/?name=${encodeURIComponent(userEmail?.split("@")[0] || "User")}&background=1e293b&color=38bdf8`,
           avatar: meta.avatar_url,
           display_name:
-            meta.display_name || meta.full_name || meta.name || meta.username,
+            meta.username || meta.display_name || meta.full_name || meta.name || userEmail?.split("@")[0],
           username:
             meta.username ||
             meta.display_name ||
@@ -204,7 +204,8 @@ function App() {
             loginAction({
               ...baseUser,
               ...dbUser,
-              display_name: dbUser.nickname || dbUser.username || baseUser.display_name,
+              username: dbUser.username || baseUser.username,
+              display_name: dbUser.username || baseUser.display_name,
               user_metadata: {
                 ...baseUser.user_metadata,
                 ...dbUser.user_metadata,

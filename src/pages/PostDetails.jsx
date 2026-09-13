@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router';
 import { FileText, Download, Heart, Share2, Tag, ChevronLeft, Calendar, Eye, EyeOff, ExternalLink, Bookmark, X, Edit3, Trash2, Send, MessageSquare, AlignLeft, ImageIcon } from 'lucide-react';
 import { postService } from '@/services/post.service';
+import { profileService, DEFAULT_FRAMES } from '@/services/profile.service';
 import useAuthStore from '@/store/authStore';
 import api from '@/utils/api';
 import toast from 'react-hot-toast';
@@ -32,6 +33,7 @@ export default function PostDetails() {
   }, []);
 
   const [post, setPost] = useState(null);
+  const [authorProfile, setAuthorProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -55,6 +57,12 @@ export default function PostDetails() {
           setIsLiked(userLiked);
           if (data.isBookmarked !== undefined) {
             setIsBookmarked(data.isBookmarked);
+          }
+          const targetAuthorId = data.authorId || data.author_id || data.author?.id;
+          if (targetAuthorId) {
+            profileService.getUserProfile(targetAuthorId).then(prof => {
+              if (prof) setAuthorProfile(prof);
+            }).catch(err => console.log('Notice fetching author profile:', err?.message));
           }
         }
       } catch (error) {
@@ -125,6 +133,25 @@ export default function PostDetails() {
     postAuthorId &&
     String(currentUserId) === String(postAuthorId)
   );
+
+  const authorUsername = isAuthor
+    ? (user?.username || authorProfile?.username || post?.author?.username || 'ผู้ใช้งาน')
+    : (authorProfile?.username || post?.author?.username || 'ผู้ใช้งาน');
+
+  const authorAvatar = isAuthor
+    ? (user?.avatar_url || user?.profile_image || user?.avatar || authorProfile?.profile_image || authorProfile?.avatar_url || post?.author?.avatar)
+    : (authorProfile?.profile_image || authorProfile?.avatar_url || post?.author?.avatar);
+
+  const authorRole = authorProfile?.role === 'ADMIN'
+    ? 'แอดมิน'
+    : (authorProfile?.role === 'MODERATOR' ? 'ผู้ดูแลระบบ' : (post?.author?.role || 'Contributor'));
+
+  const authorFrameId = isAuthor
+    ? (user?.user_metadata?.profile_frame_id || user?.current_frame_id || (currentUserId ? localStorage.getItem(`profile_frame_id_${currentUserId}`) : null) || localStorage.getItem('profile_frame_id'))
+    : (authorProfile?.user_metadata?.profile_frame_id || authorProfile?.current_frame_id);
+
+  const authorFrameObj = DEFAULT_FRAMES.find(df => df.id === authorFrameId || df.reward_item_id === authorFrameId) || authorProfile?.current_frame;
+  const authorFrameUrl = authorFrameObj?.reward?.previewUrl || authorFrameObj?.image_url || authorFrameObj?.previewUrl;
 
   const handleLike = async () => {
     if (!isAuthenticated) {
@@ -270,8 +297,8 @@ export default function PostDetails() {
           createdAt: new Date(createdDate).toLocaleDateString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' - ' + new Date(createdDate).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }),
           user: {
             id: user?.id || user?.user_id,
-            username: user?.username || user?.display_name || user?.name || 'ผู้ใช้งาน',
-            avatar: user?.avatar || user?.profile_image || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.username || user?.display_name || 'User')}`
+            username: user?.username || 'ผู้ใช้งาน',
+            avatar: user?.avatar_url || user?.profile_image || user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.username || 'User')}&background=1e293b&color=38bdf8`
           }
         };
 
@@ -383,10 +410,31 @@ export default function PostDetails() {
 
             <div className="flex flex-wrap items-center justify-between gap-4 py-4 border-y border-slate-100">
               <div className="flex items-center gap-3">
-                <img src={post.author.avatar} alt={post.author.name} className="w-12 h-12 rounded-full border-2 border-white shadow-sm" />
+                <Link to={postAuthorId ? `/profile/${postAuthorId}` : '#'} className="relative shrink-0 block group cursor-pointer">
+                  <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-sm bg-slate-100 flex items-center justify-center">
+                    <img
+                      src={authorAvatar}
+                      alt={authorUsername}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(authorUsername || 'User')}&background=1e293b&color=38bdf8`;
+                      }}
+                    />
+                  </div>
+                  {authorFrameUrl && (
+                    <img
+                      src={authorFrameUrl}
+                      alt="Frame"
+                      className="absolute -inset-1.5 w-[calc(100%+12px)] h-[calc(100%+12px)] object-cover pointer-events-none z-10 scale-110"
+                    />
+                  )}
+                </Link>
                 <div>
-                  <p className="font-bold text-slate-900">{post.author.name}</p>
-                  <p className="text-xs font-medium text-slate-500">{post.author.role}</p>
+                  <Link to={postAuthorId ? `/profile/${postAuthorId}` : '#'} className="font-bold text-slate-900 hover:text-primary transition-colors block">
+                    {authorUsername}
+                  </Link>
+                  <p className="text-xs font-medium text-slate-500">{authorRole}</p>
                 </div>
               </div>
 
@@ -526,9 +574,13 @@ export default function PostDetails() {
             {/* Comment Form */}
             <form onSubmit={handleSubmitComment} className="flex gap-4 items-start mb-8">
               <img
-                src={user?.avatar || user?.profile_image || 'https://ui-avatars.com/api/?name=' + (user?.username || 'User')}
+                src={user?.avatar_url || user?.profile_image || user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.username || 'User')}&background=1e293b&color=38bdf8`}
                 alt={user?.username || 'User'}
-                className="w-10 h-10 rounded-full border border-slate-200"
+                className="w-10 h-10 rounded-full border border-slate-200 object-cover"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.username || 'User')}&background=1e293b&color=38bdf8`;
+                }}
               />
               <div className="flex-1">
                 <textarea
@@ -562,13 +614,17 @@ export default function PostDetails() {
                 comments.map((comment) => (
                   <div key={comment.id} className="flex gap-4 items-start pb-6 border-b border-slate-50 last:border-b-0 last:pb-0 group">
                     <img
-                      src={comment.user?.avatar || comment.user?.profile_image || 'https://ui-avatars.com/api/?name=' + (comment.user?.username || 'User')}
-                      alt={comment.user?.username}
-                      className="w-10 h-10 rounded-full border border-slate-100 flex-shrink-0"
+                      src={comment.user?.avatar_url || comment.user?.avatar || comment.user?.profile_image || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.user?.username || 'User')}&background=1e293b&color=38bdf8`}
+                      alt={comment.user?.username || 'User'}
+                      className="w-10 h-10 rounded-full border border-slate-100 flex-shrink-0 object-cover"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.user?.username || 'User')}&background=1e293b&color=38bdf8`;
+                      }}
                     />
                     <div className="flex-1 bg-slate-50/50 hover:bg-slate-50 rounded-2xl p-4 transition-colors">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="font-bold text-slate-900 text-sm">{comment.user?.username}</span>
+                        <span className="font-bold text-slate-900 text-sm">{comment.user?.username || 'ผู้ใช้งาน'}</span>
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-slate-400 font-medium">{comment.createdAt}</span>
                           {(isAuthenticated && currentUserId && (String(comment.user?.id) === String(currentUserId) || String(comment.user_id) === String(currentUserId))) && (

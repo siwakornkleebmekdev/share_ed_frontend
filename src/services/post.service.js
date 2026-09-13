@@ -271,8 +271,8 @@ function formatSinglePostData(post) {
         : 'เมื่อสักครู่',
       user: {
         id: cUser.id || cUser.user_id || c.user_id,
-        username: cUser.username || cUser.display_name || cUser.name || 'ผู้ใช้งาน',
-        avatar: cUser.avatar || cUser.avatar_url || cUser.profile_image || ('https://ui-avatars.com/api/?name=' + encodeURIComponent(cUser.username || cUser.name || 'User'))
+        username: cUser.username || 'ผู้ใช้งาน',
+        avatar: cUser.avatar_url || cUser.profile_image || cUser.avatar || ('https://ui-avatars.com/api/?name=' + encodeURIComponent(cUser.username || 'User'))
       }
     };
   });
@@ -310,8 +310,9 @@ function formatSinglePostData(post) {
     author: {
       id: authorId,
       name: post.author?.username || 'ผู้ใช้งาน',
+      username: post.author?.username || 'ผู้ใช้งาน',
       role: 'Contributor',
-      avatar: post.author?.profile_image || 'https://ui-avatars.com/api/?name=' + (post.author?.username || 'User'),
+      avatar: post.author?.avatar_url || post.author?.profile_image || post.author?.avatar || ('https://ui-avatars.com/api/?name=' + encodeURIComponent(post.author?.username || 'User')),
     },
     createdAt: new Date(post.created_at).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' }),
   };

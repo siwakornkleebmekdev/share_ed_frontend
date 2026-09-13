@@ -54,7 +54,7 @@ export default function SettingsProfile() {
   const [isFrameModalOpen, setIsFrameModalOpen] = useState(false);
 
   const [formData, setFormData] = useState({
-    nickname: "",
+    username: "",
     bio: "",
     education_level: "HIGH_SCHOOL",
     theme_settings: DEFAULT_THEME,
@@ -238,7 +238,7 @@ export default function SettingsProfile() {
     if (!user) return;
     const meta = user.user_metadata || {};
     setFormData({
-      nickname: user.display_name || user.username || user.name || "",
+      username: user.username || user.display_name || user.name || "",
       bio: user.bio || "",
       education_level: user.education_level || "HIGH_SCHOOL",
       // Full theme_settings is loaded (not just avatarShape) since saving
@@ -302,10 +302,17 @@ export default function SettingsProfile() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const trimmedUsername = (formData.username || "").trim();
+    if (!trimmedUsername) {
+      toast.error("กรุณากรอกชื่อผู้ใช้ (Username)");
+      return;
+    }
     setIsSaving(true);
     try {
       const updatePayload = {
         ...formData,
+        username: trimmedUsername,
+        nickname: trimmedUsername,
         avatarFile: media.avatar?.file,
         wallpaperFile: media.wallpaper?.file,
         bannerFile: media.banner?.file,
@@ -318,12 +325,15 @@ export default function SettingsProfile() {
 
       if (response && response.success !== false) {
         const resData = response.data || {};
+        const newAvatarUrl = resData.avatar_url || resData.profile_image || (media.avatar?.url && !media.avatar?.remove ? media.avatar.url : user?.avatar_url);
 
-        // Sync theme_settings and display_name to Supabase auth metadata so they persist after refresh
+        // Sync theme_settings, username, display_name, avatar_url to Supabase auth metadata so they persist after refresh
         try {
           await supabase.auth.updateUser({
             data: {
-              display_name: formData.nickname,
+              username: trimmedUsername,
+              display_name: trimmedUsername,
+              avatar_url: newAvatarUrl || null,
               theme_settings: formData.theme_settings,
             },
           });
@@ -333,13 +343,18 @@ export default function SettingsProfile() {
 
         login({
           ...user,
-          display_name: formData.nickname,
-          username: resData.username || formData.nickname,
+          username: resData.username || trimmedUsername,
+          display_name: trimmedUsername,
           bio: resData.bio || formData.bio,
           education_level: resData.education_level || formData.education_level,
-          avatar_url: resData.avatar_url || resData.profile_image || user.avatar_url,
+          avatar_url: newAvatarUrl,
+          avatar: newAvatarUrl,
+          profile_image: newAvatarUrl,
           user_metadata: {
             ...user.user_metadata,
+            username: trimmedUsername,
+            display_name: trimmedUsername,
+            avatar_url: newAvatarUrl,
             theme_settings: formData.theme_settings,
             profile_frame_id: equippedFrameId,
             wallpaper_url:
@@ -391,7 +406,8 @@ export default function SettingsProfile() {
   };
   const previewFormData = {
     theme_settings: formData.theme_settings,
-    nickname: formData.nickname,
+    username: formData.username,
+    nickname: formData.username,
     bio: formData.bio,
     tags: formData.tags,
   };
@@ -655,16 +671,17 @@ export default function SettingsProfile() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
                 <label className="block text-sm font-semibold text-slate-600 mb-2">
-                  ชื่อเล่น / ชื่อแสดงผล
+                  ชื่อผู้ใช้ (Username)
                 </label>
                 <input
                   type="text"
-                  value={formData.nickname}
+                  value={formData.username}
                   onChange={(e) =>
-                    setFormData({ ...formData, nickname: e.target.value })
+                    setFormData({ ...formData, username: e.target.value })
                   }
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-slate-800 font-medium"
-                  placeholder="กรอกชื่อของคุณ"
+                  placeholder="กรอกชื่อผู้ใช้ของคุณ"
+                  required
                 />
               </div>
 
