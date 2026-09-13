@@ -257,7 +257,7 @@ export default function CreatePost() {
       formData.append('title', title.trim());
       formData.append('summary', summary.trim());
       formData.append('content', content);
-      
+
       // Resolve valid category UUID from selected category
       let validCatId = isValidCategoryUuid(categoryId) ? categoryId : null;
       if (!validCatId && categoryName) {
@@ -312,6 +312,8 @@ export default function CreatePost() {
         if (imageUrls.length > 0) {
           formData.append('image_urls', JSON.stringify(imageUrls));
         }
+      }
+
       // Send only user-entered hashtags
       formData.append('tags', JSON.stringify(hashtags));
 
