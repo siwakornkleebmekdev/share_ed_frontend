@@ -12,6 +12,7 @@ import {
   FileText,
   Trophy,
   ShieldCheck,
+  PenTool,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import useNotificationStore from "@/store/notificationStore";
@@ -147,7 +148,20 @@ export default function Navbar() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+            <Link
+              to="/create"
+              id="create-post-btn"
+              name="create-post-btn"
+              data-testid="create-post-btn"
+              role="button"
+              aria-label="สร้างโพสต์"
+              className="flex items-center gap-1.5 bg-primary text-white hover:bg-blue-600 rounded-full font-bold px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
+            >
+              <PenTool className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span>สร้างโพสต์</span>
+            </Link>
+
             <div className="relative" ref={notifRef}>
               <button
                 onClick={() => setShowNotifications(!showNotifications)}
