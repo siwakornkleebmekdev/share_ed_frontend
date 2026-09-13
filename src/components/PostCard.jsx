@@ -1,17 +1,26 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Heart, Eye, BookmarkPlus, BookmarkCheck, Crown, Medal } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import toast from 'react-hot-toast';
+import { postService } from '../services/post.service';
 import useAuthStore from '../store/authStore';
 import useHeroThemeStore from '../store/heroThemeStore';
 import { getGlassColor, rgbToRgba } from '../utils/colorUtils';
 
 export default function PostCard({ post, viewMode, rank = null, dark = false }) {
-  const [isLiked, setIsLiked] = useState(false);
-  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [isLiked, setIsLiked] = useState(Boolean(post.isLiked || post.is_liked));
+  const [isBookmarked, setIsBookmarked] = useState(Boolean(post.isBookmarked || post.is_bookmarked));
   const [likesCount, setLikesCount] = useState(post.likes);
+  const [isLiking, setIsLiking] = useState(false);
+  const [isBookmarking, setIsBookmarking] = useState(false);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    setIsLiked(Boolean(post.isLiked || post.is_liked));
+    setIsBookmarked(Boolean(post.isBookmarked || post.is_bookmarked));
+    setLikesCount(post.likes);
+  }, [post.id, post.isLiked, post.is_liked, post.isBookmarked, post.is_bookmarked, post.likes]);
   // `dark` cards sit on a page with a full-bleed hero background (Profile) —
   // tint their glass to match that background's color instead of a flat
   // neutral overlay.
@@ -19,37 +28,73 @@ export default function PostCard({ post, viewMode, rank = null, dark = false }) 
   const heroColor = useHeroThemeStore((state) => state.heroColor);
   const cardGlassStyle = dark ? { backgroundColor: rgbToRgba(getGlassColor(heroColor, isDarkHero), 25) } : undefined;
 
-  const handleLike = (e) => {
+  const handleLike = async (e) => {
     e.stopPropagation();
     if (!isAuthenticated) {
       toast.error('กรุณาสมัครสมาชิกเพื่อกดถูกใจ');
       return navigate('/register');
     }
+    if (isLiking || !post?.id) return;
 
-    if (isLiked) {
-      setIsLiked(false);
-      setLikesCount(prev => prev - 1);
-      toast('ยกเลิกการถูกใจ', { icon: '💔' });
-    } else {
-      setIsLiked(true);
-      setLikesCount(prev => prev + 1);
-      toast.success('ถูกใจโพสต์แล้ว');
+    try {
+      setIsLiking(true);
+      const response = await postService.likePost(post.id);
+      const resData = response?.data || response;
+      const newIsLiked = resData?.isLiked !== undefined 
+        ? resData.isLiked 
+        : (resData?.is_liked !== undefined 
+          ? resData.is_liked 
+          : (resData?.liked !== undefined ? resData.liked : !isLiked));
+
+      setIsLiked(newIsLiked);
+      setLikesCount(prev => {
+        const count = typeof prev === 'number' ? prev : (parseInt(prev) || 0);
+        if (typeof resData?.likesCount === 'number') return resData.likesCount;
+        if (typeof resData?.likes_count === 'number') return resData.likes_count;
+        return newIsLiked ? count + 1 : Math.max(0, count - 1);
+      });
+      if (newIsLiked) {
+        toast.success('ถูกใจโพสต์แล้ว');
+      } else {
+        toast('ยกเลิกการถูกใจ', { icon: '💔' });
+      }
+    } catch (err) {
+      console.error('Error liking post in card:', err);
+      toast.error('เกิดข้อผิดพลาดในการกดถูกใจ');
+    } finally {
+      setIsLiking(false);
     }
   };
 
-  const handleBookmark = (e) => {
+  const handleBookmark = async (e) => {
     e.stopPropagation();
     if (!isAuthenticated) {
       toast.error('กรุณาสมัครสมาชิกเพื่อบันทึกโพสต์');
       return navigate('/register');
     }
+    if (isBookmarking || !post?.id) return;
 
-    if (isBookmarked) {
-      setIsBookmarked(false);
-      toast('นำบุ๊คมาร์กออกแล้ว', { icon: '🗑️' });
-    } else {
-      setIsBookmarked(true);
-      toast.success('เพิ่มบุ๊คมาร์กเรียบร้อย');
+    try {
+      setIsBookmarking(true);
+      const response = await postService.bookmarkPost(post.id);
+      const resData = response?.data || response;
+      const newIsBookmarked = resData?.isBookmarked !== undefined 
+        ? resData.isBookmarked 
+        : (resData?.is_bookmarked !== undefined 
+          ? resData.is_bookmarked 
+          : (resData?.bookmarked !== undefined ? resData.bookmarked : !isBookmarked));
+
+      setIsBookmarked(newIsBookmarked);
+      if (newIsBookmarked) {
+        toast.success('เพิ่มบุ๊คมาร์กเรียบร้อย');
+      } else {
+        toast('นำบุ๊คมาร์กออกแล้ว', { icon: '🗑️' });
+      }
+    } catch (err) {
+      console.error('Error bookmarking post in card:', err);
+      toast.error('เกิดข้อผิดพลาดในการบันทึกโพสต์');
+    } finally {
+      setIsBookmarking(false);
     }
   };
 

@@ -33,9 +33,21 @@ export const profileService = {
     }
   },
 
-  // Fetch Bookmarks (Temporarily disabled due to missing backend API)
+  // Fetch Bookmarks
   getBookmarks: async () => {
-    return [];
+    try {
+      const response = await api.get("/bookmarks");
+      if (response.data?.success && Array.isArray(response.data?.data)) {
+        const posts = response.data.data
+          .map((b) => (b.post ? { ...b.post, id: b.post.id || b.post_id, isBookmarked: true } : b))
+          .filter(Boolean);
+        return formatPosts(posts);
+      }
+      return [];
+    } catch (error) {
+      console.log("Error fetching bookmarks:", error);
+      return [];
+    }
   },
 
   // Public profile of any user (self or someone else) — GET /users/:id.
@@ -198,10 +210,13 @@ function formatPosts(data) {
   return data.map((post) => ({
     id: post.id,
     title: post.title,
+    description: post.summary || "ไม่มีคำอธิบาย",
     level: mapEducationLevel(post.education_level),
     subject: post.category?.category_name || post.category?.name || "ทั่วไป",
     views: formatNumber(post.view_count),
-    likes: post._count?.likes || post.likes || 0,
+    likes: post._count?.likes || (typeof post.likes === 'number' ? post.likes : 0),
+    isLiked: Boolean(post.is_liked || post.isLiked || post.has_liked),
+    isBookmarked: Boolean(post.is_bookmarked || post.isBookmarked || post.has_bookmarked),
     image:
       post.cover_image ||
       "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=500&q=80",

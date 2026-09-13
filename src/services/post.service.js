@@ -65,7 +65,7 @@ export const postService = {
   // Like / Unlike a post
   likePost: async (id) => {
     try {
-      const response = await api.post(`/posts/${id}/like`);
+      const response = await api.post(`/likes/${id}`);
       return response.data;
     } catch (error) {
       console.error(`Error liking post ${id}:`, error);
@@ -73,10 +73,21 @@ export const postService = {
     }
   },
 
+  // Get like status for a post
+  getLikeStatus: async (id) => {
+    try {
+      const response = await api.get(`/likes/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error getting like status for post ${id}:`, error);
+      throw error;
+    }
+  },
+
   // Bookmark / Unbookmark a post
   bookmarkPost: async (id) => {
     try {
-      const response = await api.post(`/posts/${id}/bookmark`);
+      const response = await api.post(`/bookmarks/${id}`);
       return response.data;
     } catch (error) {
       console.error(`Error bookmarking post ${id}:`, error);
@@ -84,13 +95,57 @@ export const postService = {
     }
   },
 
+  // Get all bookmarks for current user
+  getBookmarks: async () => {
+    try {
+      const response = await api.get('/bookmarks');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching bookmarks:', error);
+      throw error;
+    }
+  },
+
   // Create a comment on a post
   createComment: async (id, content) => {
     try {
-      const response = await api.post(`/posts/${id}/comments`, { content });
+      const response = await api.post('/comment', { post_id: id, content });
       return response.data;
     } catch (error) {
       console.error(`Error creating comment on post ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Get comments by post ID
+  getComments: async (postId) => {
+    try {
+      const response = await api.get(`/comment/post/${postId}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching comments for post ${postId}:`, error);
+      throw error;
+    }
+  },
+
+  // Delete a comment
+  deleteComment: async (commentId) => {
+    try {
+      const response = await api.delete(`/comment/${commentId}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error deleting comment ${commentId}:`, error);
+      throw error;
+    }
+  },
+
+  // Update a comment
+  updateComment: async (commentId, content) => {
+    try {
+      const response = await api.put(`/comment/${commentId}`, { content });
+      return response.data;
+    } catch (error) {
+      console.error(`Error updating comment ${commentId}:`, error);
       throw error;
     }
   },
@@ -132,7 +187,9 @@ function formatPostData(post) {
     level: mapEducationLevel(post.education_level),
     subject: post.category?.category_name || post.category?.name || 'ทั่วไป',
     views: formatNumber(post.view_count),
-    likes: post._count?.likes || post.likes || 0,
+    likes: post._count?.likes || post.like_count || post.likes_count || (Array.isArray(post.likes) ? post.likes.length : (typeof post.likes === 'number' ? post.likes : 0)),
+    isLiked: Boolean(post.is_liked || post.isLiked || post.has_liked),
+    isBookmarked: Boolean(post.is_bookmarked || post.isBookmarked || post.has_bookmarked),
     image: post.cover_image || 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=1280&q=90',
     author: post.author?.username || 'ผู้ใช้งาน',
     created_at: post.created_at,
@@ -145,6 +202,24 @@ function formatSinglePostData(post) {
   const images = post.media?.filter(m => m.media_type === 'IMAGE').map(m => m.media_url) || [];
   const authorId = post.author?.id || post.author?.user_id || post.author_id || post.user_id || post.userId;
 
+  const comments = (post.comments || []).map(c => {
+    const userObj = c.user || c.author || {};
+    const cUser = typeof userObj === 'object' ? userObj : {};
+    const createdDate = c.created_at || c.createdAt;
+    return {
+      id: c.id || c._id || `c_${Math.random().toString(36).substring(2, 9)}`,
+      content: c.content || c.text || c.comment || '',
+      createdAt: createdDate
+        ? (new Date(createdDate).toLocaleDateString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' - ' + new Date(createdDate).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }))
+        : 'เมื่อสักครู่',
+      user: {
+        id: cUser.id || cUser.user_id || c.user_id,
+        username: cUser.username || cUser.display_name || cUser.name || 'ผู้ใช้งาน',
+        avatar: cUser.avatar || cUser.avatar_url || cUser.profile_image || ('https://ui-avatars.com/api/?name=' + encodeURIComponent(cUser.username || cUser.name || 'User'))
+      }
+    };
+  });
+
   return {
     id: post.id,
     title: post.title,
@@ -153,12 +228,15 @@ function formatSinglePostData(post) {
     level: mapEducationLevel(post.education_level),
     category: post.category?.category_name || post.category?.name || 'ทั่วไป',
     views: formatNumber(post.view_count),
-    likes: post._count?.likes || (Array.isArray(post.likes) ? post.likes.length : post.likes) || 0,
-    rawLikes: post.likes || [],
+    likes: post._count?.likes || post.like_count || post.likes_count || (Array.isArray(post.likes) ? post.likes.length : (typeof post.likes === 'number' ? post.likes : 0)),
+    rawLikes: Array.isArray(post.likes) ? post.likes : [],
+    isLiked: Boolean(post.is_liked || post.isLiked || post.has_liked),
+    isBookmarked: Boolean(post.is_bookmarked || post.isBookmarked || post.has_bookmarked),
     coverImage: post.cover_image || 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=1280&q=90',
     hashtags: hashtags,
     images: images,
     media: post.media || [],
+    comments: comments,
     author_id: authorId,
     user_id: authorId,
     authorId: authorId,

@@ -44,9 +44,17 @@ export default function PostDetails() {
         setPost(data);
         if (data) {
           setComments(data.comments || []);
-          if (user?.id) {
-            const userLiked = data.rawLikes?.some(l => l.user_id === user.id);
-            setIsLiked(!!userLiked);
+          const curUserId = user?.id || user?.user_id;
+          const userLiked = Boolean(
+            data.isLiked ||
+            (Array.isArray(data.rawLikes) && curUserId && data.rawLikes.some(l => {
+              if (typeof l === 'string') return String(l) === String(curUserId);
+              return String(l.user_id || l.userId || l.user?.id || l.id) === String(curUserId);
+            }))
+          );
+          setIsLiked(userLiked);
+          if (data.isBookmarked !== undefined) {
+            setIsBookmarked(data.isBookmarked);
           }
         }
       } catch (error) {
@@ -56,25 +64,33 @@ export default function PostDetails() {
       }
     };
 
-    const checkBookmarkStatus = async () => {
+    const checkUserStatuses = async () => {
       try {
-        const response = await api.get('/bookmarks');
-        if (response.data.success) {
-          const bookmarked = response.data.data.some(b => String(b.post_id) === String(id));
+        const [likeRes, bookmarkRes] = await Promise.allSettled([
+          postService.getLikeStatus(id),
+          postService.getBookmarks()
+        ]);
+        if (likeRes.status === 'fulfilled' && likeRes.value?.success) {
+          setIsLiked(Boolean(likeRes.value.isLiked));
+        }
+        if (bookmarkRes.status === 'fulfilled' && bookmarkRes.value?.success && Array.isArray(bookmarkRes.value.data)) {
+          const bookmarked = bookmarkRes.value.data.some(b =>
+            String(b.post_id || b.postId || b.post?.id || b.id) === String(id)
+          );
           setIsBookmarked(bookmarked);
         }
       } catch (err) {
-        console.error('Error fetching bookmark status:', err);
+        console.error('Error checking user statuses:', err);
       }
     };
 
     if (id) {
       fetchPost();
       if (isAuthenticated) {
-        checkBookmarkStatus();
+        checkUserStatuses();
       }
     }
-  }, [id, user?.id, isAuthenticated]);
+  }, [id, user?.id, user?.user_id, isAuthenticated]);
 
   // Subscribe to Supabase Realtime Broadcast for comments
   useEffect(() => {
@@ -116,16 +132,30 @@ export default function PostDetails() {
       navigate('/register');
       return;
     }
-    if (isLiking) return;
+    if (isLiking || !post) return;
     try {
       setIsLiking(true);
       const response = await postService.likePost(post.id);
-      setIsLiked(response.isLiked);
-      setPost(prev => ({
-        ...prev,
-        likes: response.isLiked ? prev.likes + 1 : Math.max(0, prev.likes - 1)
-      }));
-      if (response.isLiked) {
+      const resData = response?.data || response;
+      const newIsLiked = resData?.isLiked !== undefined 
+        ? resData.isLiked 
+        : (resData?.is_liked !== undefined 
+          ? resData.is_liked 
+          : (resData?.liked !== undefined ? resData.liked : !isLiked));
+
+      setIsLiked(newIsLiked);
+      setPost(prev => {
+        if (!prev) return prev;
+        const currentLikes = typeof prev.likes === 'number' ? prev.likes : (parseInt(prev.likes) || 0);
+        let updatedLikes = newIsLiked ? currentLikes + 1 : Math.max(0, currentLikes - 1);
+        if (typeof resData?.likesCount === 'number') updatedLikes = resData.likesCount;
+        else if (typeof resData?.likes_count === 'number') updatedLikes = resData.likes_count;
+        return {
+          ...prev,
+          likes: updatedLikes
+        };
+      });
+      if (newIsLiked) {
         toast.success('ถูกใจโพสต์แล้ว');
       } else {
         toast('ยกเลิกการถูกใจ', { icon: '💔' });
@@ -144,12 +174,19 @@ export default function PostDetails() {
       navigate('/register');
       return;
     }
-    if (isBookmarking) return;
+    if (isBookmarking || !post) return;
     try {
       setIsBookmarking(true);
       const response = await postService.bookmarkPost(post.id);
-      setIsBookmarked(response.isBookmarked);
-      if (response.isBookmarked) {
+      const resData = response?.data || response;
+      const newIsBookmarked = resData?.isBookmarked !== undefined 
+        ? resData.isBookmarked 
+        : (resData?.is_bookmarked !== undefined 
+          ? resData.is_bookmarked 
+          : (resData?.bookmarked !== undefined ? resData.bookmarked : !isBookmarked));
+
+      setIsBookmarked(newIsBookmarked);
+      if (newIsBookmarked) {
         toast.success('เพิ่มบุ๊คมาร์กเรียบร้อย');
       } else {
         toast('นำบุ๊คมาร์กออกแล้ว', { icon: '🗑️' });
@@ -218,22 +255,23 @@ export default function PostDetails() {
       navigate('/register');
       return;
     }
-    if (!newCommentText.trim()) return;
+    if (!newCommentText.trim() || !post) return;
 
     try {
       setIsSubmittingComment(true);
       const response = await postService.createComment(post.id, newCommentText.trim());
 
-      if (response && response.success) {
-        const commentData = response.data;
+      if (response && (response.success || response.status === 200 || response.data)) {
+        const commentData = response.data || response;
+        const createdDate = commentData.created_at || commentData.createdAt || new Date();
         const newComment = {
-          id: commentData.id,
-          content: commentData.content,
-          createdAt: new Date(commentData.created_at).toLocaleDateString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' - ' + new Date(commentData.created_at).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }),
+          id: commentData.id || commentData._id || `c_${Date.now()}`,
+          content: commentData.content || commentData.text || newCommentText.trim(),
+          createdAt: new Date(createdDate).toLocaleDateString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' - ' + new Date(createdDate).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }),
           user: {
-            id: user.id,
-            username: user.username || 'ผู้ใช้งาน',
-            avatar: user.avatar || user.profile_image || 'https://ui-avatars.com/api/?name=' + (user.username || 'User')
+            id: user?.id || user?.user_id,
+            username: user?.username || user?.display_name || user?.name || 'ผู้ใช้งาน',
+            avatar: user?.avatar || user?.profile_image || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.username || user?.display_name || 'User')}`
           }
         };
 
@@ -243,20 +281,49 @@ export default function PostDetails() {
         toast.success('ส่งความคิดเห็นเรียบร้อยแล้ว');
 
         // Broadcast to other clients in real-time
-        const channel = supabase.channel(`post-comments:${id}`);
-        channel.send({
-          type: 'broadcast',
-          event: 'new-comment',
-          payload: newComment
-        });
+        try {
+          const channel = supabase.channel(`post-comments:${id}`);
+          channel.send({
+            type: 'broadcast',
+            event: 'new-comment',
+            payload: newComment
+          });
+        } catch (e) {
+          console.log('Realtime broadcast notice:', e);
+        }
       } else {
         toast.error(response?.message || 'เกิดข้อผิดพลาดในการส่งความคิดเห็น');
       }
     } catch (error) {
       console.error('Error submitting comment:', error);
-      toast.error('ไม่สามารถส่งความคิดเห็นได้ในขณะนี้');
+      const errMsg = error.response?.data?.message || error.message || 'ไม่สามารถส่งความคิดเห็นได้ในขณะนี้';
+      toast.error(errMsg);
     } finally {
       setIsSubmittingComment(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId) => {
+    const result = await Swal.fire({
+      title: 'ต้องการลบความคิดเห็น?',
+      text: 'ความคิดเห็นนี้จะถูกลบออกอย่างถาวร',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'ลบ',
+      cancelButtonText: 'ยกเลิก'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await postService.deleteComment(commentId);
+        setComments(prev => prev.filter(c => String(c.id) !== String(commentId)));
+        toast.success('ลบความคิดเห็นเรียบร้อยแล้ว');
+      } catch (error) {
+        console.error('Error deleting comment:', error);
+        toast.error(error.response?.data?.message || 'ไม่สามารถลบความคิดเห็นได้');
+      }
     }
   };
 
@@ -502,7 +569,19 @@ export default function PostDetails() {
                     <div className="flex-1 bg-slate-50/50 hover:bg-slate-50 rounded-2xl p-4 transition-colors">
                       <div className="flex items-center justify-between mb-2">
                         <span className="font-bold text-slate-900 text-sm">{comment.user?.username}</span>
-                        <span className="text-xs text-slate-400 font-medium">{comment.createdAt}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-slate-400 font-medium">{comment.createdAt}</span>
+                          {(isAuthenticated && currentUserId && (String(comment.user?.id) === String(currentUserId) || String(comment.user_id) === String(currentUserId))) && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteComment(comment.id)}
+                              className="text-slate-400 hover:text-rose-500 p-1 rounded-lg hover:bg-rose-50 transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
+                              title="ลบความคิดเห็น"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
                       </div>
                       <p className="text-slate-600 text-sm whitespace-pre-line leading-relaxed">{comment.content}</p>
                     </div>
