@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <defs>
+    <!-- Platinum Gradients -->
+    <linearGradient id="platinumGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#94a3b8" />
+      <stop offset="25%" stop-color="#ffffff" />
+      <stop offset="50%" stop-color="#cbd5e1" />
+      <stop offset="75%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#64748b" />
+    </linearGradient>
+
+    <linearGradient id="diamondGleam" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0" />
+      <stop offset="50%" stop-color="#ffffff" stop-opacity="1" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
+    </linearGradient>
+
+    <linearGradient id="diamondCyan" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e0f2fe" />
+      <stop offset="50%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#0284c7" />
+    </linearGradient>
+
+    <filter id="diamondGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <style>
+      @keyframes platinumPulse {
+        0%, 100% { transform: scale(1); opacity: 0.9; }
+        50% { transform: scale(1.02); opacity: 1; filter: drop-shadow(0 0 7px #93c5fd); }
+      }
+      @keyframes diamondSparkle {
+        0%, 100% { opacity: 0.2; transform: scale(0.6); }
+        50% { opacity: 1; transform: scale(1.3); }
+      }
+      @keyframes diamondRotate {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      .platinum-ring {
+        transform-origin: 100px 100px;
+        animation: platinumPulse 3s ease-in-out infinite;
+      }
+      .sweep-diamond {
+        transform-origin: 100px 100px;
+        animation: diamondRotate 4.5s linear infinite;
+      }
+      .diamond-1 { transform-origin: 35px 35px; animation: diamondSparkle 1.8s infinite ease-in-out; }
+      .diamond-2 { transform-origin: 165px 35px; animation: diamondSparkle 2.3s infinite ease-in-out 0.6s; }
+      .diamond-3 { transform-origin: 165px 165px; animation: diamondSparkle 2s infinite ease-in-out 1.2s; }
+      .diamond-4 { transform-origin: 35px 165px; animation: diamondSparkle 2.5s infinite ease-in-out 0.3s; }
+    </style>
+  </defs>
+
+  <!-- Platinum Halo Glow -->
+  <circle cx="100" cy="100" r="91" fill="none" stroke="#e2e8f0" stroke-width="8" opacity="0.4" filter="url(#diamondGlow)" />
+
+  <!-- Outer Beaded Silver Chain -->
+  <circle cx="100" cy="100" r="93" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-dasharray="3 5" opacity="0.85" />
+
+  <!-- Main Platinum Bezel Ring -->
+  <circle class="platinum-ring" cx="100" cy="100" r="88" fill="none" stroke="url(#platinumGrad)" stroke-width="7" />
+
+  <!-- Inner Diamond Trim Line -->
+  <circle cx="100" cy="100" r="84" fill="none" stroke="#ffffff" stroke-width="1.8" opacity="0.95" />
+
+  <!-- Rotating Diamond Shimmer Beam -->
+  <g class="sweep-diamond" opacity="0.8">
+    <circle cx="100" cy="100" r="88" fill="none" stroke="url(#diamondGleam)" stroke-width="7" stroke-dasharray="50 130" stroke-linecap="round" />
+  </g>
+
+  <!-- Top Huge Brilliant-Cut Diamond Crest (12 o'clock) -->
+  <g class="platinum-ring" filter="url(#diamondGlow)">
+    <polygon points="90,20 94,10 106,10 110,20 100,32" fill="#ffffff" stroke="#94a3b8" stroke-width="1" />
+    <polygon points="94,10 100,20 106,10" fill="#e0f2fe" />
+    <polygon points="90,20 100,20 100,32" fill="#bae6fd" />
+    <polygon points="110,20 100,20 100,32" fill="#7dd3fc" />
+    <circle cx="100" cy="18" r="1.8" fill="#ffffff" />
+  </g>
+
+  <!-- Left / Right Sapphire Inlaid Studs -->
+  <g filter="url(#diamondGlow)">
+    <circle cx="12" cy="100" r="6" fill="url(#platinumGrad)" stroke="#64748b" stroke-width="1" />
+    <circle cx="12" cy="100" r="3.5" fill="url(#diamondCyan)" />
+    <circle cx="11" cy="99" r="1" fill="#ffffff" />
+
+    <circle cx="188" cy="100" r="6" fill="url(#platinumGrad)" stroke="#64748b" stroke-width="1" />
+    <circle cx="188" cy="100" r="3.5" fill="url(#diamondCyan)" />
+    <circle cx="187" cy="99" r="1" fill="#ffffff" />
+  </g>
+
+  <!-- Bottom Platinum Ribbon Jewel -->
+  <g transform="translate(100, 184)" filter="url(#diamondGlow)">
+    <polygon points="-12,-2 0,6 12,-2 0,-4" fill="url(#platinumGrad)" stroke="#64748b" stroke-width="0.8" />
+    <circle cx="0" cy="3" r="3.5" fill="#ffffff" stroke="#94a3b8" stroke-width="1" />
+    <circle cx="0" cy="3" r="1.8" fill="url(#diamondCyan)" />
+  </g>
+
+  <!-- Brilliant Sparkling Diamond Flares -->
+  <g class="diamond-1">
+    <polygon points="35,25 38,33 46,35 38,37 35,45 32,37 24,35 32,33" fill="#ffffff" filter="url(#diamondGlow)" />
+  </g>
+  <g class="diamond-2">
+    <polygon points="165,26 167,33 174,35 167,37 165,44 163,37 156,35 163,33" fill="#ffffff" filter="url(#diamondGlow)" />
+  </g>
+  <g class="diamond-3">
+    <polygon points="165,155 167,161 173,163 167,165 165,171 163,165 157,163 163,161" fill="#ffffff" />
+  </g>
+  <g class="diamond-4">
+    <polygon points="35,155 37,161 43,163 37,165 35,171 33,165 27,163 33,161" fill="#ffffff" />
+  </g>
+</svg>

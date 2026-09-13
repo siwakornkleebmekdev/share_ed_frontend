@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <defs>
+    <!-- Matrix Glitch Gradients -->
+    <linearGradient id="matrixGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22c55e" />
+      <stop offset="35%" stop-color="#86efac" />
+      <stop offset="70%" stop-color="#15803d" />
+      <stop offset="100%" stop-color="#06b6d4" />
+    </linearGradient>
+
+    <radialGradient id="hackerAura" cx="50%" cy="50%" r="50%">
+      <stop offset="68%" stop-color="#166534" stop-opacity="0" />
+      <stop offset="88%" stop-color="#22c55e" stop-opacity="0.35" />
+      <stop offset="100%" stop-color="#86efac" stop-opacity="0.75" />
+    </radialGradient>
+
+    <filter id="matrixGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2.8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <style>
+      @keyframes matrixPulse {
+        0%, 100% { transform: scale(1); opacity: 0.9; }
+        50% { transform: scale(1.02); opacity: 1; filter: drop-shadow(0 0 7px #22c55e); }
+      }
+      @keyframes hudSpin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      @keyframes glitchBlink {
+        0%, 90%, 100% { opacity: 0.85; }
+        92% { opacity: 0.2; transform: translate(-2px, 1px); }
+        94% { opacity: 1; transform: translate(2px, -1px); }
+        96% { opacity: 0.4; }
+      }
+      @keyframes dataStream1 {
+        0% { transform: translateY(0); opacity: 0; }
+        30% { opacity: 1; }
+        80% { opacity: 0.8; }
+        100% { transform: translateY(28px); opacity: 0; }
+      }
+      .matrix-ring {
+        transform-origin: 100px 100px;
+        animation: matrixPulse 2.8s ease-in-out infinite;
+      }
+      .hud-spin {
+        transform-origin: 100px 100px;
+        animation: hudSpin 14s linear infinite;
+      }
+      .glitch-hud {
+        animation: glitchBlink 4s infinite ease-in-out;
+      }
+      .data-drop-1 { animation: dataStream1 2s infinite linear; }
+      .data-drop-2 { animation: dataStream1 2.4s infinite linear 0.7s; }
+      .data-drop-3 { animation: dataStream1 1.8s infinite linear 1.2s; }
+    </style>
+  </defs>
+
+  <!-- Hacker Terminal Aura -->
+  <circle cx="100" cy="100" r="92" fill="none" stroke="url(#hackerAura)" stroke-width="6" />
+
+  <!-- Outer HUD Targeting Reticle Brackets (Glitching) -->
+  <g class="glitch-hud" filter="url(#matrixGlow)">
+    <!-- Top-Left Bracket -->
+    <path d="M24 40 L24 24 L40 24" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round" />
+    <!-- Top-Right Bracket -->
+    <path d="M176 40 L176 24 L160 24" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round" />
+    <!-- Bottom-Left Bracket -->
+    <path d="M24 160 L24 176 L40 176" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round" />
+    <!-- Bottom-Right Bracket -->
+    <path d="M176 160 L176 176 L160 176" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round" />
+  </g>
+
+  <!-- Rotating Tech Ring Indices -->
+  <g class="hud-spin" opacity="0.75">
+    <circle cx="100" cy="100" r="93" fill="none" stroke="#86efac" stroke-width="1.5" stroke-dasharray="10 30" />
+    <circle cx="100" cy="7" r="2" fill="#22c55e" />
+    <circle cx="193" cy="100" r="2" fill="#06b6d4" />
+    <circle cx="100" cy="193" r="2" fill="#22c55e" />
+    <circle cx="7" cy="100" r="2" fill="#06b6d4" />
+  </g>
+
+  <!-- Base Cyber Scanline Ring -->
+  <circle cx="100" cy="100" r="88" fill="none" stroke="#14532d" stroke-width="9" opacity="0.6" />
+
+  <!-- Main Cyberpunk Neon Matrix Ring -->
+  <circle class="matrix-ring" cx="100" cy="100" r="88" fill="none" stroke="url(#matrixGrad)" stroke-width="6.5" />
+
+  <!-- Inner Cyan Tech Rim -->
+  <circle cx="100" cy="100" r="84" fill="none" stroke="#67e8f9" stroke-width="1.8" opacity="0.9" />
+
+  <!-- Top Center HUD Status Chip -->
+  <g transform="translate(100, 16)" filter="url(#matrixGlow)">
+    <rect x="-14" y="-5" width="28" height="10" rx="3" fill="#052e16" stroke="#22c55e" stroke-width="1.2" />
+    <circle cx="-7" cy="0" r="2" fill="#86efac" />
+    <line x1="-2" y1="0" x2="8" y2="0" stroke="#86efac" stroke-width="1.5" stroke-linecap="round" />
+  </g>
+
+  <!-- Left / Right Circuit Nodes -->
+  <g filter="url(#matrixGlow)">
+    <circle cx="12" cy="100" r="4.5" fill="#052e16" stroke="#22c55e" stroke-width="1.5" />
+    <circle cx="12" cy="100" r="2" fill="#86efac" />
+
+    <circle cx="188" cy="100" r="4.5" fill="#052e16" stroke="#06b6d4" stroke-width="1.5" />
+    <circle cx="188" cy="100" r="2" fill="#67e8f9" />
+  </g>
+
+  <!-- Bottom Terminal Tag -->
+  <g transform="translate(100, 185)" filter="url(#matrixGlow)">
+    <rect x="-16" y="-4" width="32" height="8" rx="2" fill="#052e16" stroke="#22c55e" stroke-width="1" />
+    <circle cx="-8" cy="0" r="1.5" fill="#22c55e" />
+    <circle cx="0" cy="0" r="1.5" fill="#22c55e" />
+    <circle cx="8" cy="0" r="1.5" fill="#22c55e" />
+  </g>
+
+  <!-- Digital Rain Bits Streaming Down -->
+  <g transform="translate(48, 65)" class="data-drop-1">
+    <circle cx="0" cy="0" r="1.5" fill="#86efac" filter="url(#matrixGlow)" />
+    <circle cx="0" cy="6" r="1.2" fill="#22c55e" />
+    <circle cx="0" cy="12" r="0.9" fill="#15803d" />
+  </g>
+  <g transform="translate(152, 75)" class="data-drop-2">
+    <circle cx="0" cy="0" r="1.5" fill="#67e8f9" filter="url(#matrixGlow)" />
+    <circle cx="0" cy="6" r="1.2" fill="#06b6d4" />
+    <circle cx="0" cy="12" r="0.9" fill="#0369a1" />
+  </g>
+  <g transform="translate(100, 140)" class="data-drop-3">
+    <circle cx="0" cy="0" r="1.5" fill="#86efac" />
+    <circle cx="0" cy="6" r="1.1" fill="#22c55e" />
+  </g>
+</svg>

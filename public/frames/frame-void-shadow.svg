@@ -1,0 +1,130 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <defs>
+    <!-- Void Shadow Gradients -->
+    <linearGradient id="voidGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e1b4b" />
+      <stop offset="30%" stop-color="#6b21a8" />
+      <stop offset="70%" stop-color="#a855f7" />
+      <stop offset="100%" stop-color="#3b0764" />
+    </linearGradient>
+
+    <linearGradient id="runeGleam" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#c084fc" />
+      <stop offset="50%" stop-color="#f3e8ff" />
+      <stop offset="100%" stop-color="#a855f7" />
+    </linearGradient>
+
+    <radialGradient id="voidAura" cx="50%" cy="50%" r="50%">
+      <stop offset="65%" stop-color="#3b0764" stop-opacity="0" />
+      <stop offset="85%" stop-color="#7e22ce" stop-opacity="0.4" />
+      <stop offset="100%" stop-color="#c084fc" stop-opacity="0.8" />
+    </radialGradient>
+
+    <filter id="voidGlow" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur stdDeviation="3.5" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <style>
+      @keyframes voidPulse {
+        0%, 100% { transform: scale(1); opacity: 0.85; }
+        50% { transform: scale(1.025); opacity: 1; filter: drop-shadow(0 0 8px #a855f7); }
+      }
+      @keyframes runeRotate {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      @keyframes runeReverse {
+        0% { transform: rotate(360deg); }
+        100% { transform: rotate(0deg); }
+      }
+      @keyframes flameFlicker {
+        0%, 100% { opacity: 0.4; transform: scale(0.8); }
+        50% { opacity: 1; transform: scale(1.2); }
+      }
+      .void-ring {
+        transform-origin: 100px 100px;
+        animation: voidPulse 3s ease-in-out infinite;
+      }
+      .rune-ring {
+        transform-origin: 100px 100px;
+        animation: runeRotate 24s linear infinite;
+      }
+      .wisp-1 { transform-origin: 40px 40px; animation: flameFlicker 2.5s infinite ease-in-out; }
+      .wisp-2 { transform-origin: 160px 40px; animation: flameFlicker 2.1s infinite ease-in-out 0.7s; }
+      .wisp-3 { transform-origin: 160px 160px; animation: flameFlicker 2.8s infinite ease-in-out 1.3s; }
+      .wisp-4 { transform-origin: 40px 160px; animation: flameFlicker 2.3s infinite ease-in-out 0.4s; }
+    </style>
+  </defs>
+
+  <!-- Abyssal Mist Outer Ring -->
+  <circle cx="100" cy="100" r="92" fill="none" stroke="url(#voidAura)" stroke-width="6.5" />
+
+  <!-- Outer Spiky Shadow Blades -->
+  <g opacity="0.75" filter="url(#voidGlow)">
+    <polygon points="100,4 94,18 106,18" fill="#a855f7" />
+    <polygon points="196,100 182,94 182,106" fill="#a855f7" />
+    <polygon points="100,196 94,182 106,182" fill="#a855f7" />
+    <polygon points="4,100 18,94 18,106" fill="#a855f7" />
+  </g>
+
+  <!-- Rotating Runic Ring with Ancient Glyphs -->
+  <g class="rune-ring" opacity="0.8">
+    <circle cx="100" cy="100" r="93" fill="none" stroke="#a855f7" stroke-width="1.5" stroke-dasharray="4 8" />
+    <!-- 8 Runic Inscriptions -->
+    <circle cx="100" cy="8" r="2" fill="#f3e8ff" />
+    <circle cx="165" cy="35" r="2" fill="#f3e8ff" />
+    <circle cx="192" cy="100" r="2" fill="#f3e8ff" />
+    <circle cx="165" cy="165" r="2" fill="#f3e8ff" />
+    <circle cx="100" cy="192" r="2" fill="#f3e8ff" />
+    <circle cx="35" cy="165" r="2" fill="#f3e8ff" />
+    <circle cx="8" cy="100" r="2" fill="#f3e8ff" />
+    <circle cx="35" cy="35" r="2" fill="#f3e8ff" />
+  </g>
+
+  <!-- Deep Obsidian Ring Background -->
+  <circle cx="100" cy="100" r="88" fill="none" stroke="#1e1b4b" stroke-width="9" />
+
+  <!-- Main Void Arcane Ring -->
+  <circle class="void-ring" cx="100" cy="100" r="88" fill="none" stroke="url(#voidGrad)" stroke-width="7" />
+
+  <!-- Inner Violet Shimmer Edge -->
+  <circle cx="100" cy="100" r="84" fill="none" stroke="url(#runeGleam)" stroke-width="1.8" />
+
+  <!-- Top Void Rift Eye / Demon Horns -->
+  <g class="void-ring" filter="url(#voidGlow)">
+    <path d="M82 28 C88 16 94 10 100 8 C106 10 112 16 118 28 C110 24 105 24 100 24 C95 24 90 24 82 28 Z" fill="#3b0764" stroke="#c084fc" stroke-width="1" />
+    <!-- Abyssal Glowing Iris -->
+    <ellipse cx="100" cy="20" rx="5" ry="3" fill="#a855f7" />
+    <circle cx="100" cy="20" r="1.8" fill="#ffffff" />
+  </g>
+
+  <!-- Left / Right Obsidian Spikes -->
+  <g filter="url(#voidGlow)">
+    <polygon points="12,100 24,92 22,100 24,108" fill="#1e1b4b" stroke="#a855f7" stroke-width="1" />
+    <circle cx="21" cy="100" r="2.5" fill="#c084fc" />
+    <polygon points="188,100 176,92 178,100 176,108" fill="#1e1b4b" stroke="#a855f7" stroke-width="1" />
+    <circle cx="179" cy="100" r="2.5" fill="#c084fc" />
+  </g>
+
+  <!-- Bottom Dark Talisman Crystal -->
+  <g transform="translate(100, 184)" filter="url(#voidGlow)">
+    <polygon points="0,12 -8,-2 0,2 8,-2" fill="#3b0764" stroke="#c084fc" stroke-width="1.2" />
+    <polygon points="0,8 -4,0 0,2 4,0" fill="#a855f7" />
+    <circle cx="0" cy="1" r="1.5" fill="#ffffff" />
+  </g>
+
+  <!-- Floating Arcane Soul Wisps -->
+  <g class="wisp-1">
+    <circle cx="40" cy="40" r="2.5" fill="#f3e8ff" filter="url(#voidGlow)" />
+  </g>
+  <g class="wisp-2">
+    <circle cx="160" cy="40" r="2.2" fill="#c084fc" filter="url(#voidGlow)" />
+  </g>
+  <g class="wisp-3">
+    <circle cx="160" cy="160" r="2.8" fill="#f3e8ff" />
+  </g>
+  <g class="wisp-4">
+    <circle cx="40" cy="160" r="2.4" fill="#a855f7" />
+  </g>
+</svg>

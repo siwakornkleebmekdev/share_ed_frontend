@@ -1,0 +1,130 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <defs>
+    <!-- Sakura Gradients -->
+    <linearGradient id="sakuraGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f472b6" />
+      <stop offset="35%" stop-color="#fbcfe8" />
+      <stop offset="70%" stop-color="#ec4899" />
+      <stop offset="100%" stop-color="#fda4af" />
+    </linearGradient>
+
+    <linearGradient id="petalGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="50%" stop-color="#fbcfe8" />
+      <stop offset="100%" stop-color="#f43f5e" />
+    </linearGradient>
+
+    <radialGradient id="sakuraAura" cx="50%" cy="50%" r="50%">
+      <stop offset="70%" stop-color="#ec4899" stop-opacity="0" />
+      <stop offset="88%" stop-color="#f472b6" stop-opacity="0.3" />
+      <stop offset="100%" stop-color="#fbcfe8" stop-opacity="0.75" />
+    </radialGradient>
+
+    <filter id="sakuraGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2.8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <style>
+      @keyframes sakuraPulse {
+        0%, 100% { transform: scale(1); opacity: 0.9; }
+        50% { transform: scale(1.02); opacity: 1; filter: drop-shadow(0 0 6px #f472b6); }
+      }
+      @keyframes petalDrift1 {
+        0% { transform: translate(0, 0) rotate(0deg); opacity: 0; }
+        25% { opacity: 0.9; }
+        75% { opacity: 0.8; }
+        100% { transform: translate(-18px, 24px) rotate(45deg); opacity: 0; }
+      }
+      @keyframes petalDrift2 {
+        0% { transform: translate(0, 0) rotate(0deg); opacity: 0; }
+        30% { opacity: 0.9; }
+        80% { opacity: 0.7; }
+        100% { transform: translate(22px, 20px) rotate(-35deg); opacity: 0; }
+      }
+      @keyframes flowerRotate {
+        0% { transform: rotate(0deg); }
+        50% { transform: rotate(8deg); }
+        100% { transform: rotate(0deg); }
+      }
+      .sakura-ring {
+        transform-origin: 100px 100px;
+        animation: sakuraPulse 3.4s ease-in-out infinite;
+      }
+      .drift-1 { animation: petalDrift1 3.5s infinite linear; }
+      .drift-2 { animation: petalDrift2 4s infinite linear 1s; }
+      .drift-3 { animation: petalDrift1 3.8s infinite linear 2s; }
+      .flower-sway {
+        transform-origin: 155px 45px;
+        animation: flowerRotate 4s ease-in-out infinite;
+      }
+    </style>
+  </defs>
+
+  <!-- Gentle Floral Aura -->
+  <circle cx="100" cy="100" r="92" fill="none" stroke="url(#sakuraAura)" stroke-width="6" />
+
+  <!-- Outer Dotted Silk Thread -->
+  <circle cx="100" cy="100" r="92" fill="none" stroke="#fbcfe8" stroke-width="1.8" stroke-dasharray="3 5" opacity="0.8" />
+
+  <!-- Base Sakura Glow Ring -->
+  <circle cx="100" cy="100" r="87" fill="none" stroke="#ec4899" stroke-width="8" opacity="0.4" filter="url(#sakuraGlow)" />
+
+  <!-- Main Sakura Silk Ring -->
+  <circle class="sakura-ring" cx="100" cy="100" r="87" fill="none" stroke="url(#sakuraGrad)" stroke-width="6.5" />
+
+  <!-- Inner Soft Pink Ribbon -->
+  <circle cx="100" cy="100" r="83" fill="none" stroke="#fff1f2" stroke-width="1.8" opacity="0.9" />
+
+  <!-- Top Left Blossom Cluster (10 o'clock) -->
+  <g transform="translate(48, 48) scale(0.9)" filter="url(#sakuraGlow)">
+    <!-- 5 Petals of Sakura Flower -->
+    <path d="M0 -14 C4 -10 6 -4 0 0 C-6 -4 -4 -10 0 -14 Z" fill="url(#petalGrad)" />
+    <path d="M13 -4 C11 2 5 5 0 0 C2 -6 8 -8 13 -4 Z" fill="url(#petalGrad)" />
+    <path d="M8 12 C3 12 0 7 0 0 C5 -1 10 3 8 12 Z" fill="url(#petalGrad)" />
+    <path d="M-8 12 C-10 3 -5 -1 0 0 C0 7 -3 12 -8 12 Z" fill="url(#petalGrad)" />
+    <path d="M-13 -4 C-8 -8 -2 -6 0 0 C-5 5 -11 2 -13 -4 Z" fill="url(#petalGrad)" />
+    <circle cx="0" cy="0" r="3" fill="#fbbf24" stroke="#e11d48" stroke-width="0.8" />
+  </g>
+
+  <!-- Top Right Main Sakura Flower -->
+  <g class="flower-sway" filter="url(#sakuraGlow)">
+    <g transform="translate(155, 45)">
+      <!-- 5 Large Petals -->
+      <path d="M0 -16 C5 -11 7 -4 0 0 C-7 -4 -5 -11 0 -16 Z" fill="url(#petalGrad)" />
+      <path d="M15 -5 C12 2 6 6 0 0 C2 -7 9 -9 15 -5 Z" fill="url(#petalGrad)" />
+      <path d="M9 13 C4 14 0 8 0 0 C6 -1 12 3 9 13 Z" fill="url(#petalGrad)" />
+      <path d="M-9 13 C-12 3 -6 -1 0 0 C0 8 -4 14 -9 13 Z" fill="url(#petalGrad)" />
+      <path d="M-15 -5 C-9 -9 -2 -7 0 0 C-6 6 -12 2 -15 -5 Z" fill="url(#petalGrad)" />
+      <circle cx="0" cy="0" r="3.5" fill="#facc15" stroke="#f43f5e" stroke-width="1" />
+      <circle cx="0" cy="0" r="1.5" fill="#ffffff" />
+    </g>
+  </g>
+
+  <!-- Bottom Left Sakura Flower (7 o'clock) -->
+  <g transform="translate(48, 150) scale(0.85)" filter="url(#sakuraGlow)">
+    <path d="M0 -14 C4 -10 6 -4 0 0 C-6 -4 -4 -10 0 -14 Z" fill="url(#petalGrad)" />
+    <path d="M13 -4 C11 2 5 5 0 0 C2 -6 8 -8 13 -4 Z" fill="url(#petalGrad)" />
+    <path d="M8 12 C3 12 0 7 0 0 C5 -1 10 3 8 12 Z" fill="url(#petalGrad)" />
+    <path d="M-8 12 C-10 3 -5 -1 0 0 C0 7 -3 12 -8 12 Z" fill="url(#petalGrad)" />
+    <path d="M-13 -4 C-8 -8 -2 -6 0 0 C-5 5 -11 2 -13 -4 Z" fill="url(#petalGrad)" />
+    <circle cx="0" cy="0" r="2.8" fill="#facc15" stroke="#e11d48" stroke-width="0.8" />
+  </g>
+
+  <!-- Bottom Center Gold Ribbon Tie -->
+  <g transform="translate(100, 185)" filter="url(#sakuraGlow)">
+    <path d="M-14 -3 C-8 6 0 7 14 -3 C6 3 0 4 -14 -3 Z" fill="url(#sakuraGrad)" />
+    <circle cx="0" cy="3" r="3.5" fill="#fbbf24" stroke="#ec4899" stroke-width="1" />
+  </g>
+
+  <!-- Falling Cherry Blossom Petals -->
+  <g transform="translate(140, 75)" class="drift-1">
+    <path d="M0 0 C3 -4 7 -3 6 2 C5 6 1 7 0 0 Z" fill="url(#petalGrad)" />
+  </g>
+  <g transform="translate(60, 110)" class="drift-2">
+    <path d="M0 0 C-3 -4 -7 -3 -6 2 C-5 6 -1 7 0 0 Z" fill="url(#petalGrad)" />
+  </g>
+  <g transform="translate(125, 145)" class="drift-3">
+    <path d="M0 0 C4 -3 6 1 4 5 C2 7 -2 4 0 0 Z" fill="url(#petalGrad)" />
+  </g>
+</svg>

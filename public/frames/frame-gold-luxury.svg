@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <defs>
+    <!-- Gold Gradients -->
+    <linearGradient id="goldMetallic" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#bf953f" />
+      <stop offset="25%" stop-color="#fcf6ba" />
+      <stop offset="50%" stop-color="#b38728" />
+      <stop offset="75%" stop-color="#fbf5b7" />
+      <stop offset="100%" stop-color="#aa771c" />
+    </linearGradient>
+
+    <linearGradient id="goldShine" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0" />
+      <stop offset="50%" stop-color="#ffffff" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
+    </linearGradient>
+
+    <filter id="goldGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <style>
+      @keyframes pulseGlow {
+        0%, 100% { opacity: 0.6; transform: scale(1); }
+        50% { opacity: 1; transform: scale(1.02); }
+      }
+      @keyframes sparkle {
+        0%, 100% { opacity: 0.2; transform: scale(0.6); }
+        50% { opacity: 1; transform: scale(1.2); }
+      }
+      @keyframes sweepShine {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+
+      .gold-ring {
+        transform-origin: 100px 100px;
+        animation: pulseGlow 3s ease-in-out infinite;
+      }
+      .sweep-group {
+        transform-origin: 100px 100px;
+        animation: sweepShine 4s linear infinite;
+      }
+      .sparkle-1 {
+        transform-origin: 35px 35px;
+        animation: sparkle 2s ease-in-out infinite;
+      }
+      .sparkle-2 {
+        transform-origin: 165px 35px;
+        animation: sparkle 2.4s ease-in-out 0.7s infinite;
+      }
+      .sparkle-3 {
+        transform-origin: 165px 165px;
+        animation: sparkle 2.2s ease-in-out 1.2s infinite;
+      }
+      .sparkle-4 {
+        transform-origin: 35px 165px;
+        animation: sparkle 2.6s ease-in-out 0.4s infinite;
+      }
+      .crown-glow {
+        transform-origin: 100px 22px;
+        animation: pulseGlow 2s ease-in-out infinite;
+      }
+    </style>
+  </defs>
+
+  <!-- Glowing background ring -->
+  <circle cx="100" cy="100" r="88" fill="none" stroke="url(#goldMetallic)" stroke-width="10" filter="url(#goldGlow)" opacity="0.7" />
+
+  <!-- Outer beaded ring -->
+  <circle cx="100" cy="100" r="93" fill="none" stroke="#fcf6ba" stroke-width="2" stroke-dasharray="3 5" opacity="0.8" />
+
+  <!-- Main Metallic Ring (Leaves center 100% transparent for avatar) -->
+  <circle class="gold-ring" cx="100" cy="100" r="88" fill="none" stroke="url(#goldMetallic)" stroke-width="8" />
+
+  <!-- Inner Trim Ring -->
+  <circle cx="100" cy="100" r="83" fill="none" stroke="#aa771c" stroke-width="2" opacity="0.9" />
+
+  <!-- Rotating Light Shimmer Ring -->
+  <g class="sweep-group" opacity="0.6">
+    <circle cx="100" cy="100" r="88" fill="none" stroke="url(#goldShine)" stroke-width="8" stroke-dasharray="60 120" stroke-linecap="round" />
+  </g>
+
+  <!-- Crown at Top (12 o'clock) -->
+  <g class="crown-glow">
+    <path d="M84 26 L88 12 L100 20 L112 12 L116 26 Z" fill="url(#goldMetallic)" stroke="#fcf6ba" stroke-width="1.5" filter="url(#goldGlow)" />
+    <!-- Ruby Gem on Crown -->
+    <circle cx="100" cy="19" r="3.5" fill="#ef4444" stroke="#ffffff" stroke-width="1" />
+    <circle cx="89" cy="14" r="2" fill="#38bdf8" />
+    <circle cx="111" cy="14" r="2" fill="#38bdf8" />
+  </g>
+
+  <!-- Bottom Laurel Ornament -->
+  <g transform="translate(100, 182)">
+    <path d="M-22 -4 Q-12 8 0 6 Q12 8 22 -4 Q10 2 0 1 Q-10 2 -22 -4 Z" fill="url(#goldMetallic)" stroke="#fcf6ba" stroke-width="1" />
+    <circle cx="0" cy="2" r="4" fill="#ef4444" stroke="#fcf6ba" stroke-width="1" />
+  </g>
+
+  <!-- Left/Right Medallions -->
+  <g transform="translate(12, 100)">
+    <circle cx="0" cy="0" r="6" fill="url(#goldMetallic)" stroke="#fcf6ba" stroke-width="1.5" />
+    <circle cx="0" cy="0" r="2.5" fill="#3b82f6" />
+  </g>
+  <g transform="translate(188, 100)">
+    <circle cx="0" cy="0" r="6" fill="url(#goldMetallic)" stroke="#fcf6ba" stroke-width="1.5" />
+    <circle cx="0" cy="0" r="2.5" fill="#3b82f6" />
+  </g>
+
+  <!-- Twinkling Sparkles -->
+  <g class="sparkle-1">
+    <path d="M35 25 L37 33 L45 35 L37 37 L35 45 L33 37 L25 35 L33 33 Z" fill="#ffffff" filter="url(#goldGlow)" />
+  </g>
+  <g class="sparkle-2">
+    <path d="M165 27 L166.5 33 L173 35 L166.5 37 L165 43 L163.5 37 L157 35 L163.5 33 Z" fill="#fffdf0" filter="url(#goldGlow)" />
+  </g>
+  <g class="sparkle-3">
+    <path d="M165 157 L166.5 163 L173 165 L166.5 167 L165 173 L163.5 167 L157 165 L163.5 163 Z" fill="#fffdf0" />
+  </g>
+  <g class="sparkle-4">
+    <path d="M35 157 L36.5 163 L43 165 L36.5 167 L35 173 L33.5 167 L27 165 L33.5 163 Z" fill="#ffffff" />
+  </g>
+</svg>

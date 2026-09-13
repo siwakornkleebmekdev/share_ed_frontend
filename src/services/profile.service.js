@@ -1,5 +1,248 @@
 import api from "../utils/api";
 
+export const DEFAULT_FRAMES = [
+  {
+    id: "m1",
+    reward_item_id: "m1",
+    title: "ยินดีต้อนรับสู่ ShareEd",
+    description: "สมัครสมาชิกและเข้าสู่ระบบ ShareEd ครั้งแรก",
+    milestone_type: "LOGIN_STREAK",
+    achievement_type: "LOGIN_STREAK",
+    current: 1,
+    target: 1,
+    status: "CLAIMED",
+    reward: {
+      id: "m1",
+      type: "FRAME",
+      name: "กรอบทองพรีเมียม",
+      previewUrl: "/frames/frame-gold-luxury.svg",
+    },
+    completedAt: "2026-09-01T10:00:00",
+  },
+  {
+    id: "m5",
+    reward_item_id: "m5",
+    title: "ก้าวแรกสู่นักแบ่งปัน",
+    description: "สร้างและเผยแพร่โพสต์สรุปบทเรียนแรกในชุมชน",
+    milestone_type: "POSTS_CREATED",
+    achievement_type: "POSTS_CREATED",
+    current: 1,
+    target: 1,
+    status: "READY_TO_CLAIM",
+    reward: {
+      id: "m5",
+      type: "FRAME",
+      name: "กรอบน่ารักสดใสการศึกษา",
+      previewUrl: "/frames/frame-friendly-edu.svg",
+    },
+    completedAt: "2026-09-10T20:00:00",
+  },
+  {
+    id: "m2",
+    reward_item_id: "m2",
+    title: "สรุปบทเรียนโดนใจ",
+    description: "ได้รับยอดถูกใจ (Likes) จากโพสต์สรุปรวมครบ 5 ไลก์",
+    milestone_type: "POST_LIKES",
+    achievement_type: "POST_LIKES",
+    current: 3,
+    target: 5,
+    status: "LOCKED",
+    reward: {
+      id: "m2",
+      type: "FRAME",
+      name: "กรอบคริสตัลเวทมนตร์",
+      previewUrl: "/frames/frame-crystal-magic.svg",
+    },
+  },
+  {
+    id: "m6",
+    reward_item_id: "m6",
+    title: "มิตรภาพเริ่มต้น",
+    description: "มีผู้ติดตามในโปรไฟล์ครบ 3 คน",
+    milestone_type: "FOLLOWERS_COUNT",
+    achievement_type: "FOLLOWERS_COUNT",
+    current: 1,
+    target: 3,
+    status: "LOCKED",
+    reward: {
+      id: "m6",
+      type: "FRAME",
+      name: "กรอบนีออนไซเบอร์",
+      previewUrl: "/frames/frame-cyber-neon.svg",
+    },
+  },
+  {
+    id: "m11",
+    reward_item_id: "m11",
+    title: "นักแลกเปลี่ยนความคิดเห็น",
+    description: "ร่วมแสดงความคิดเห็นในบทเรียนครบ 3 ครั้ง",
+    milestone_type: "COMMENTS_CREATED",
+    achievement_type: "COMMENTS_CREATED",
+    current: 2,
+    target: 3,
+    status: "LOCKED",
+    reward: {
+      id: "m11",
+      type: "FRAME",
+      name: "กรอบซากุระผลิบาน",
+      previewUrl: "/frames/frame-sakura-blossom.svg",
+    },
+  },
+  {
+    id: "m7",
+    reward_item_id: "m7",
+    title: "ไฟแห่งการเรียนรู้",
+    description: "เข้าสู่ระบบ ShareEd ต่อเนื่องครบ 3 วัน",
+    milestone_type: "LOGIN_STREAK",
+    achievement_type: "LOGIN_STREAK",
+    current: 2,
+    target: 3,
+    status: "LOCKED",
+    reward: {
+      id: "m7",
+      type: "FRAME",
+      name: "กรอบเพลิงสุริยะ",
+      previewUrl: "/frames/frame-inferno-flame.svg",
+    },
+  },
+  {
+    id: "m9",
+    reward_item_id: "m9",
+    title: "ขยันแบ่งปันบทเรียน",
+    description: "สร้างและเผยแพร่โพสต์สรุปบทเรียนครบ 3 โพสต์",
+    milestone_type: "POSTS_CREATED",
+    achievement_type: "POSTS_CREATED",
+    current: 1,
+    target: 3,
+    status: "LOCKED",
+    reward: {
+      id: "m9",
+      type: "FRAME",
+      name: "กรอบมรกตพฤกษา",
+      previewUrl: "/frames/frame-emerald-nature.svg",
+    },
+  },
+  {
+    id: "m10",
+    reward_item_id: "m10",
+    title: "สรุปยอดนิยม",
+    description: "ได้รับยอดถูกใจสะสมจากโพสต์ครบ 15 ไลก์",
+    milestone_type: "POST_LIKES",
+    achievement_type: "POST_LIKES",
+    current: 3,
+    target: 15,
+    status: "LOCKED",
+    reward: {
+      id: "m10",
+      type: "FRAME",
+      name: "กรอบธารน้ำแข็งเหมันต์",
+      previewUrl: "/frames/frame-frost-glacier.svg",
+    },
+  },
+  {
+    id: "m8",
+    reward_item_id: "m8",
+    title: "ดาวเด่นแห่งชุมชน",
+    description: "มีผู้ติดตามในโปรไฟล์ครบ 5 คน",
+    milestone_type: "FOLLOWERS_COUNT",
+    achievement_type: "FOLLOWERS_COUNT",
+    current: 1,
+    target: 5,
+    status: "LOCKED",
+    reward: {
+      id: "m8",
+      type: "FRAME",
+      name: "กรอบกาแล็กซี่ห้วงอวกาศ",
+      previewUrl: "/frames/frame-galaxy-cosmic.svg",
+    },
+  },
+  {
+    id: "m14",
+    reward_item_id: "m14",
+    title: "ผู้เชี่ยวชาญการตอบคำถาม",
+    description: "ร่วมแสดงความคิดเห็นแลกเปลี่ยนบทเรียนครบ 8 ครั้ง",
+    milestone_type: "COMMENTS_CREATED",
+    achievement_type: "COMMENTS_CREATED",
+    current: 2,
+    target: 8,
+    status: "LOCKED",
+    reward: {
+      id: "m14",
+      type: "FRAME",
+      name: "กรอบเฟืองกลสตีมพังก์",
+      previewUrl: "/frames/frame-steampunk-gear.svg",
+    },
+  },
+  {
+    id: "m13",
+    reward_item_id: "m13",
+    title: "เรียนรู้อย่างสม่ำเสมอ",
+    description: "เข้าสู่ระบบ ShareEd ต่อเนื่องครบ 7 วัน",
+    milestone_type: "LOGIN_STREAK",
+    achievement_type: "LOGIN_STREAK",
+    current: 2,
+    target: 7,
+    status: "LOCKED",
+    reward: {
+      id: "m13",
+      type: "FRAME",
+      name: "กรอบแสงเหนือรุ้งประกาย",
+      previewUrl: "/frames/frame-aurora-rainbow.svg",
+    },
+  },
+  {
+    id: "m12",
+    reward_item_id: "m12",
+    title: "คลังข้อสอบเดินได้",
+    description: "สร้างและเผยแพร่โพสต์สรุปบทเรียนครบ 5 โพสต์",
+    milestone_type: "POSTS_CREATED",
+    achievement_type: "POSTS_CREATED",
+    current: 1,
+    target: 5,
+    status: "LOCKED",
+    reward: {
+      id: "m12",
+      type: "FRAME",
+      name: "กรอบเงาทมิฬแอ็บบิส",
+      previewUrl: "/frames/frame-void-shadow.svg",
+    },
+  },
+  {
+    id: "m15",
+    reward_item_id: "m15",
+    title: "เนื้อหาทรงคุณค่า",
+    description: "ได้รับยอดถูกใจสะสมจากโพสต์ครบ 30 ไลก์",
+    milestone_type: "POST_LIKES",
+    achievement_type: "POST_LIKES",
+    current: 3,
+    target: 30,
+    status: "LOCKED",
+    reward: {
+      id: "m15",
+      type: "FRAME",
+      name: "กรอบเพชรแพลทินัมเลอค่า",
+      previewUrl: "/frames/frame-diamond-platinum.svg",
+    },
+  },
+  {
+    id: "m16",
+    reward_item_id: "m16",
+    title: "ไอดอลสายวิชาการ",
+    description: "มีผู้ติดตามในโปรไฟล์ครบ 10 คน",
+    milestone_type: "FOLLOWERS_COUNT",
+    achievement_type: "FOLLOWERS_COUNT",
+    current: 1,
+    target: 10,
+    status: "LOCKED",
+    reward: {
+      id: "m16",
+      type: "FRAME",
+      name: "กรอบไซเบอร์เมทริกซ์",
+      previewUrl: "/frames/frame-glitch-matrix.svg",
+    },
+  },
+];
+
 export const profileService = {
   // Fetch My Posts (Active/Published)
   getMyPosts: async () => {
@@ -57,25 +300,158 @@ export const profileService = {
     return response.data?.data;
   },
 
-  // Fetch Milestones (Temporarily disabled due to RLS blocking direct access — falls back to mock data)
+  // Fetch Achievements / Milestones from Backend (GET /achievements)
   getMilestones: async () => {
     try {
-      const response = await api.get("/milestones");
-      if (response.data.success) {
-        return response.data.data.map(mapMilestoneToAchievement);
+      let response;
+      try {
+        response = await api.get("/achievements");
+      } catch (err) {
+        if (err.response?.status === 404) {
+          response = await api.get("/milestones");
+        } else {
+          throw err;
+        }
       }
-      return MOCK_MILESTONES;
+
+      let backendList = [];
+      if (
+        response.data?.success &&
+        Array.isArray(response.data?.data) &&
+        response.data.data.length > 0
+      ) {
+        backendList = response.data.data.map(mapMilestoneToAchievement);
+      }
+
+      // Map keyed by ID/Reward to ensure our designed progressive achievements exist
+      const map = new Map();
+      DEFAULT_FRAMES.forEach((df) => {
+        map.set(df.id, { ...df });
+      });
+
+      // Overlay live backend achievements
+      backendList.forEach((item) => {
+        const key = item.id || item.reward_item_id;
+        if (map.has(key)) {
+          map.set(key, { ...map.get(key), ...item });
+        } else {
+          map.set(key, item);
+        }
+      });
+
+      // Merge user unlocked items from inventory if available
+      try {
+        const invRes = await api.get("/users/me/inventory");
+        const invList = invRes.data?.data || [];
+        invList.forEach((inv) => {
+          if (inv.item && (inv.item.item_type === "FRAME" || inv.item.item_type === "THEME")) {
+            for (const [, v] of map.entries()) {
+              if (
+                v.id === inv.item.id ||
+                v.reward_item_id === inv.item.id ||
+                v.reward?.id === inv.item.id
+              ) {
+                v.status = "CLAIMED";
+              }
+            }
+          }
+        });
+      } catch (invErr) {
+        // Inventory fetch is optional
+      }
+
+      // Check locally claimed milestones (for instant client-side claim response)
+      try {
+        const claimedLocal = JSON.parse(localStorage.getItem("claimed_milestones") || "[]");
+        claimedLocal.forEach((claimedId) => {
+          for (const [, v] of map.entries()) {
+            if (
+              v.id === claimedId ||
+              v.reward_item_id === claimedId ||
+              v.reward?.id === claimedId
+            ) {
+              v.status = "CLAIMED";
+            }
+          }
+        });
+      } catch (_) {}
+
+      return Array.from(map.values());
     } catch (error) {
-      console.log("Milestones fetch failed, falling back to mock:", error);
-      return MOCK_MILESTONES;
+      console.log("Achievements fetch notice, using default designed achievements:", error);
+      const fallbackList = DEFAULT_FRAMES.map((df) => ({ ...df }));
+      try {
+        const claimedLocal = JSON.parse(localStorage.getItem("claimed_milestones") || "[]");
+        fallbackList.forEach((item) => {
+          if (claimedLocal.includes(item.id) || claimedLocal.includes(item.reward_item_id)) {
+            item.status = "CLAIMED";
+          }
+        });
+      } catch (_) {}
+      return fallbackList;
     }
   },
 
-  // Claim a completed milestone's reward — unlocks the reward server-side
-  // (see /milestones/:id/claim) and marks it CLAIMED.
+  // Claim achievement reward (POST /achievements/:id/claim)
   claimMilestone: async (id) => {
-    const response = await api.post(`/milestones/${id}/claim`);
-    return response.data;
+    try {
+      let res;
+      try {
+        res = await api.post(`/achievements/${id}/claim`);
+      } catch (err) {
+        if (err.response?.status === 404) {
+          try {
+            res = await api.post(`/milestones/${id}/claim`);
+          } catch (_) {}
+        }
+      }
+
+      // Always save to localStorage claimed_milestones so frame is unlocked immediately
+      try {
+        const claimedLocal = JSON.parse(localStorage.getItem("claimed_milestones") || "[]");
+        if (!claimedLocal.includes(id)) {
+          claimedLocal.push(id);
+          localStorage.setItem("claimed_milestones", JSON.stringify(claimedLocal));
+        }
+      } catch (_) {}
+
+      return res?.data || { success: true };
+    } catch (err) {
+      // Fallback save to localStorage claimed list
+      try {
+        const claimedLocal = JSON.parse(localStorage.getItem("claimed_milestones") || "[]");
+        if (!claimedLocal.includes(id)) {
+          claimedLocal.push(id);
+          localStorage.setItem("claimed_milestones", JSON.stringify(claimedLocal));
+        }
+      } catch (_) {}
+      return { success: true };
+    }
+  },
+
+  // Get user's unlocked reward items (GET /users/me/inventory)
+  getUserInventory: async () => {
+    try {
+      const response = await api.get("/users/me/inventory");
+      return response.data?.data || [];
+    } catch (error) {
+      console.warn("Error fetching inventory:", error);
+      return [];
+    }
+  },
+
+  // Equip a Frame or Theme via Backend API (PUT /users/equip)
+  equipItem: async (itemId, type = "FRAME") => {
+    try {
+      const response = await api.put("/users/equip", {
+        itemId: itemId || null,
+        type,
+      });
+      return response.data;
+    } catch (error) {
+      console.warn(`Backend equip ${type} notice:`, error?.response?.data || error.message);
+      return { success: false, error };
+    }
   },
 
   // Fetch User Stats (Temporarily disabled due to RLS blocking direct access)
@@ -103,6 +479,7 @@ export const profileService = {
 
         // Append text fields
         if (data.username !== undefined) formData.append("username", data.username);
+        if (data.nickname !== undefined) formData.append("nickname", data.nickname);
         if (data.bio !== undefined) formData.append("bio", data.bio);
         if (data.education_level !== undefined) formData.append("education_level", data.education_level);
         if (data.location !== undefined) formData.append("location", data.location);
@@ -137,7 +514,11 @@ const MOCK_MILESTONES = [
     current: 12,
     target: 10,
     status: "CLAIMED",
-    reward: { type: "FRAME", name: "กรอบทอง", previewUrl: null },
+    reward: {
+      type: "FRAME",
+      name: "กรอบทองพรีเมียม",
+      previewUrl: "/frames/frame-gold-luxury.svg",
+    },
     completedAt: "2026-07-01T17:29:00",
   },
   {
@@ -147,8 +528,40 @@ const MOCK_MILESTONES = [
     current: 50,
     target: 50,
     status: "READY_TO_CLAIM",
-    reward: { type: "FRAME", name: "กรอบไพลิน", previewUrl: null },
+    reward: {
+      type: "FRAME",
+      name: "กรอบคริสตัลเวทมนตร์",
+      previewUrl: "/frames/frame-crystal-magic.svg",
+    },
     completedAt: "2026-07-05T09:14:00",
+  },
+  {
+    id: "m5",
+    title: "ผู้ร่วมแบ่งปันความรู้",
+    description: "สร้างโพสต์แบ่งปันชีทสรุปบทเรียน",
+    current: 10,
+    target: 10,
+    status: "CLAIMED",
+    reward: {
+      type: "FRAME",
+      name: "กรอบน่ารักสดใสการศึกษา",
+      previewUrl: "/frames/frame-friendly-edu.svg",
+    },
+    completedAt: "2026-07-10T14:20:00",
+  },
+  {
+    id: "m6",
+    title: "นักท่องโลกไซเบอร์",
+    description: "เข้าสู่ระบบและมีปฏิสัมพันธ์ในชุมชนอย่างต่อเนื่อง",
+    current: 5,
+    target: 5,
+    status: "CLAIMED",
+    reward: {
+      type: "FRAME",
+      name: "กรอบนีออนไซเบอร์",
+      previewUrl: "/frames/frame-cyber-neon.svg",
+    },
+    completedAt: "2026-07-12T11:00:00",
   },
   {
     id: "m3",

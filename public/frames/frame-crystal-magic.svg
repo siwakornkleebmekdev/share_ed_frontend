@@ -1,0 +1,138 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <defs>
+    <!-- Crystal Gradients -->
+    <linearGradient id="magicViolet" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="30%" stop-color="#818cf8" />
+      <stop offset="70%" stop-color="#c084fc" />
+      <stop offset="100%" stop-color="#f43f5e" />
+    </linearGradient>
+
+    <linearGradient id="crystalFacetA" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e0e7ff" />
+      <stop offset="50%" stop-color="#818cf8" />
+      <stop offset="100%" stop-color="#4338ca" />
+    </linearGradient>
+
+    <linearGradient id="crystalFacetB" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#f5d0fe" />
+      <stop offset="50%" stop-color="#c084fc" />
+      <stop offset="100%" stop-color="#6b21a8" />
+    </linearGradient>
+
+    <filter id="magicGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="4" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <style>
+      @keyframes orbitRune {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      @keyframes orbitReverse {
+        from { transform: rotate(360deg); }
+        to { transform: rotate(0deg); }
+      }
+      @keyframes crystalPulse {
+        0%, 100% { opacity: 0.75; transform: scale(1); filter: drop-shadow(0 0 4px #c084fc); }
+        50% { opacity: 1; transform: scale(1.02); filter: drop-shadow(0 0 10px #38bdf8) drop-shadow(0 0 16px #c084fc); }
+      }
+      @keyframes starBlink {
+        0%, 100% { transform: scale(0.6); opacity: 0.3; }
+        50% { transform: scale(1.2); opacity: 1; }
+      }
+
+      .pulse-crystal {
+        transform-origin: 100px 100px;
+        animation: crystalPulse 3s ease-in-out infinite;
+      }
+      .orbit-group {
+        transform-origin: 100px 100px;
+        animation: orbitRune 10s linear infinite;
+      }
+      .orbit-group-fast {
+        transform-origin: 100px 100px;
+        animation: orbitReverse 6s linear infinite;
+      }
+      .magic-star-1 {
+        transform-origin: 100px 20px;
+        animation: starBlink 2s ease-in-out infinite;
+      }
+      .magic-star-2 {
+        transform-origin: 180px 100px;
+        animation: starBlink 2.4s ease-in-out 0.8s infinite;
+      }
+      .magic-star-3 {
+        transform-origin: 20px 100px;
+        animation: starBlink 2.2s ease-in-out 0.4s infinite;
+      }
+    </style>
+  </defs>
+
+  <!-- Deep Aura Shadow Ring -->
+  <circle cx="100" cy="100" r="90" fill="none" stroke="#312e81" stroke-width="6" opacity="0.6" />
+
+  <!-- Outer Main Magic Crystal Ring -->
+  <circle class="pulse-crystal" cx="100" cy="100" r="88" fill="none" stroke="url(#magicViolet)" stroke-width="6" filter="url(#magicGlow)" />
+
+  <!-- Inner Arcane Inscription Ring -->
+  <circle cx="100" cy="100" r="82" fill="none" stroke="#e0e7ff" stroke-width="1.5" stroke-dasharray="8 6 2 6" opacity="0.85" />
+
+  <!-- Orbiting Mana Orbs (Group 1) -->
+  <g class="orbit-group">
+    <circle cx="100" cy="12" r="3.5" fill="#38bdf8" filter="url(#magicGlow)" />
+    <circle cx="188" cy="100" r="3.5" fill="#c084fc" filter="url(#magicGlow)" />
+    <circle cx="100" cy="188" r="3.5" fill="#38bdf8" filter="url(#magicGlow)" />
+    <circle cx="12" cy="100" r="3.5" fill="#c084fc" filter="url(#magicGlow)" />
+  </g>
+
+  <!-- Orbiting Starlight Motes (Group 2 - Reverse) -->
+  <g class="orbit-group-fast" opacity="0.8">
+    <circle cx="162" cy="38" r="2" fill="#ffffff" />
+    <circle cx="162" cy="162" r="2" fill="#ffffff" />
+    <circle cx="38" cy="162" r="2" fill="#ffffff" />
+    <circle cx="38" cy="38" r="2" fill="#ffffff" />
+  </g>
+
+  <!-- Top Crystal Cluster (12 o'clock) -->
+  <g filter="url(#magicGlow)">
+    <!-- Central Large Crystal Point -->
+    <polygon points="100,6 106,20 100,28 94,20" fill="url(#crystalFacetA)" stroke="#ffffff" stroke-width="1" />
+    <!-- Left Flanking Crystal -->
+    <polygon points="90,12 95,22 91,28 85,20" fill="url(#crystalFacetB)" stroke="#ffffff" stroke-width="0.8" />
+    <!-- Right Flanking Crystal -->
+    <polygon points="110,12 115,20 109,28 105,22" fill="url(#crystalFacetB)" stroke="#ffffff" stroke-width="0.8" />
+  </g>
+
+  <!-- Bottom Crystal Cluster (6 o'clock) -->
+  <g filter="url(#magicGlow)">
+    <polygon points="100,194 94,180 100,172 106,180" fill="url(#crystalFacetA)" stroke="#ffffff" stroke-width="1" />
+    <polygon points="90,188 85,180 91,172 95,178" fill="url(#crystalFacetB)" stroke="#ffffff" stroke-width="0.8" />
+    <polygon points="110,188 105,178 109,172 115,180" fill="url(#crystalFacetB)" stroke="#ffffff" stroke-width="0.8" />
+  </g>
+
+  <!-- Left Gem Cluster (9 o'clock) -->
+  <g filter="url(#magicGlow)">
+    <polygon points="6,100 20,94 28,100 20,106" fill="url(#crystalFacetA)" stroke="#ffffff" stroke-width="1" />
+  </g>
+
+  <!-- Right Gem Cluster (3 o'clock) -->
+  <g filter="url(#magicGlow)">
+    <polygon points="194,100 180,94 172,100 180,106" fill="url(#crystalFacetA)" stroke="#ffffff" stroke-width="1" />
+  </g>
+
+  <!-- Blinking Magic Sparkles -->
+  <g class="magic-star-1">
+    <polygon points="100,14 102,19 107,20 102,21 100,26 98,21 93,20 98,19" fill="#ffffff" />
+  </g>
+  <g class="magic-star-2">
+    <polygon points="180,94 182,99 187,100 182,101 180,106 178,101 173,100 178,99" fill="#ffffff" />
+  </g>
+  <g class="magic-star-3">
+    <polygon points="20,94 22,99 27,100 22,101 20,106 18,101 13,100 18,99" fill="#ffffff" />
+  </g>
+</svg>

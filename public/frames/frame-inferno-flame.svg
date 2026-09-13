@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <defs>
+    <!-- Fire Gradients -->
+    <linearGradient id="infernoGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#b91c1c" />
+      <stop offset="35%" stop-color="#ef4444" />
+      <stop offset="70%" stop-color="#f97316" />
+      <stop offset="100%" stop-color="#fde047" />
+    </linearGradient>
+
+    <linearGradient id="fireRingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f97316" />
+      <stop offset="50%" stop-color="#dc2626" />
+      <stop offset="100%" stop-color="#facc15" />
+    </linearGradient>
+
+    <radialGradient id="heatAura" cx="50%" cy="50%" r="50%">
+      <stop offset="60%" stop-color="#ef4444" stop-opacity="0" />
+      <stop offset="85%" stop-color="#f97316" stop-opacity="0.3" />
+      <stop offset="100%" stop-color="#fde047" stop-opacity="0.8" />
+    </radialGradient>
+
+    <filter id="infernoGlow" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur stdDeviation="3.5" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <style>
+      @keyframes flamePulse {
+        0%, 100% { transform: scale(1); opacity: 0.85; }
+        50% { transform: scale(1.03); opacity: 1; filter: drop-shadow(0 0 6px #f97316); }
+      }
+      @keyframes emberFloat1 {
+        0% { transform: translateY(0) scale(0.8); opacity: 0; }
+        30% { opacity: 1; }
+        80% { opacity: 0.8; }
+        100% { transform: translateY(-30px) scale(0.3); opacity: 0; }
+      }
+      @keyframes emberFloat2 {
+        0% { transform: translateY(0) scale(0.6); opacity: 0; }
+        40% { opacity: 1; }
+        90% { opacity: 0.6; }
+        100% { transform: translateY(-35px) scale(0.2); opacity: 0; }
+      }
+      @keyframes ringSpin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      .flame-core {
+        transform-origin: 100px 100px;
+        animation: flamePulse 2.4s ease-in-out infinite;
+      }
+      .ember-1 { animation: emberFloat1 2.2s infinite ease-out; }
+      .ember-2 { animation: emberFloat2 2.8s infinite ease-out 0.8s; }
+      .ember-3 { animation: emberFloat1 2.5s infinite ease-out 1.4s; }
+      .ember-4 { animation: emberFloat2 2.1s infinite ease-out 0.4s; }
+      .spin-cinders {
+        transform-origin: 100px 100px;
+        animation: ringSpin 12s linear infinite;
+      }
+    </style>
+  </defs>
+
+  <!-- Heat Aura Outer Circle -->
+  <circle cx="100" cy="100" r="92" fill="none" stroke="url(#heatAura)" stroke-width="6" />
+
+  <!-- Outer Cinder Sparks (Spinning slowly) -->
+  <g class="spin-cinders">
+    <circle cx="100" cy="8" r="2.5" fill="#fde047" filter="url(#infernoGlow)" />
+    <circle cx="180" cy="50" r="2" fill="#f97316" />
+    <circle cx="192" cy="120" r="2.5" fill="#fde047" />
+    <circle cx="150" cy="185" r="1.8" fill="#ef4444" />
+    <circle cx="50" cy="185" r="2.2" fill="#facc15" />
+    <circle cx="8" cy="120" r="2.5" fill="#f97316" />
+    <circle cx="20" cy="50" r="1.8" fill="#fde047" />
+  </g>
+
+  <!-- Fiery Plasma Ring (Base Glow) -->
+  <circle cx="100" cy="100" r="87" fill="none" stroke="#dc2626" stroke-width="9" opacity="0.6" filter="url(#infernoGlow)" />
+
+  <!-- Main Blazing Metallic Ring -->
+  <circle class="flame-core" cx="100" cy="100" r="87" fill="none" stroke="url(#fireRingGrad)" stroke-width="7" />
+
+  <!-- Inner Molten Border -->
+  <circle cx="100" cy="100" r="83" fill="none" stroke="#fde047" stroke-width="2" opacity="0.9" />
+
+  <!-- Top Inferno Horns / Crown -->
+  <g class="flame-core" filter="url(#infernoGlow)">
+    <path d="M100 8 C95 24 88 28 82 32 C90 31 96 32 100 24 C104 32 110 31 118 32 C112 28 105 24 100 8 Z" fill="url(#infernoGrad)" />
+    <path d="M100 14 C97 22 93 25 89 27 C94 27 98 26 100 20 C102 26 106 27 111 27 C107 25 103 22 100 14 Z" fill="#ffffff" opacity="0.9" />
+    <!-- Ruby Core Gem in Crown -->
+    <circle cx="100" cy="28" r="4.5" fill="#fef08a" stroke="#dc2626" stroke-width="1.5" />
+    <circle cx="100" cy="28" r="2" fill="#ffffff" />
+  </g>
+
+  <!-- Left & Right Flame Wings -->
+  <g filter="url(#infernoGlow)">
+    <!-- Left Wing -->
+    <path d="M14 100 C18 88 22 84 27 82 C25 89 26 94 22 100 C26 106 25 111 27 118 C22 116 18 112 14 100 Z" fill="url(#infernoGrad)" />
+    <circle cx="23" cy="100" r="3" fill="#fde047" stroke="#dc2626" stroke-width="1" />
+    <!-- Right Wing -->
+    <path d="M186 100 C182 88 178 84 173 82 C175 89 174 94 178 100 C174 106 175 111 173 118 C178 116 182 112 186 100 Z" fill="url(#infernoGrad)" />
+    <circle cx="177" cy="100" r="3" fill="#fde047" stroke="#dc2626" stroke-width="1" />
+  </g>
+
+  <!-- Bottom Dragon Tail / Fire Crest -->
+  <g transform="translate(100, 185)" filter="url(#infernoGlow)">
+    <path d="M-18 -5 C-10 8 0 10 18 -5 C10 4 0 5 -18 -5 Z" fill="url(#infernoGrad)" />
+    <circle cx="0" cy="2" r="3.5" fill="#fde047" stroke="#dc2626" stroke-width="1" />
+  </g>
+
+  <!-- Rising Floating Embers -->
+  <g transform="translate(70, 45)" class="ember-1">
+    <circle cx="0" cy="0" r="2" fill="#fef08a" filter="url(#infernoGlow)" />
+  </g>
+  <g transform="translate(130, 40)" class="ember-2">
+    <circle cx="0" cy="0" r="2.4" fill="#f97316" filter="url(#infernoGlow)" />
+  </g>
+  <g transform="translate(45, 130)" class="ember-3">
+    <circle cx="0" cy="0" r="1.8" fill="#facc15" />
+  </g>
+  <g transform="translate(155, 135)" class="ember-4">
+    <circle cx="0" cy="0" r="2.2" fill="#fde047" />
+  </g>
+</svg>

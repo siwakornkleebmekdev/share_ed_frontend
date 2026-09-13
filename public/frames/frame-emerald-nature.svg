@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <defs>
+    <!-- Emerald Nature Gradients -->
+    <linearGradient id="emeraldVine" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#059669" />
+      <stop offset="30%" stop-color="#10b981" />
+      <stop offset="70%" stop-color="#34d399" />
+      <stop offset="100%" stop-color="#047857" />
+    </linearGradient>
+
+    <linearGradient id="goldFlora" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b" />
+      <stop offset="50%" stop-color="#fef08a" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+
+    <radialGradient id="natureAura" cx="50%" cy="50%" r="50%">
+      <stop offset="70%" stop-color="#10b981" stop-opacity="0" />
+      <stop offset="90%" stop-color="#34d399" stop-opacity="0.3" />
+      <stop offset="100%" stop-color="#6ee7b7" stop-opacity="0.7" />
+    </radialGradient>
+
+    <filter id="emeraldGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <style>
+      @keyframes vineBreathe {
+        0%, 100% { transform: scale(1); opacity: 0.9; }
+        50% { transform: scale(1.02); opacity: 1; filter: drop-shadow(0 0 6px #10b981); }
+      }
+      @keyframes leafSway1 {
+        0%, 100% { transform: rotate(0deg); }
+        50% { transform: rotate(5deg); }
+      }
+      @keyframes leafSway2 {
+        0%, 100% { transform: rotate(0deg); }
+        50% { transform: rotate(-5deg); }
+      }
+      @keyframes dewShine {
+        0%, 100% { opacity: 0.3; transform: scale(0.7); }
+        50% { opacity: 1; transform: scale(1.2); }
+      }
+      .vine-ring {
+        transform-origin: 100px 100px;
+        animation: vineBreathe 3.5s ease-in-out infinite;
+      }
+      .sway-left { transform-origin: 25px 100px; animation: leafSway1 3s ease-in-out infinite; }
+      .sway-right { transform-origin: 175px 100px; animation: leafSway2 3.2s ease-in-out 0.5s infinite; }
+      .dew-1 { transform-origin: 50px 35px; animation: dewShine 2.2s infinite ease-in-out; }
+      .dew-2 { transform-origin: 155px 45px; animation: dewShine 2.7s infinite ease-in-out 0.8s; }
+      .dew-3 { transform-origin: 150px 160px; animation: dewShine 2.4s infinite ease-in-out 1.2s; }
+      .dew-4 { transform-origin: 45px 155px; animation: dewShine 2.9s infinite ease-in-out 0.4s; }
+    </style>
+  </defs>
+
+  <!-- Forest Aura Outer Ring -->
+  <circle cx="100" cy="100" r="92" fill="none" stroke="url(#natureAura)" stroke-width="6" />
+
+  <!-- Outer Braided Vine Branch -->
+  <circle cx="100" cy="100" r="91" fill="none" stroke="#065f46" stroke-width="2.5" stroke-dasharray="12 4" opacity="0.85" />
+
+  <!-- Base Emerald Ring with Glow -->
+  <circle cx="100" cy="100" r="87" fill="none" stroke="#059669" stroke-width="8" opacity="0.5" filter="url(#emeraldGlow)" />
+
+  <!-- Main Animated Emerald Ring -->
+  <circle class="vine-ring" cx="100" cy="100" r="87" fill="none" stroke="url(#emeraldVine)" stroke-width="6" />
+
+  <!-- Inner Golden Leaf Border -->
+  <circle cx="100" cy="100" r="83" fill="none" stroke="#6ee7b7" stroke-width="1.8" opacity="0.9" />
+
+  <!-- Botanical Leaves Sculpted Along Ring -->
+  <!-- Top Center Golden Lotus Sprout -->
+  <g transform="translate(100, 14)" filter="url(#emeraldGlow)">
+    <path d="M0 -6 C4 -1 6 5 0 9 C-6 5 -4 -1 0 -6 Z" fill="url(#goldFlora)" />
+    <path d="M-6 0 C-10 4 -8 9 -2 8 C-1 5 -3 2 -6 0 Z" fill="#34d399" />
+    <path d="M6 0 C10 4 8 9 2 8 C1 5 3 2 6 0 Z" fill="#34d399" />
+    <circle cx="0" cy="5" r="2" fill="#ffffff" />
+  </g>
+
+  <!-- Left Vine Leaf Cluster -->
+  <g class="sway-left" filter="url(#emeraldGlow)">
+    <g transform="translate(14, 90)">
+      <path d="M0 0 C-6 -8 -2 -14 6 -10 C6 -3 3 0 0 0 Z" fill="url(#emeraldVine)" />
+      <path d="M0 2 C-8 6 -10 14 -4 14 C-1 10 1 5 0 2 Z" fill="#10b981" />
+      <circle cx="-1" cy="4" r="2.5" fill="url(#goldFlora)" />
+    </g>
+  </g>
+
+  <!-- Right Vine Leaf Cluster -->
+  <g class="sway-right" filter="url(#emeraldGlow)">
+    <g transform="translate(186, 90)">
+      <path d="M0 0 C6 -8 2 -14 -6 -10 C-6 -3 -3 0 0 0 Z" fill="url(#emeraldVine)" />
+      <path d="M0 2 C8 6 10 14 4 14 C1 10 -1 5 0 2 Z" fill="#10b981" />
+      <circle cx="1" cy="4" r="2.5" fill="url(#goldFlora)" />
+    </g>
+  </g>
+
+  <!-- Bottom Wreath Root Ornament -->
+  <g transform="translate(100, 186)" filter="url(#emeraldGlow)">
+    <path d="M-18 -2 C-10 6 0 8 18 -2 C10 4 0 5 -18 -2 Z" fill="url(#emeraldVine)" />
+    <circle cx="0" cy="4" r="4" fill="url(#goldFlora)" stroke="#065f46" stroke-width="1" />
+    <circle cx="0" cy="4" r="1.8" fill="#ffffff" />
+  </g>
+
+  <!-- Sparkling Dewdrops -->
+  <g class="dew-1">
+    <circle cx="50" cy="35" r="3" fill="#a7f3d0" filter="url(#emeraldGlow)" />
+    <circle cx="49" cy="34" r="1" fill="#ffffff" />
+  </g>
+  <g class="dew-2">
+    <circle cx="155" cy="45" r="2.6" fill="#fef08a" filter="url(#emeraldGlow)" />
+    <circle cx="154" cy="44" r="0.9" fill="#ffffff" />
+  </g>
+  <g class="dew-3">
+    <circle cx="150" cy="160" r="2.8" fill="#a7f3d0" />
+    <circle cx="149" cy="159" r="0.9" fill="#ffffff" />
+  </g>
+  <g class="dew-4">
+    <circle cx="45" cy="155" r="2.5" fill="#fef08a" />
+  </g>
+</svg>

@@ -145,23 +145,35 @@ function App() {
     const handleSession = async (session) => {
       // 1. If Supabase session is active, update login state
       if (session && session.user) {
-        const userEmail = session.user.email;
         const meta = session.user.user_metadata || {};
+        const userId = session.user.id;
+        const cachedFrameId =
+          meta.profile_frame_id ||
+          localStorage.getItem(`profile_frame_id_${userId}`) ||
+          localStorage.getItem("profile_frame_id") ||
+          null;
+        const cachedWallpaper =
+          meta.wallpaper_url ||
+          localStorage.getItem(`wallpaper_url_${userId}`) ||
+          localStorage.getItem("wallpaper_url") ||
+          null;
 
+        const userEmail = session.user.email;
         if (session.access_token) {
           localStorage.setItem("access_token", session.access_token);
         }
 
         const baseUser = {
+          ...session.user,
+          ...meta,
           id: session.user.id,
           user_id: session.user.id,
+          role: meta.role || "MEMBER",
           email: userEmail,
-          name:
-            meta.display_name ||
-            meta.full_name ||
-            meta.name ||
-            meta.username ||
-            userEmail?.split("@")[0],
+          avatar_url:
+            meta.avatar_url ||
+            meta.picture ||
+            `https://ui-avatars.com/api/?name=${encodeURIComponent(userEmail?.split("@")[0] || "User")}&background=1e293b&color=38bdf8`,
           avatar: meta.avatar_url,
           display_name:
             meta.display_name || meta.full_name || meta.name || meta.username,
@@ -173,7 +185,11 @@ function App() {
           education_level: meta.education_level || "HIGH_SCHOOL",
           age: meta.age || 0,
           bio: meta.bio || "ยังไม่ได้ระบุ",
-          user_metadata: meta,
+          user_metadata: {
+            ...meta,
+            profile_frame_id: cachedFrameId,
+            wallpaper_url: cachedWallpaper,
+          },
         };
 
         loginAction(baseUser);
@@ -189,7 +205,21 @@ function App() {
               ...baseUser,
               ...dbUser,
               display_name: dbUser.nickname || dbUser.username || baseUser.display_name,
-              });
+              user_metadata: {
+                ...baseUser.user_metadata,
+                ...dbUser.user_metadata,
+                profile_frame_id:
+                  dbUser.user_metadata?.profile_frame_id ||
+                  dbUser.current_frame_id ||
+                  baseUser.user_metadata?.profile_frame_id ||
+                  cachedFrameId,
+                wallpaper_url:
+                  dbUser.user_metadata?.wallpaper_url ||
+                  dbUser.wallpaper ||
+                  baseUser.user_metadata?.wallpaper_url ||
+                  cachedWallpaper,
+              },
+            });
           }
         } catch (e) {
           console.log("Background role sync notice:", e);
@@ -205,23 +235,55 @@ function App() {
       if (savedToken && savedToken !== "undefined" && savedToken !== "null") {
         const tokenUser = getUserFromToken(savedToken);
         if (tokenUser) {
+          const userId = tokenUser.id || tokenUser.user_id;
+          const cachedFrameId =
+            tokenUser.user_metadata?.profile_frame_id ||
+            localStorage.getItem(`profile_frame_id_${userId}`) ||
+            localStorage.getItem("profile_frame_id") ||
+            null;
+          const cachedWallpaper =
+            tokenUser.user_metadata?.wallpaper_url ||
+            localStorage.getItem(`wallpaper_url_${userId}`) ||
+            localStorage.getItem("wallpaper_url") ||
+            null;
+
+          const baseTokenUser = {
+            ...tokenUser,
+            user_metadata: {
+              ...tokenUser.user_metadata,
+              profile_frame_id: cachedFrameId,
+              wallpaper_url: cachedWallpaper,
+            },
+          };
+
           // Token is valid and not expired -> keep user logged in!
-          loginAction(tokenUser);
+          loginAction(baseTokenUser);
 
           // Asynchronously attempt to refresh user profile from server
           try {
             const res = await authService.getMe();
             const dbUser = res?.data || res?.user || (res?.id ? res : null);
             if (dbUser) {
+              const finalUserId =
+                dbUser.id || dbUser._id || dbUser.user_id || userId;
               loginAction({
-                ...tokenUser,
+                ...baseTokenUser,
                 ...dbUser,
-                id: dbUser.id || dbUser._id || dbUser.user_id || tokenUser.id,
-                user_id:
-                  dbUser.id || dbUser._id || dbUser.user_id || tokenUser.id,
+                id: finalUserId,
+                user_id: finalUserId,
                 user_metadata: {
-                  ...tokenUser.user_metadata,
+                  ...baseTokenUser.user_metadata,
                   ...dbUser.user_metadata,
+                  profile_frame_id:
+                    dbUser.user_metadata?.profile_frame_id ||
+                    dbUser.current_frame_id ||
+                    baseTokenUser.user_metadata?.profile_frame_id ||
+                    cachedFrameId,
+                  wallpaper_url:
+                    dbUser.user_metadata?.wallpaper_url ||
+                    dbUser.wallpaper ||
+                    baseTokenUser.user_metadata?.wallpaper_url ||
+                    cachedWallpaper,
                 },
               });
             }
@@ -353,6 +415,20 @@ function App() {
           <Route path="appearance" element={<SettingsAppearance />} />
           <Route path="widgets" element={<SettingsWidgets />} />
           <Route path="account" element={<SettingsAccount />} />
+        </Route>
+
+        <Route
+          path="/admin"
+          element={
+            <AdminRoute>
+              <AdminLayout />
+            </AdminRoute>
+          }
+        >
+          <Route index element={<AdminDashboard />} />
+          <Route path="users" element={<UserManagement />} />
+          <Route path="users/:id" element={<UserDetails />} />
+          <Route path="achievements" element={<AchievementManagement />} />
         </Route>
       </Routes>
 

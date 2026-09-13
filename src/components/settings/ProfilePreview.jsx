@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import useAchievementStore from '@/store/achievementStore';
 import { AVATAR_SHAPES, DEFAULT_THEME } from '@/pages/settings/themeConstants';
 import { hexToRgba } from '@/utils/colorUtils';
+import { DEFAULT_FRAMES } from '@/services/profile.service';
 
 // Card-surface treatment per cardStyle — background/border come from
 // cardColor+cardOpacity via inline style below, this only controls blur and
@@ -19,12 +21,40 @@ const STYLE_CLASSES = {
 // Note: avatar/wallpaper here always reflect the *saved* user record unless
 // the caller merges in unsaved uploads itself (SettingsProfile does this).
 export default function ProfilePreview({ user, formData }) {
+  const { milestones } = useAchievementStore();
   const theme = formData.theme_settings;
   const avatarShape = AVATAR_SHAPES.find(s => s.id === theme.avatarShape) || AVATAR_SHAPES[3];
   const wallpaperUrl = user?.user_metadata?.wallpaper_url;
   const bannerUrl = user?.user_metadata?.banner_url;
   const avatarUrl = user?.avatar_url;
-  const hasFrame = !!user?.user_metadata?.profile_frame_id;
+  const currentUserId = user?.id || user?.user_id;
+  const frameId =
+    user?.user_metadata?.profile_frame_id ||
+    user?.current_frame_id ||
+    (currentUserId ? localStorage.getItem(`profile_frame_id_${currentUserId}`) : null) ||
+    localStorage.getItem("profile_frame_id") ||
+    null;
+  const hasFrame = !!frameId;
+  const allMilestones = [
+    ...DEFAULT_FRAMES,
+    ...milestones.filter(
+      (m) =>
+        !DEFAULT_FRAMES.some(
+          (df) =>
+            df.id === m.id ||
+            df.reward_item_id === m.reward_item_id ||
+            df.reward?.previewUrl === m.reward?.previewUrl,
+        ),
+    ),
+  ];
+  const equippedFrame = allMilestones.find(
+    (m) =>
+      m.id === frameId ||
+      m.reward_item_id === frameId ||
+      m.reward?.id === frameId,
+  );
+  const frameUrl =
+    equippedFrame?.reward?.previewUrl || user?.current_frame?.image_url;
   const [isBannerBlank, setIsBannerBlank] = useState(false);
 
   // "ปรับสีการ์ดเอง" off falls back to the default color/opacity instead of
@@ -53,7 +83,15 @@ export default function ProfilePreview({ user, formData }) {
         </div>
       )}
       {hasFrame && (
-        <div className={`absolute inset-0 border-4 border-amber-400 mix-blend-overlay pointer-events-none ${avatarShape.className}`}></div>
+        frameUrl ? (
+          <img
+            src={frameUrl}
+            alt={equippedFrame?.reward?.name || "Frame"}
+            className="absolute inset-0 w-full h-full object-cover pointer-events-none z-10"
+          />
+        ) : (
+          <div className={`absolute inset-0 border-4 border-amber-400 mix-blend-overlay pointer-events-none ${avatarShape.className}`}></div>
+        )
       )}
     </div>
   );

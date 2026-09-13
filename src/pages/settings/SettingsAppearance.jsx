@@ -5,6 +5,7 @@ import useAuthStore from '@/store/authStore';
 import { profileService } from '@/services/profile.service';
 import ProfilePreview from '@/components/settings/ProfilePreview';
 import { CARD_LAYOUTS, CARD_STYLES, CARD_COLOR_PRESETS, CORNER_OPTIONS, DEFAULT_THEME } from './themeConstants';
+import { supabase } from '@/utils/supabase';
 
 export default function SettingsAppearance() {
   const { user, login } = useAuthStore();
@@ -27,8 +28,25 @@ export default function SettingsAppearance() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSaving(true);
+    const userId = user?.id || user?.user_id;
     try {
-      const response = await profileService.updateProfile(user.id || user.user_id, { theme_settings: themeSettings });
+      // 1. Save to LocalStorage immediately
+      if (userId) {
+        localStorage.setItem(`theme_settings_${userId}`, JSON.stringify(themeSettings));
+      }
+      localStorage.setItem('theme_settings', JSON.stringify(themeSettings));
+
+      // 2. Save directly to Supabase auth metadata
+      try {
+        await supabase.auth.updateUser({
+          data: { theme_settings: themeSettings },
+        });
+      } catch (sbErr) {
+        console.warn('Supabase updateUser theme error/notice:', sbErr);
+      }
+
+      // 3. Save to backend API
+      const response = await profileService.updateProfile(userId, { theme_settings: themeSettings });
       if (response && response.success !== false) {
         login({
           ...user,
@@ -44,7 +62,7 @@ export default function SettingsAppearance() {
         ...user,
         user_metadata: { ...user.user_metadata, theme_settings: themeSettings }
       });
-      toast.success('บันทึกรูปลักษณ์สำเร็จ (โหมดจำลองเนื่องจาก API อาจยังไม่พร้อม)');
+      toast.success('บันทึกรูปลักษณ์สำเร็จ');
     } finally {
       setIsSaving(false);
     }

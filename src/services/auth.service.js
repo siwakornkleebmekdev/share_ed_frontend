@@ -113,6 +113,17 @@ export const authService = {
     if (!error && session?.user) {
       const user = session.user;
       const meta = user.user_metadata || {};
+      const cachedFrameId =
+        meta.profile_frame_id ||
+        localStorage.getItem(`profile_frame_id_${user.id}`) ||
+        localStorage.getItem("profile_frame_id") ||
+        null;
+      const cachedWallpaper =
+        meta.wallpaper_url ||
+        localStorage.getItem(`wallpaper_url_${user.id}`) ||
+        localStorage.getItem("wallpaper_url") ||
+        null;
+
       const supabaseUser = {
         id: user.id,
         user_id: user.id,
@@ -124,7 +135,11 @@ export const authService = {
         education_level: meta.education_level,
         age: meta.age,
         bio: meta.bio,
-        user_metadata: meta
+        user_metadata: {
+          ...meta,
+          profile_frame_id: cachedFrameId,
+          wallpaper_url: cachedWallpaper,
+        }
       };
 
       // Supabase's session/JWT has no knowledge of the DB-side role/status/metadata,
@@ -134,12 +149,22 @@ export const authService = {
         const backendUser = backendRes.data?.data || backendRes.data?.user || backendRes.data;
         if (backendUser) {
           Object.assign(supabaseUser, backendUser);
-          if (backendUser.user_metadata) {
-            supabaseUser.user_metadata = {
-              ...meta,
-              ...backendUser.user_metadata
-            };
-          }
+          supabaseUser.user_metadata = {
+            ...meta,
+            ...(backendUser.user_metadata || {}),
+            profile_frame_id:
+              backendUser.user_metadata?.profile_frame_id ||
+              backendUser.current_frame_id ||
+              cachedFrameId ||
+              meta.profile_frame_id ||
+              null,
+            wallpaper_url:
+              backendUser.user_metadata?.wallpaper_url ||
+              backendUser.wallpaper ||
+              cachedWallpaper ||
+              meta.wallpaper_url ||
+              null,
+          };
         }
       } catch (e) {
         console.log('Background role sync via /auth/me failed:', e?.response?.data || e.message);
@@ -151,6 +176,28 @@ export const authService = {
     // Fallback: Check backend /auth/me
     try {
       const response = await api.get('/auth/me');
+      const dbUser = response.data?.data || response.data?.user || response.data;
+      if (dbUser) {
+        const userId = dbUser.id || dbUser.user_id;
+        const cachedFrameId =
+          dbUser.user_metadata?.profile_frame_id ||
+          dbUser.current_frame_id ||
+          (userId ? localStorage.getItem(`profile_frame_id_${userId}`) : null) ||
+          localStorage.getItem("profile_frame_id") ||
+          null;
+        const cachedWallpaper =
+          dbUser.user_metadata?.wallpaper_url ||
+          dbUser.wallpaper ||
+          (userId ? localStorage.getItem(`wallpaper_url_${userId}`) : null) ||
+          localStorage.getItem("wallpaper_url") ||
+          null;
+
+        dbUser.user_metadata = {
+          ...(dbUser.user_metadata || {}),
+          profile_frame_id: cachedFrameId,
+          wallpaper_url: cachedWallpaper,
+        };
+      }
       return response.data;
     } catch (e) {
       return null;
