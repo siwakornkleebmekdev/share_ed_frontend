@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Heart, Eye, BookmarkPlus, BookmarkCheck, Crown, Medal } from 'lucide-react';
+import { Heart, Eye, Bookmark, BookmarkPlus, BookmarkCheck, Crown, Medal } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import toast from 'react-hot-toast';
 import { postService } from '../services/post.service';
@@ -53,11 +53,6 @@ export default function PostCard({ post, viewMode, rank = null, dark = false }) 
         if (typeof resData?.likes_count === 'number') return resData.likes_count;
         return newIsLiked ? count + 1 : Math.max(0, count - 1);
       });
-      if (newIsLiked) {
-        toast.success('ถูกใจโพสต์แล้ว');
-      } else {
-        toast('ยกเลิกการถูกใจ', { icon: '💔' });
-      }
     } catch (err) {
       console.error('Error liking post in card:', err);
       toast.error('เกิดข้อผิดพลาดในการกดถูกใจ');
@@ -88,7 +83,7 @@ export default function PostCard({ post, viewMode, rank = null, dark = false }) 
       if (newIsBookmarked) {
         toast.success('เพิ่มบุ๊คมาร์กเรียบร้อย');
       } else {
-        toast('นำบุ๊คมาร์กออกแล้ว', { icon: '🗑️' });
+        toast('นำบุ๊คมาร์กออกแล้ว', { icon: <Bookmark className="h-5 w-5 text-amber-500" /> });
       }
     } catch (err) {
       console.error('Error bookmarking post in card:', err);

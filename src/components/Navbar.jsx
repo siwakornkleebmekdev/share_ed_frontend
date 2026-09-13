@@ -57,9 +57,11 @@ export default function Navbar() {
   };
 
   useEffect(() => {
-    fetchNotifications();
-    fetchMilestones();
-  }, [fetchNotifications, fetchMilestones]);
+    if (isAuthenticated) {
+      fetchNotifications();
+      fetchMilestones();
+    }
+  }, [isAuthenticated, fetchNotifications, fetchMilestones]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -101,13 +103,11 @@ export default function Navbar() {
       className={`fixed top-0 left-0 w-full z-50 transition-all duration-500 ease-out px-4 ${isScrolled ? "pt-2" : "pt-4"}`}
     >
       <nav
-        className={`mx-auto backdrop-blur-md transition-all duration-500 ease-out overflow-visible rounded-full border ${
-          isDarkHero ? "border-white/10" : "border-slate-200/50"
-        } ${
-          isScrolled
+        className={`mx-auto backdrop-blur-md transition-all duration-500 ease-out overflow-visible rounded-full border ${isDarkHero ? "border-white/10" : "border-slate-200/50"
+          } ${isScrolled
             ? "w-[92%] max-w-5xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] py-2 px-6"
             : "w-[98%] max-w-7xl shadow-sm py-2.5 px-8"
-        }`}
+          }`}
         style={{
           backgroundColor: rgbToRgba(glassColor, isScrolled ? 85 : 65),
           transition: "background-color 500ms ease-out",
@@ -149,200 +149,200 @@ export default function Navbar() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-            <Link
-              to="/create"
-              id="create-post-btn"
-              name="create-post-btn"
-              data-testid="create-post-btn"
-              role="button"
-              aria-label="สร้างโพสต์"
-              className="flex items-center gap-1.5 bg-primary text-white hover:bg-blue-600 rounded-full font-bold px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
-            >
-              <PenTool className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span>สร้างโพสต์</span>
-            </Link>
+            {isAuthenticated ? (
+              <>
+                <Link
+                  to="/create"
+                  id="create-post-btn"
+                  name="create-post-btn"
+                  data-testid="create-post-btn"
+                  role="button"
+                  aria-label="สร้างโพสต์"
+                  className="flex items-center gap-1.5 bg-primary text-white hover:bg-blue-600 rounded-full font-bold px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
+                >
+                  <PenTool className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <span>สร้างโพสต์</span>
+                </Link>
 
-            <div className="relative" ref={notifRef}>
-              <button
-                onClick={() => setShowNotifications(!showNotifications)}
-                className={`relative p-2.5 rounded-full transition-colors shadow-sm ${isDarkHero ? "text-slate-300 hover:text-white bg-white/10 hover:bg-white/20" : "text-slate-500 hover:text-primary bg-slate-100 hover:bg-slate-200"}`}
-              >
-                <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
-                {unreadCount() > 0 && (
-                  <span className="absolute top-0 right-0 h-3 w-3 bg-red-500 border-2 border-white rounded-full"></span>
-                )}
-              </button>
-
-              {/* Notification Dropdown */}
-              {showNotifications && (
-                <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
-                  <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                    <h3 className="font-bold text-slate-800 text-base">
-                      การแจ้งเตือน
-                    </h3>
+                <div className="relative" ref={notifRef}>
+                  <button
+                    onClick={() => setShowNotifications(!showNotifications)}
+                    className={`relative p-2.5 rounded-full transition-colors shadow-sm ${isDarkHero ? "text-slate-300 hover:text-white bg-white/10 hover:bg-white/20" : "text-slate-500 hover:text-primary bg-slate-100 hover:bg-slate-200"}`}
+                  >
+                    <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
                     {unreadCount() > 0 && (
-                      <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-0.5 rounded-full">
-                        {unreadCount()} ใหม่
-                      </span>
+                      <span className="absolute top-0 right-0 h-3 w-3 bg-red-500 border-2 border-white rounded-full"></span>
                     )}
-                  </div>
+                  </button>
 
-                  <div className="max-h-[320px] overflow-y-auto">
-                    {notifications.length === 0 ? (
-                      <div className="p-8 text-center text-slate-500 flex flex-col items-center gap-2">
-                        <Bell className="h-8 w-8 text-slate-300" />
-                        <p className="text-sm font-medium">
-                          ยังไม่ได้รับการแจ้งเตือนใดๆ
-                        </p>
+                  {/* Notification Dropdown */}
+                  {showNotifications && (
+                    <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+                      <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                        <h3 className="font-bold text-slate-800 text-base">
+                          การแจ้งเตือน
+                        </h3>
+                        {unreadCount() > 0 && (
+                          <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-0.5 rounded-full">
+                            {unreadCount()} ใหม่
+                          </span>
+                        )}
                       </div>
-                    ) : (
-                      <div className="divide-y divide-slate-100">
-                        {notifications.slice(0, 5).map((notif) => (
-                          <div
-                            key={notif.id}
-                            onClick={() => {
-                              if (!notif.isRead) markAsRead(notif.id);
-                            }}
-                            className={`p-4 flex gap-3 hover:bg-slate-50 transition-colors cursor-pointer ${!notif.isRead ? "bg-blue-50/30" : ""}`}
-                          >
-                            <div
-                              className={`mt-0.5 p-2 rounded-full h-fit flex-shrink-0 ${!notif.isRead ? "bg-white shadow-sm" : "bg-slate-100"}`}
-                            >
-                              {getNotificationIcon(notif.type)}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p
-                                className={`text-sm mb-0.5 truncate ${!notif.isRead ? "font-bold text-slate-800" : "font-medium text-slate-700"}`}
-                              >
-                                {notif.title}
-                              </p>
-                              <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
-                                {notif.message}
-                              </p>
-                            </div>
-                            {!notif.isRead && (
-                              <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5 flex-shrink-0"></div>
-                            )}
+
+                      <div className="max-h-[320px] overflow-y-auto">
+                        {notifications.length === 0 ? (
+                          <div className="p-8 text-center text-slate-500 flex flex-col items-center gap-2">
+                            <Bell className="h-8 w-8 text-slate-300" />
+                            <p className="text-sm font-medium">
+                              ยังไม่ได้รับการแจ้งเตือนใดๆ
+                            </p>
                           </div>
-                        ))}
+                        ) : (
+                          <div className="divide-y divide-slate-100">
+                            {notifications.slice(0, 5).map((notif) => (
+                              <div
+                                key={notif.id}
+                                onClick={() => {
+                                  if (!notif.isRead) markAsRead(notif.id);
+                                }}
+                                className={`p-4 flex gap-3 hover:bg-slate-50 transition-colors cursor-pointer ${!notif.isRead ? "bg-blue-50/30" : ""}`}
+                              >
+                                <div
+                                  className={`mt-0.5 p-2 rounded-full h-fit flex-shrink-0 ${!notif.isRead ? "bg-white shadow-sm" : "bg-slate-100"}`}
+                                >
+                                  {getNotificationIcon(notif.type)}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p
+                                    className={`text-sm mb-0.5 truncate ${!notif.isRead ? "font-bold text-slate-800" : "font-medium text-slate-700"}`}
+                                  >
+                                    {notif.title}
+                                  </p>
+                                  <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
+                                    {notif.message}
+                                  </p>
+                                </div>
+                                {!notif.isRead && (
+                                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5 flex-shrink-0"></div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
 
-                  {notifications.length > 0 && (
-                    <div className="p-3 border-t border-slate-100 bg-slate-50 text-center hover:bg-slate-100 transition-colors">
-                      <Link
-                        to="/notifications"
-                        onClick={() => setShowNotifications(false)}
-                        className="text-sm font-bold text-primary block w-full"
-                      >
-                        ดูการแจ้งเตือนทั้งหมด
-                      </Link>
+                      {notifications.length > 0 && (
+                        <div className="p-3 border-t border-slate-100 bg-slate-50 text-center hover:bg-slate-100 transition-colors">
+                          <Link
+                            to="/notifications"
+                            onClick={() => setShowNotifications(false)}
+                            className="text-sm font-bold text-primary block w-full"
+                          >
+                            ดูการแจ้งเตือนทั้งหมด
+                          </Link>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
-              )}
-            </div>
 
-            {isAuthenticated && (
-              <Link
-                to="/achievements"
-                title="ความสำเร็จ"
-                className={`relative p-2.5 rounded-full transition-colors shadow-sm ${isDarkHero ? "text-slate-300 hover:text-white bg-white/10 hover:bg-white/20" : "text-slate-500 hover:text-primary bg-slate-100 hover:bg-slate-200"}`}
-              >
-                <Trophy className="h-4 w-4 sm:h-5 sm:w-5" />
-                {readyToClaimCount() > 0 && (
-                  <span className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center bg-amber-500 border-2 border-white rounded-full text-[9px] font-bold text-white">
-                    {readyToClaimCount()}
-                  </span>
-                )}
-              </Link>
-            )}
-
-            {isAuthenticated ? (
-              <div className="relative" ref={profileRef}>
-                <button
-                  onClick={() => setShowProfileMenu(!showProfileMenu)}
-                  className={`flex items-center justify-center p-2.5 rounded-full transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 ${isDarkHero ? "text-slate-300 hover:text-white bg-white/10 hover:bg-white/20" : "text-slate-500 hover:text-primary bg-slate-100 hover:bg-slate-200"}`}
-                  title="เมนูผู้ใช้"
+                <Link
+                  to="/achievements"
+                  title="ความสำเร็จ"
+                  className={`relative p-2.5 rounded-full transition-colors shadow-sm ${isDarkHero ? "text-slate-300 hover:text-white bg-white/10 hover:bg-white/20" : "text-slate-500 hover:text-primary bg-slate-100 hover:bg-slate-200"}`}
                 >
-                  {user?.avatar_url || user?.user_metadata?.avatar_url || user?.avatar ? (
-                    <img
-                      src={user?.avatar_url || user?.user_metadata?.avatar_url || user?.avatar}
-                      alt="Profile"
-                      className="h-4 w-4 sm:h-5 sm:w-5 rounded-full object-cover"
-                    />
-                  ) : (
-                    <User className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <Trophy className="h-4 w-4 sm:h-5 sm:w-5" />
+                  {readyToClaimCount() > 0 && (
+                    <span className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center bg-amber-500 border-2 border-white rounded-full text-[9px] font-bold text-white">
+                      {readyToClaimCount()}
+                    </span>
                   )}
-                </button>
+                </Link>
 
-                {/* Profile Dropdown */}
-                {showProfileMenu && (
-                  <div className="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
-                    <div className="p-4 border-b border-slate-100 bg-slate-50/50">
-                      <p className="font-bold text-slate-800 truncate">
-                        {user?.display_name ||
-                          user?.username ||
-                          user?.user_metadata?.full_name ||
-                          user?.name ||
-                          "ผู้ใช้งาน"}
-                      </p>
-                      <p className="text-sm text-slate-500 truncate mt-0.5">
-                        {user?.email || "ไม่มีอีเมล"}
-                      </p>
-                    </div>
+                <div className="relative" ref={profileRef}>
+                  <button
+                    onClick={() => setShowProfileMenu(!showProfileMenu)}
+                    className={`flex items-center justify-center p-2.5 rounded-full transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 ${isDarkHero ? "text-slate-300 hover:text-white bg-white/10 hover:bg-white/20" : "text-slate-500 hover:text-primary bg-slate-100 hover:bg-slate-200"}`}
+                    title="เมนูผู้ใช้"
+                  >
+                    {user?.avatar_url || user?.user_metadata?.avatar_url || user?.avatar ? (
+                      <img
+                        src={user?.avatar_url || user?.user_metadata?.avatar_url || user?.avatar}
+                        alt="Profile"
+                        className="h-4 w-4 sm:h-5 sm:w-5 rounded-full object-cover"
+                      />
+                    ) : (
+                      <User className="h-4 w-4 sm:h-5 sm:w-5" />
+                    )}
+                  </button>
 
-                    <div className="p-2">
-                      <Link
-                        to="/profile"
-                        onClick={() => setShowProfileMenu(false)}
-                        className="flex items-center gap-3 w-full p-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors"
-                      >
-                        <User className="h-4 w-4" />
-                        โปรไฟล์ของฉัน
-                      </Link>
-                      {user?.role === "ADMIN" ? (
+                  {/* Profile Dropdown */}
+                  {showProfileMenu && (
+                    <div className="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+                      <div className="p-4 border-b border-slate-100 bg-slate-50/50">
+                        <p className="font-bold text-slate-800 truncate">
+                          {user?.display_name ||
+                            user?.username ||
+                            user?.user_metadata?.full_name ||
+                            user?.name ||
+                            "ผู้ใช้งาน"}
+                        </p>
+                        <p className="text-sm text-slate-500 truncate mt-0.5">
+                          {user?.email || "ไม่มีอีเมล"}
+                        </p>
+                      </div>
+
+                      <div className="p-2">
                         <Link
-                          to="/admin"
+                          to="/profile"
                           onClick={() => setShowProfileMenu(false)}
                           className="flex items-center gap-3 w-full p-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors"
                         >
-                          <ShieldCheck className="h-4 w-4" />
-                          Admin Console
+                          <User className="h-4 w-4" />
+                          โปรไฟล์ของฉัน
                         </Link>
-                      ) : (
+                        {user?.role === "ADMIN" ? (
+                          <Link
+                            to="/admin"
+                            onClick={() => setShowProfileMenu(false)}
+                            className="flex items-center gap-3 w-full p-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors"
+                          >
+                            <ShieldCheck className="h-4 w-4" />
+                            Admin Console
+                          </Link>
+                        ) : (
+                          <Link
+                            to="/profile?tab=drafts"
+                            onClick={() => setShowProfileMenu(false)}
+                            className="flex items-center gap-3 w-full p-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors"
+                          >
+                            <FileText className="h-4 w-4" />
+                            แบบร่างของฉัน
+                          </Link>
+                        )}
                         <Link
-                          to="/profile?tab=drafts"
+                          to="/settings/profile"
                           onClick={() => setShowProfileMenu(false)}
                           className="flex items-center gap-3 w-full p-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors"
                         >
-                          <FileText className="h-4 w-4" />
-                          แบบร่างของฉัน
+                          <Settings className="h-4 w-4" />
+                          ตั้งค่าบัญชี
                         </Link>
-                      )}
-                      <Link
-                        to="/settings/profile"
-                        onClick={() => setShowProfileMenu(false)}
-                        className="flex items-center gap-3 w-full p-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors"
-                      >
-                        <Settings className="h-4 w-4" />
-                        ตั้งค่าบัญชี
-                      </Link>
-                    </div>
+                      </div>
 
-                    <div className="p-2 border-t border-slate-100">
-                      <button
-                        onClick={handleLogout}
-                        className="flex items-center gap-3 w-full p-2 text-left text-sm font-medium text-red-600 hover:bg-red-50 rounded-xl transition-colors"
-                      >
-                        <LogOut className="h-4 w-4" />
-                        ออกจากระบบ
-                      </button>
+                      <div className="p-2 border-t border-slate-100">
+                        <button
+                          onClick={handleLogout}
+                          className="flex items-center gap-3 w-full p-2 text-left text-sm font-medium text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          ออกจากระบบ
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              </>
             ) : (
               <Link
                 to="/login"

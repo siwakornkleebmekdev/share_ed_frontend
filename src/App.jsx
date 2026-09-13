@@ -434,7 +434,7 @@ function App() {
       </Routes>
 
       <Toaster
-        position="bottom-center"
+        position="bottom-right"
         toastOptions={{
           style: {
             borderRadius: "12px",

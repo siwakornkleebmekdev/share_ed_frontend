@@ -182,11 +182,6 @@ export default function PostDetails() {
           likes: updatedLikes
         };
       });
-      if (newIsLiked) {
-        toast.success('ถูกใจโพสต์แล้ว');
-      } else {
-        toast('ยกเลิกการถูกใจ', { icon: '💔' });
-      }
     } catch (error) {
       console.error('Error liking post:', error);
       toast.error('เกิดข้อผิดพลาดในการกดถูกใจ');
@@ -216,7 +211,7 @@ export default function PostDetails() {
       if (newIsBookmarked) {
         toast.success('เพิ่มบุ๊คมาร์กเรียบร้อย');
       } else {
-        toast('นำบุ๊คมาร์กออกแล้ว', { icon: '🗑️' });
+        toast('นำบุ๊คมาร์กออกแล้ว', { icon: <Bookmark className="h-5 w-5 text-amber-500" /> });
       }
     } catch (error) {
       console.error('Error bookmarking post:', error);

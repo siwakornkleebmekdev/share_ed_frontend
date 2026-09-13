@@ -370,7 +370,7 @@ export default function CreatePost() {
                 <label className="flex flex-col items-center justify-center w-full aspect-video border-2 border-dashed border-slate-300 rounded-2xl hover:border-primary hover:bg-slate-50 cursor-pointer transition-all">
                   <ImageIcon className="h-10 w-10 text-slate-400 mb-3" />
                   <span className="text-sm font-medium text-slate-500">คลิกเพื่ออัปโหลดรูปปก</span>
-                  <span className="text-xs text-slate-400 mt-1">อัตราส่วนที่แนะนำ 16:9 (1280×720px) รูปภาพขนาดไม่เกิน 20 Mb</span>
+                  <span className="text-xs text-slate-400 mt-1">อัตราส่วนที่แนะนำ 16:9 (1280×720px) รูปภาพขนาดไม่เกิน 2 Mb</span>
                   <input type="file" className="hidden" accept=".jpg,.jpeg,.png" onChange={handleCoverUpload} />
                 </label>
               ) : (
@@ -570,7 +570,7 @@ export default function CreatePost() {
             <div>
               <label className="flex items-center justify-between text-base font-bold text-slate-800 mb-3">
                 <span>รูปภาพประกอบ ({images.length}/15)</span>
-                <span className="text-xs font-normal text-slate-500">ไม่เกินรูปละ 5 MB</span>
+                <span className="text-xs font-normal text-slate-500">ไม่เกินรูปละ 2 MB</span>
               </label>
 
               <div className="flex flex-wrap gap-4 pt-1">
