@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { UploadCloud, File, X, GraduationCap, Tag, AlignLeft, BookOpen, PenTool, Save, Image as ImageIcon, Plus, Eye, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -6,6 +6,7 @@ import Swal from 'sweetalert2';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import { postService } from '../services/post.service';
+import { categoryService, isValidCategoryUuid } from '../services/category.service';
 import { uploadFileToSupabase } from '@/utils/storage';
 
 const SUGGESTED_TAGS = ['#AI', '#เรียนรู้ไปด้วยกัน', '#เตรียมสอบ', '#TCAS67', '#สรุปย่อ', '#แชร์ความรู้', '#เด็กซิ่ว', '#สรุปชีท'];
@@ -20,7 +21,9 @@ export default function CreatePost() {
   const [summary, setSummary] = useState('');
   const [content, setContent] = useState('');
 
-  const [category, setCategory] = useState('');
+  const [categoriesList, setCategoriesList] = useState([]);
+  const [categoryId, setCategoryId] = useState('');
+  const [categoryName, setCategoryName] = useState('');
   const [level, setLevel] = useState('');
 
   const [hashtags, setHashtags] = useState([]);
@@ -30,6 +33,33 @@ export default function CreatePost() {
   const [showModal, setShowModal] = useState(false);
   const [previewFile, setPreviewFile] = useState(null); // { type: 'image' | 'pdf', url: string }
   const [fieldErrors, setFieldErrors] = useState({});
+
+  // Fetch categories on mount
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const list = await categoryService.getAllCategories();
+        setCategoriesList(list);
+      } catch (err) {
+        console.error('Error fetching categories:', err);
+      }
+    };
+    loadCategories();
+  }, []);
+
+  const handleCategorySelect = (selectedId) => {
+    const found = categoriesList.find(c => c.id === selectedId || c.name === selectedId);
+    if (found) {
+      setCategoryId(found.id);
+      setCategoryName(found.name);
+    } else {
+      setCategoryId(selectedId);
+      setCategoryName(selectedId);
+    }
+    if (fieldErrors.category) {
+      setFieldErrors(prev => ({ ...prev, category: null }));
+    }
+  };
 
   // File Handlers
   const handleCoverUpload = (e) => {
@@ -207,7 +237,7 @@ export default function CreatePost() {
     else if (title.length > 100) newErrors.title = 'ชื่อหัวข้อต้องมีความยาวไม่เกิน 100 ตัวอักษร';
     if (!level) newErrors.level = 'กรุณาเลือกระดับชั้น';
     if (!summary.trim()) newErrors.summary = 'กรุณากรอกบทสรุปย่อ';
-    if (!category) newErrors.category = 'กรุณาเลือกหมวดหมู่วิชา';
+    if (!categoryId && !categoryName) newErrors.category = 'กรุณาเลือกหมวดหมู่วิชา';
 
     if (Object.keys(newErrors).length > 0) {
       setFieldErrors(newErrors);
@@ -227,7 +257,21 @@ export default function CreatePost() {
       formData.append('title', title.trim());
       formData.append('summary', summary.trim());
       formData.append('content', content);
-      formData.append('category', category);
+      
+      // Resolve valid category UUID from selected category
+      let validCatId = isValidCategoryUuid(categoryId) ? categoryId : null;
+      if (!validCatId && categoryName) {
+        const matchInList = categoriesList.find(c => c.name === categoryName && isValidCategoryUuid(c.id));
+        if (matchInList) {
+          validCatId = matchInList.id;
+        }
+      }
+      if (validCatId) {
+        formData.append('category_id', validCatId);
+      }
+      if (categoryName) {
+        formData.append('category', categoryName);
+      }
 
       let backendLevel = 'UNIVERSITY';
       if (level === 'มัธยมศึกษาตอนต้น') backendLevel = 'MIDDLE_SCHOOL';
@@ -268,8 +312,7 @@ export default function CreatePost() {
         if (imageUrls.length > 0) {
           formData.append('image_urls', JSON.stringify(imageUrls));
         }
-      }
-
+      // Send only user-entered hashtags
       formData.append('tags', JSON.stringify(hashtags));
 
       const result = await postService.createPost(formData);
@@ -282,7 +325,7 @@ export default function CreatePost() {
           text: status === 'ACTIVE' ? 'โพสต์สรุปความรู้เรียบร้อยแล้ว' : 'บันทึกแบบร่างเรียบร้อยแล้ว',
           confirmButtonColor: '#3b82f6'
         }).then(() => {
-          navigate('/explore');
+          navigate('/home');
         });
       } else {
         throw new Error(result.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
@@ -441,10 +484,10 @@ export default function CreatePost() {
                 }`}
             >
               <div className="flex flex-col gap-2">
-                {category ? (
+                {categoryName ? (
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-bold text-slate-400">วิชาที่เลือก:</span>
-                    <span className="px-3 py-1 bg-primary/10 text-primary font-bold text-xs rounded-full">{category}</span>
+                    <span className="px-3 py-1 bg-primary/10 text-primary font-bold text-xs rounded-full">{categoryName}</span>
                   </div>
                 ) : (
                   <span className="text-sm text-rose-500 font-medium">กรุณาเลือกหมวดหมู่วิชา *</span>
@@ -579,7 +622,7 @@ export default function CreatePost() {
 
         {/* Actions */}
         <div className="sticky bottom-0 z-40 bg-slate-50 p-6 sm:px-12 sm:py-8 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4 rounded-b-[24px] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-          <button onClick={() => navigate('/explore')} className="w-full sm:w-auto px-6 py-4 rounded-xl font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-colors shadow-sm cursor-pointer">
+          <button onClick={() => navigate('/home')} className="w-full sm:w-auto px-6 py-4 rounded-xl font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-colors shadow-sm cursor-pointer">
             ยกเลิก
           </button>
           <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
@@ -615,19 +658,16 @@ export default function CreatePost() {
                   <BookOpen className="h-5 w-5 text-primary" /> หมวดหมู่วิชา <span className="text-rose-500">*</span>
                 </label>
                 <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-5 py-3.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors bg-white font-medium text-slate-700 text-base"
+                  value={categoryId || categoryName}
+                  onChange={(e) => handleCategorySelect(e.target.value)}
+                  className="w-full px-5 py-3.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors bg-white font-medium text-slate-700 text-base cursor-pointer"
                 >
-                  <option value="" disabled>เลือกวิชา</option>
-                  <option value="คณิตศาสตร์">คณิตศาสตร์</option>
-                  <option value="วิทยาศาสตร์">วิทยาศาสตร์</option>
-                  <option value="ฟิสิกส์">ฟิสิกส์</option>
-                  <option value="เคมี">เคมี</option>
-                  <option value="ชีววิทยา">ชีววิทยา</option>
-                  <option value="ภาษาอังกฤษ">ภาษาอังกฤษ</option>
-                  <option value="สังคมศึกษา">สังคมศึกษา</option>
-                  <option value="ภาษาไทย">ภาษาไทย</option>
+                  <option value="" disabled>เลือกหมวดหมู่วิชา</option>
+                  {categoriesList.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 

@@ -3,20 +3,23 @@ import { useSearchParams } from 'react-router';
 import { LayoutGrid, List, SlidersHorizontal, Search, X } from 'lucide-react';
 import PostCard from '@/components/PostCard';
 import { postService } from '@/services/post.service';
+import { categoryService } from '@/services/category.service';
 import { Loader2 } from 'lucide-react';
 
 export default function Explore() {
   const [posts, setPosts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchParams] = useSearchParams();
   const initialSubject = searchParams.get('subject');
   const initialLevel = searchParams.get('level');
+  const initialSearch = searchParams.get('search') || searchParams.get('q') || '';
 
   const [viewMode, setViewMode] = useState('grid');
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const [selectedLevels, setSelectedLevels] = useState(initialLevel ? [initialLevel] : []);
   const [selectedSubjects, setSelectedSubjects] = useState(initialSubject ? [initialSubject] : []);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
 
   useEffect(() => {
     const subjectParam = searchParams.get('subject');
@@ -34,21 +37,30 @@ export default function Explore() {
         return prev;
       });
     }
+
+    const searchParam = searchParams.get('search') || searchParams.get('q');
+    if (searchParam) {
+      setSearchQuery(searchParam);
+    }
   }, [searchParams]);
 
   useEffect(() => {
-    const fetchPosts = async () => {
+    const fetchData = async () => {
       try {
         setIsLoading(true);
-        const fetchedPosts = await postService.getAllPosts();
-        setPosts(fetchedPosts);
+        const [fetchedPosts, fetchedCats] = await Promise.all([
+          postService.getAllPosts(),
+          categoryService.getAllCategories()
+        ]);
+        setPosts(fetchedPosts || []);
+        setCategories(fetchedCats || []);
       } catch (error) {
-        console.error('Error loading posts:', error);
+        console.error('Error loading explore data:', error);
       } finally {
         setIsLoading(false);
       }
     };
-    fetchPosts();
+    fetchData();
   }, []);
 
   const toggleLevel = (level) => {
@@ -57,20 +69,34 @@ export default function Explore() {
     );
   };
 
-  const toggleSubject = (subject) => {
+  const toggleSubject = (subjectName) => {
     setSelectedSubjects(prev => 
-      prev.includes(subject) ? prev.filter(s => s !== subject) : [...prev, subject]
+      prev.includes(subjectName) ? prev.filter(s => s !== subjectName) : [...prev, subjectName]
     );
   };
 
   const filteredPosts = posts.filter(post => {
-    const matchSearch = post.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                        post.subject.toLowerCase().includes(searchQuery.toLowerCase());
+    const q = searchQuery.toLowerCase().trim();
+    const matchSearch = !q || 
+      (post.title && post.title.toLowerCase().includes(q)) || 
+      (post.subject && post.subject.toLowerCase().includes(q)) ||
+      (post.description && post.description.toLowerCase().includes(q)) ||
+      (post.author && post.author.toLowerCase().includes(q)) ||
+      (Array.isArray(post.tags) && post.tags.some(t => t.toLowerCase().includes(q)));
+
     const matchLevel = selectedLevels.length === 0 || selectedLevels.includes(post.level);
-    const matchSubject = selectedSubjects.length === 0 || selectedSubjects.includes(post.subject);
+    const matchSubject = selectedSubjects.length === 0 || 
+      selectedSubjects.includes(post.subject) ||
+      (post.category?.name && selectedSubjects.includes(post.category.name)) ||
+      (Array.isArray(post.tags) && post.tags.some(t => selectedSubjects.includes(typeof t === 'string' ? t.replace(/^#/, '').trim() : '')));
     
     return matchSearch && matchLevel && matchSubject;
   });
+
+  // Unique list of subject names from categories or posts
+  const subjectList = categories.length > 0 
+    ? categories.map(c => c.name) 
+    : ['คณิตศาสตร์', 'ฟิสิกส์', 'เคมี', 'ชีววิทยา', 'วิทยาศาสตร์', 'ภาษาอังกฤษ', 'สังคมศึกษา', 'ภาษาไทย', 'คอมพิวเตอร์และเทคโนโลยี', 'ทั่วไป'];
 
   const FilterContent = () => (
     <div className="space-y-6">
@@ -83,7 +109,7 @@ export default function Explore() {
                 type="checkbox" 
                 checked={selectedLevels.includes(level)}
                 onChange={() => toggleLevel(level)}
-                className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary transition-colors" 
+                className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary transition-colors cursor-pointer" 
               />
               <span className="text-slate-600 text-sm group-hover:text-slate-900 transition-colors">{level}</span>
             </label>
@@ -92,16 +118,16 @@ export default function Explore() {
       </div>
       <div>
         <h3 className="font-semibold text-slate-800 mb-3">หมวดหมู่วิชา</h3>
-        <div className="space-y-2">
-          {['คณิตศาสตร์', 'ฟิสิกส์', 'เคมี', 'ชีววิทยา', 'ภาษาอังกฤษ', 'สังคมศึกษา'].map(subject => (
+        <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
+          {subjectList.map(subject => (
             <label key={subject} className="flex items-center gap-2 cursor-pointer group">
               <input 
                 type="checkbox" 
                 checked={selectedSubjects.includes(subject)}
                 onChange={() => toggleSubject(subject)}
-                className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary transition-colors" 
+                className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary transition-colors cursor-pointer" 
               />
-              <span className="text-slate-600 text-sm group-hover:text-slate-900 transition-colors">{subject}</span>
+              <span className="text-slate-600 text-sm group-hover:text-slate-900 transition-colors truncate">{subject}</span>
             </label>
           ))}
         </div>

@@ -617,6 +617,8 @@ function mapMilestoneToAchievement(m) {
   };
 }
 
+import { resolveCategoryName } from './post.service';
+
 // Helper function to format data for PostCard component
 function formatPosts(data) {
   if (!data) return [];
@@ -625,7 +627,7 @@ function formatPosts(data) {
     title: post.title,
     description: post.summary || "ไม่มีคำอธิบาย",
     level: mapEducationLevel(post.education_level),
-    subject: post.category?.category_name || post.category?.name || "ทั่วไป",
+    subject: resolveCategoryName(post),
     views: formatNumber(post.view_count),
     likes: post._count?.likes || (typeof post.likes === 'number' ? post.likes : 0),
     isLiked: Boolean(post.is_liked || post.isLiked || post.has_liked),

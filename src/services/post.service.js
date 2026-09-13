@@ -1,10 +1,11 @@
 import api from '../utils/api';
+import { categoryService } from './category.service';
 
 export const postService = {
   // Fetch all posts (Active/Published)
-  getAllPosts: async () => {
+  getAllPosts: async (params = {}) => {
     try {
-      const response = await api.get('/posts');
+      const response = await api.get('/posts', { params });
       if (response.data.success) {
         return response.data.data.map(formatPostData);
       }
@@ -13,6 +14,11 @@ export const postService = {
       console.error('Error fetching all posts:', error);
       throw error;
     }
+  },
+
+  // Get categories helper
+  getCategories: async () => {
+    return await categoryService.getAllCategories();
   },
 
   // Fetch a single post by ID
@@ -179,13 +185,63 @@ export const postService = {
   }
 };
 
+export const KNOWN_SUBJECTS = [
+  'คณิตศาสตร์',
+  'ฟิสิกส์',
+  'เคมี',
+  'ชีววิทยา',
+  'วิทยาศาสตร์',
+  'ภาษาอังกฤษ',
+  'ภาษาไทย',
+  'สังคมศึกษา',
+  'คอมพิวเตอร์และเทคโนโลยี',
+  'ทั่วไป'
+];
+
+export function resolveCategoryName(post) {
+  if (!post) return 'ทั่วไป';
+
+  // 1. Check if post.category is an object with a valid name
+  if (post.category && typeof post.category === 'object') {
+    const name = post.category.name || post.category.category_name;
+    if (name && typeof name === 'string' && name.trim() && name !== 'null' && name !== 'undefined') {
+      return name.trim();
+    }
+  }
+
+  // 2. Check if post.category is a direct string
+  if (typeof post.category === 'string' && post.category.trim() && post.category !== 'null' && post.category !== 'undefined') {
+    return post.category.trim();
+  }
+
+  // 3. Check direct subject field
+  if (typeof post.subject === 'string' && post.subject.trim() && post.subject !== 'ทั่วไป' && post.subject !== 'null' && post.subject !== 'undefined') {
+    return post.subject.trim();
+  }
+
+  // 4. Look inside tags for any known subject name
+  const tagsList = Array.isArray(post.tags) ? post.tags : [];
+  for (const t of tagsList) {
+    const rawTag = (typeof t === 'string' ? t : (t?.tag?.tag_name || t?.tag_name || t?.name || '')).replace(/^#/, '').trim();
+    const matched = KNOWN_SUBJECTS.find(sub => sub.toLowerCase() === rawTag.toLowerCase());
+    if (matched) return matched;
+  }
+
+  return 'ทั่วไป';
+}
+
 function formatPostData(post) {
+  const categoryName = resolveCategoryName(post);
   return {
     id: post.id,
     title: post.title,
     description: post.summary || 'ไม่มีคำอธิบาย',
     level: mapEducationLevel(post.education_level),
-    subject: post.category?.category_name || post.category?.name || 'ทั่วไป',
+    rawLevel: post.education_level,
+    subject: categoryName,
+    category_id: post.category_id || post.category?.id || null,
+    category: post.category || { id: post.category_id, name: categoryName },
+    tags: post.tags?.map(t => typeof t === 'string' ? t : (t.tag?.tag_name || t.name)) || [],
     views: formatNumber(post.view_count),
     likes: post._count?.likes || post.like_count || post.likes_count || (Array.isArray(post.likes) ? post.likes.length : (typeof post.likes === 'number' ? post.likes : 0)),
     isLiked: Boolean(post.is_liked || post.isLiked || post.has_liked),
@@ -201,6 +257,7 @@ function formatSinglePostData(post) {
   const hashtags = post.tags?.map(t => typeof t === 'string' ? t : (t.tag?.tag_name || t.name)) || [];
   const images = post.media?.filter(m => m.media_type === 'IMAGE').map(m => m.media_url) || [];
   const authorId = post.author?.id || post.author?.user_id || post.author_id || post.user_id || post.userId;
+  const categoryName = resolveCategoryName(post);
 
   const comments = (post.comments || []).map(c => {
     const userObj = c.user || c.author || {};
@@ -226,7 +283,11 @@ function formatSinglePostData(post) {
     description: post.summary || 'ไม่มีคำอธิบาย',
     details: post.content || '<p>ไม่มีเนื้อหา</p>',
     level: mapEducationLevel(post.education_level),
-    category: post.category?.category_name || post.category?.name || 'ทั่วไป',
+    rawLevel: post.education_level,
+    subject: categoryName,
+    category: categoryName,
+    category_id: post.category_id || post.category?.id || null,
+    categoryObj: post.category || { id: post.category_id, name: categoryName },
     views: formatNumber(post.view_count),
     likes: post._count?.likes || post.like_count || post.likes_count || (Array.isArray(post.likes) ? post.likes.length : (typeof post.likes === 'number' ? post.likes : 0)),
     rawLikes: Array.isArray(post.likes) ? post.likes : [],

@@ -5,7 +5,8 @@ import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
-import { postService } from '@/services/post.service';
+import { postService, resolveCategoryName } from '@/services/post.service';
+import { categoryService, isValidCategoryUuid, DEFAULT_SUBJECT_NAMES } from '@/services/category.service';
 import { uploadFileToSupabase } from '@/utils/storage';
 import useAuthStore from '@/store/authStore';
 import api from '../utils/api';
@@ -35,7 +36,9 @@ export default function EditPost() {
   const [title, setTitle] = useState('');
   const [summary, setSummary] = useState('');
   const [content, setContent] = useState('');
-  const [category, setCategory] = useState('');
+  const [categoriesList, setCategoriesList] = useState([]);
+  const [categoryId, setCategoryId] = useState('');
+  const [categoryName, setCategoryName] = useState('');
   const [level, setLevel] = useState('');
   const [hashtags, setHashtags] = useState([]);
   const [hashtagInput, setCountryInput] = useState('');
@@ -44,6 +47,20 @@ export default function EditPost() {
 
   const [showModal, setShowModal] = useState(false);
   const [previewFile, setPreviewFile] = useState(null);
+
+  const handleCategorySelect = (selectedId) => {
+    const found = categoriesList.find(c => c.id === selectedId || c.name === selectedId);
+    if (found) {
+      setCategoryId(found.id);
+      setCategoryName(found.name);
+    } else {
+      setCategoryId(selectedId);
+      setCategoryName(selectedId);
+    }
+    if (fieldErrors.category) {
+      setFieldErrors(prev => ({ ...prev, category: null }));
+    }
+  };
 
   // Fetch post details on mount & check authorization
   useEffect(() => {
@@ -86,7 +103,33 @@ export default function EditPost() {
         setTitle(post.title || '');
         setSummary(post.summary || post.description || '');
         setContent(post.content || post.details || '');
-        setCategory(post.category?.category_name || post.category?.name || post.category || '');
+        
+        // Fetch categories list & match post category
+        try {
+          const catList = await categoryService.getAllCategories();
+          setCategoriesList(catList);
+
+          const resolvedSubject = resolveCategoryName(post);
+          const postCatId = post.category_id || post.category?.id;
+          
+          const matchedCat = catList.find(c => 
+            (postCatId && isValidCategoryUuid(postCatId) && c.id === postCatId) || 
+            (resolvedSubject && c.name && c.name.toLowerCase().trim() === resolvedSubject.toLowerCase().trim()) ||
+            (post.category?.name && c.name && c.name.toLowerCase().trim() === post.category.name.toLowerCase().trim())
+          );
+
+          if (matchedCat) {
+            setCategoryId(matchedCat.id);
+            setCategoryName(matchedCat.name);
+          } else {
+            setCategoryId(postCatId || '');
+            setCategoryName(resolvedSubject || post.category?.name || 'ทั่วไป');
+          }
+        } catch (catErr) {
+          console.error('Error fetching categories in EditPost:', catErr);
+          const resolvedSubject = resolveCategoryName(post);
+          setCategoryName(resolvedSubject || 'ทั่วไป');
+        }
 
         let uiLevel = 'มหาวิทยาลัย';
         const rawLevel = post.education_level || post.level;
@@ -343,7 +386,7 @@ export default function EditPost() {
     else if (title.length > 100) newErrors.title = 'ชื่อหัวข้อต้องมีความยาวไม่เกิน 100 ตัวอักษร';
     if (!level) newErrors.level = 'กรุณาเลือกระดับชั้น';
     if (!summary.trim()) newErrors.summary = 'กรุณากรอกบทสรุปย่อ';
-    if (!category) newErrors.category = 'กรุณาเลือกหมวดหมู่วิชา';
+    if (!categoryId && !categoryName) newErrors.category = 'กรุณาเลือกหมวดหมู่วิชา';
 
     if (Object.keys(newErrors).length > 0) {
       setFieldErrors(newErrors);
@@ -363,7 +406,21 @@ export default function EditPost() {
       formData.append('title', title.trim());
       formData.append('summary', summary.trim());
       formData.append('content', content);
-      formData.append('category', category);
+      
+      // Resolve valid category UUID from selected category
+      let validCatId = isValidCategoryUuid(categoryId) ? categoryId : null;
+      if (!validCatId && categoryName) {
+        const matchInList = categoriesList.find(c => c.name === categoryName && isValidCategoryUuid(c.id));
+        if (matchInList) {
+          validCatId = matchInList.id;
+        }
+      }
+      if (validCatId) {
+        formData.append('category_id', validCatId);
+      }
+      if (categoryName) {
+        formData.append('category', categoryName);
+      }
       let backendLevel = 'UNIVERSITY';
       if (level === 'มัธยมศึกษาตอนต้น') backendLevel = 'MIDDLE_SCHOOL';
       else if (level === 'มัธยมศึกษาตอนปลาย') backendLevel = 'HIGH_SCHOOL';
@@ -404,6 +461,7 @@ export default function EditPost() {
         }
       }
 
+      // Send only user-entered hashtags
       formData.append('tags', JSON.stringify(hashtags));
 
       // Append media IDs to remove
@@ -604,10 +662,10 @@ export default function EditPost() {
                 }`}
             >
               <div className="flex flex-col gap-2">
-                {category ? (
+                {categoryName ? (
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-bold text-slate-400">วิชาที่เลือก:</span>
-                    <span className="px-3 py-1 bg-primary/10 text-primary font-bold text-xs rounded-full">{category}</span>
+                    <span className="px-3 py-1 bg-primary/10 text-primary font-bold text-xs rounded-full">{categoryName}</span>
                   </div>
                 ) : (
                   <span className="text-sm text-rose-500 font-medium">กรุณาเลือกหมวดหมู่วิชา *</span>
@@ -844,19 +902,16 @@ export default function EditPost() {
                   <BookOpen className="h-5 w-5 text-primary" /> หมวดหมู่วิชา <span className="text-rose-500">*</span>
                 </label>
                 <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-5 py-3.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors bg-white font-medium text-slate-700 text-base"
+                  value={categoryId || categoryName}
+                  onChange={(e) => handleCategorySelect(e.target.value)}
+                  className="w-full px-5 py-3.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors bg-white font-medium text-slate-700 text-base cursor-pointer"
                 >
-                  <option value="" disabled>เลือกวิชา</option>
-                  <option value="คณิตศาสตร์">คณิตศาสตร์</option>
-                  <option value="วิทยาศาสตร์">วิทยาศาสตร์</option>
-                  <option value="ฟิสิกส์">ฟิสิกส์</option>
-                  <option value="เคมี">เคมี</option>
-                  <option value="ชีววิทยา">ชีววิทยา</option>
-                  <option value="ภาษาอังกฤษ">ภาษาอังกฤษ</option>
-                  <option value="สังคมศึกษา">สังคมศึกษา</option>
-                  <option value="ภาษาไทย">ภาษาไทย</option>
+                  <option value="" disabled>เลือกหมวดหมู่วิชา</option>
+                  {categoriesList.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 
