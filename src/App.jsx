@@ -1,7 +1,8 @@
 import { Routes, Route, Navigate } from "react-router";
 import toast, { Toaster } from "react-hot-toast";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import useAuthStore from "./store/authStore";
+import useNotificationStore from "./store/notificationStore";
 import MainLayout from "./layouts/MainLayout";
 import SettingsLayout from "./layouts/SettingsLayout";
 import AdminLayout from "./layouts/AdminLayout";
@@ -140,6 +141,8 @@ function App() {
   const logoutAction = useAuthStore((state) => state.logout);
   const setInitializing = useAuthStore((state) => state.setInitializing);
   const setRoleLoading = useAuthStore((state) => state.setRoleLoading);
+  const { connectRealtime, disconnectRealtime, fetchNotifications } = useNotificationStore();
+  const prevUserId = useRef(null);
 
   useEffect(() => {
     const handleSession = async (session) => {
@@ -345,6 +348,24 @@ function App() {
     return () => subscription.unsubscribe();
   }, [loginAction, logoutAction, setInitializing, setRoleLoading]);
 
+  // เชื่อมต่อ Socket.IO เมื่อ login และตัดการเชื่อมต่อเมื่อ logout
+  useEffect(() => {
+    const syncNotifications = (state) => {
+      const userId = state.user?.id || state.user?.user_id;
+      if (state.isAuthenticated && userId && userId !== prevUserId.current) {
+        prevUserId.current = userId;
+        connectRealtime(userId);
+
+      } else if (!state.isAuthenticated && prevUserId.current) {
+        prevUserId.current = null;
+        disconnectRealtime();
+      }
+    };
+    syncNotifications(useAuthStore.getState());
+    const unsubscribe = useAuthStore.subscribe(syncNotifications);
+    return () => { unsubscribe(); disconnectRealtime(); prevUserId.current = null; };
+  }, [connectRealtime, disconnectRealtime, fetchNotifications]);
+
   return (
     <>
       <Routes>
@@ -450,3 +471,4 @@ function App() {
 }
 
 export default App;
+

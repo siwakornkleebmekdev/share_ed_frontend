@@ -13,6 +13,10 @@ import {
   Trophy,
   ShieldCheck,
   PenTool,
+  Bookmark,
+  UserPlus,
+  Newspaper,
+  X,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import useNotificationStore from "@/store/notificationStore";
@@ -39,10 +43,24 @@ export default function Navbar() {
   const heroColor = useHeroThemeStore((state) => state.heroColor);
   const glassColor = getGlassColor(heroColor, isDarkHero);
 
-  const { notifications, unreadCount, fetchNotifications, markAsRead } =
+  const { notifications, unreadCount, fetchNotifications, markAsRead, markAllAsRead, deleteNotification, error, isLoading, isMutating } =
     useNotificationStore();
   const { isAuthenticated, user, logout } = useAuthStore();
   const { readyToClaimCount, fetchMilestones } = useAchievementStore();
+
+  // Relative time formatter
+  const formatRelativeTime = (iso) => {
+    if (!iso) return '';
+    const diff = Date.now() - new Date(iso).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'เมื่อสักครู่';
+    if (mins < 60) return `${mins} นาทีที่แล้ว`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs} ชั่วโมงที่แล้ว`;
+    const days = Math.floor(hrs / 24);
+    if (days < 7) return `${days} วันที่แล้ว`;
+    return new Date(iso).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
+  };
 
   const handleLogout = async () => {
     try {
@@ -58,8 +76,9 @@ export default function Navbar() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      fetchNotifications();
+
       fetchMilestones();
+
     }
   }, [isAuthenticated, fetchNotifications, fetchMilestones]);
 
@@ -91,6 +110,12 @@ export default function Navbar() {
         return <Heart className="h-4 w-4 text-pink-500" />;
       case "COMMENT":
         return <MessageSquare className="h-4 w-4 text-blue-500" />;
+      case "FOLLOW":
+        return <UserPlus className="h-4 w-4 text-green-500" />;
+      case "NEW_POST":
+        return <Newspaper className="h-4 w-4 text-purple-500" />;
+      case "BOOKMARK":
+        return <Bookmark className="h-4 w-4 text-amber-500" />;
       case "SYSTEM":
         return <Info className="h-4 w-4 text-indigo-500" />;
       default:
@@ -166,7 +191,9 @@ export default function Navbar() {
 
                 <div className="relative" ref={notifRef}>
                   <button
-                    onClick={() => setShowNotifications(!showNotifications)}
+                    aria-label={`การแจ้งเตือน ${unreadCount()} รายการที่ยังไม่อ่าน`}
+                    aria-expanded={showNotifications}
+                    onClick={() => { setShowNotifications(!showNotifications); if (!showNotifications) fetchNotifications(); }}
                     className={`relative p-2.5 rounded-full transition-colors shadow-sm ${isDarkHero ? "text-slate-300 hover:text-white bg-white/10 hover:bg-white/20" : "text-slate-500 hover:text-primary bg-slate-100 hover:bg-slate-200"}`}
                   >
                     <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -177,7 +204,7 @@ export default function Navbar() {
 
                   {/* Notification Dropdown */}
                   {showNotifications && (
-                    <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+                    <div className="absolute right-0 mt-3 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
                       <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                         <h3 className="font-bold text-slate-800 text-base">
                           การแจ้งเตือน
@@ -189,8 +216,8 @@ export default function Navbar() {
                         )}
                       </div>
 
-                      <div className="max-h-[320px] overflow-y-auto">
-                        {notifications.length === 0 ? (
+                      <div className="max-h-[360px] overflow-y-auto">
+                        {error ? (<div role="alert" className="p-4 text-sm text-red-600">{error}<button className="block underline mt-2" onClick={fetchNotifications}>ลองอีกครั้ง</button></div>) : isLoading && notifications.length === 0 ? (<p className="p-6 text-center">กำลังโหลดข้อมูล...</p>) : notifications.length === 0 ? (
                           <div className="p-8 text-center text-slate-500 flex flex-col items-center gap-2">
                             <Bell className="h-8 w-8 text-slate-300" />
                             <p className="text-sm font-medium">
@@ -199,32 +226,65 @@ export default function Navbar() {
                           </div>
                         ) : (
                           <div className="divide-y divide-slate-100">
-                            {notifications.slice(0, 5).map((notif) => (
+                            {notifications.slice(0, 6).map((notif) => (
                               <div
                                 key={notif.id}
-                                onClick={() => {
-                                  if (!notif.isRead) markAsRead(notif.id);
-                                }}
-                                className={`p-4 flex gap-3 hover:bg-slate-50 transition-colors cursor-pointer ${!notif.isRead ? "bg-blue-50/30" : ""}`}
+                                className={`group relative p-3.5 flex gap-3 hover:bg-slate-50 transition-colors ${
+                                  !notif.isRead ? "bg-blue-50/40" : ""
+                                }`}
                               >
-                                <div
-                                  className={`mt-0.5 p-2 rounded-full h-fit flex-shrink-0 ${!notif.isRead ? "bg-white shadow-sm" : "bg-slate-100"}`}
+                                {/* Icon */}
+                                <button
+                                  onClick={() => {
+                                    if (!notif.isRead) markAsRead(notif.id);
+                                    setShowNotifications(false);
+                                    if (notif.link) navigate(notif.link);
+                                  }}
+                                  className={`mt-0.5 p-2 rounded-full h-fit flex-shrink-0 cursor-pointer ${
+                                    !notif.isRead ? "bg-white shadow-sm" : "bg-slate-100"
+                                  }`}
                                 >
                                   {getNotificationIcon(notif.type)}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p
-                                    className={`text-sm mb-0.5 truncate ${!notif.isRead ? "font-bold text-slate-800" : "font-medium text-slate-700"}`}
-                                  >
+                                </button>
+
+                                {/* Text */}
+                                <button
+                                  onClick={() => {
+                                    if (!notif.isRead) markAsRead(notif.id);
+                                    setShowNotifications(false);
+                                    if (notif.link) navigate(notif.link);
+                                  }}
+                                  className="flex-1 min-w-0 text-left"
+                                >
+                                  <p className={`text-sm mb-0.5 truncate ${
+                                    !notif.isRead ? "font-bold text-slate-800" : "font-medium text-slate-700"
+                                  }`}>
                                     {notif.title}
                                   </p>
                                   <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
                                     {notif.message}
                                   </p>
+                                  <p className="text-[10px] text-slate-400 mt-0.5">
+                                    {formatRelativeTime(notif.createdAt)}
+                                  </p>
+                                </button>
+
+                                {/* Unread dot + delete */}
+                                <div className="flex flex-col items-center gap-1 flex-shrink-0 ml-1">
+                                  {!notif.isRead && (
+                                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                  )}
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      deleteNotification(notif.id);
+                                    }}
+                                    className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 transition-opacity p-0.5 rounded hover:bg-red-50 text-slate-400 hover:text-red-500"
+                                    disabled={isMutating} aria-label="ลบการแจ้งเตือน" title="ลบการแจ้งเตือน"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
                                 </div>
-                                {!notif.isRead && (
-                                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5 flex-shrink-0"></div>
-                                )}
                               </div>
                             ))}
                           </div>
@@ -232,13 +292,19 @@ export default function Navbar() {
                       </div>
 
                       {notifications.length > 0 && (
-                        <div className="p-3 border-t border-slate-100 bg-slate-50 text-center hover:bg-slate-100 transition-colors">
+                        <div className="p-3 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+                          <button
+                            disabled={isMutating} onClick={() => markAllAsRead()}
+                            className="text-xs font-semibold text-slate-500 hover:text-primary transition-colors"
+                          >
+                            อ่านทั้งหมด
+                          </button>
                           <Link
                             to="/notifications"
                             onClick={() => setShowNotifications(false)}
-                            className="text-sm font-bold text-primary block w-full"
+                            className="text-sm font-bold text-primary hover:text-blue-700 transition-colors"
                           >
-                            ดูการแจ้งเตือนทั้งหมด
+                            ดูทั้งหมด →
                           </Link>
                         </div>
                       )}
@@ -358,3 +424,4 @@ export default function Navbar() {
     </div>
   );
 }
+

@@ -1,6 +1,19 @@
 import api from '../utils/api';
 import { categoryService } from './category.service';
 
+// ดึงชื่อไฟล์จาก URL (รองรับทั้ง URL ปกติและ Cloudinary URL ที่มี URL encoding)
+function extractFileNameFromUrl(url) {
+  if (!url) return 'เอกสารประกอบการเรียน.pdf';
+  try {
+    const decoded = decodeURIComponent(url);
+    const segments = decoded.split('/');
+    const fileName = segments[segments.length - 1];
+    return fileName || 'เอกสารประกอบการเรียน.pdf';
+  } catch {
+    return 'เอกสารประกอบการเรียน.pdf';
+  }
+}
+
 export const postService = {
   // Fetch all posts (Active/Published)
   getAllPosts: async (params = {}) => {
@@ -303,9 +316,9 @@ function formatSinglePostData(post) {
     authorId: authorId,
     pdf: pdfMedia ? {
       id: pdfMedia.id,
-      name: 'เอกสารประกอบการเรียน.pdf',
+      name: extractFileNameFromUrl(pdfMedia.media_url),
       url: pdfMedia.media_url,
-      size: '2MB'
+      size: 'PDF'
     } : null,
     author: {
       id: authorId,
