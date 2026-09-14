@@ -209,7 +209,7 @@ export default function PostDetails() {
 
       setIsBookmarked(newIsBookmarked);
       if (newIsBookmarked) {
-        toast.success('เพิ่มบุ๊คมาร์กเรียบร้อย');
+        toast('เพิ่มบุ๊คมาร์กเรียบร้อย', { icon: <Bookmark className="h-5 w-5 text-amber-500 fill-amber-500" /> });
       } else {
         toast('นำบุ๊คมาร์กออกแล้ว', { icon: <Bookmark className="h-5 w-5 text-amber-500" /> });
       }
