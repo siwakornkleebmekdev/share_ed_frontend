@@ -149,7 +149,15 @@ export default function EditPost() {
         if (pdfMedia) {
           setExistingPdf({
             id: pdfMedia.id,
-            name: 'เอกสารประกอบการเรียน.pdf',
+            name: (() => {
+              try {
+                const decoded = decodeURIComponent(pdfMedia.media_url);
+                const segments = decoded.split('/');
+                return segments[segments.length - 1] || 'เอกสารประกอบการเรียน.pdf';
+              } catch {
+                return 'เอกสารประกอบการเรียน.pdf';
+              }
+            })(),
             url: pdfMedia.media_url,
             size: 'PDF'
           });
