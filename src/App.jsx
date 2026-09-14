@@ -386,6 +386,7 @@ function App() {
             path="/profile/edit"
             element={<Navigate to="/settings/profile" replace />}
           />
+          <Route path="/profile/:id" element={<Profile />} />
           <Route
             path="/notifications"
             element={
