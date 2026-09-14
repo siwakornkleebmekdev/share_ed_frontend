@@ -502,6 +502,64 @@ export const profileService = {
       throw error;
     }
   },
+
+  // Get User Profile by ID (GET /users/:id)
+  getUserProfile: async (id) => {
+    try {
+      const response = await api.get(`/users/${id}`);
+      return response.data?.data || response.data;
+    } catch (error) {
+      console.error(`Error fetching profile for user ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Get User Posts by author ID
+  getUserPosts: async (userId) => {
+    try {
+      try {
+        const response = await api.get(`/posts/user/${userId}`);
+        if (response.data?.success && Array.isArray(response.data?.data)) {
+          return formatPosts(response.data.data.filter((p) => p.post_status === "ACTIVE"));
+        }
+      } catch (_) {}
+
+      // Fallback: fetch active posts and filter by author ID
+      const response = await api.get("/posts");
+      if (response.data?.success && Array.isArray(response.data?.data)) {
+        const userPosts = response.data.data.filter(
+          (p) => String(p.author_id || p.author?.id || p.user_id) === String(userId) && p.post_status === "ACTIVE"
+        );
+        return formatPosts(userPosts);
+      }
+      return [];
+    } catch (error) {
+      console.error(`Error fetching posts for user ${userId}:`, error);
+      return [];
+    }
+  },
+
+  // Follow a user (POST /follow/:id)
+  followUser: async (userId) => {
+    try {
+      const response = await api.post(`/follow/${userId}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error following user ${userId}:`, error);
+      throw error;
+    }
+  },
+
+  // Unfollow a user (DELETE /follow/:id)
+  unfollowUser: async (userId) => {
+    try {
+      const response = await api.delete(`/follow/${userId}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error unfollowing user ${userId}:`, error);
+      throw error;
+    }
+  },
 };
 
 // Mock achievement catalog — reward is either a profile-picture FRAME or a
