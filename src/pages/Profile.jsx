@@ -68,7 +68,7 @@ const getEducationLevelLabel = (level) => {
 export default function Profile() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, isAuthenticated } = useAuthStore();
 
   const currentUserId = user?.user_id || user?.id;
@@ -102,6 +102,14 @@ export default function Profile() {
   const enterScreenEnabled = !isOtherUser && !!user?.user_metadata?.enter_screen_enabled;
   const [hasEntered, setHasEntered] = useState(!enterScreenEnabled);
   const [isBannerBlank, setIsBannerBlank] = useState(false);
+
+  const selectTab = (tab) => {
+    setActiveTab(tab);
+    setSearchParams((current) => {
+      current.set("tab", tab);
+      return current;
+    });
+  };
 
   useEffect(() => {
     setHasEntered(!enterScreenEnabled);
@@ -676,7 +684,7 @@ export default function Profile() {
         {/* แถบแท็บ */}
         <div className="flex gap-2 mb-8 overflow-x-auto pb-2 scrollbar-hide">
           <button
-            onClick={() => setActiveTab("posts")}
+            onClick={() => selectTab("posts")}
             className={`flex items-center gap-2 px-6 py-3.5 rounded-xl font-bold whitespace-nowrap transition-all cursor-pointer ${activeTab === "posts" ? "bg-primary text-white shadow-lg shadow-primary/20" : tabInactiveClass}`}
           >
             <BookOpen className="h-5 w-5" /> {isOtherUser ? "โพสต์ทั้งหมด" : "โพสต์ของฉัน"}
@@ -685,13 +693,13 @@ export default function Profile() {
           {!isOtherUser && (
             <>
               <button
-                onClick={() => setActiveTab("drafts")}
+                onClick={() => selectTab("drafts")}
                 className={`flex items-center gap-2 px-6 py-3.5 rounded-xl font-bold whitespace-nowrap transition-all cursor-pointer ${activeTab === "drafts" ? "bg-primary text-white shadow-lg shadow-primary/20" : tabInactiveClass}`}
               >
                 <FileText className="h-5 w-5" /> แบบร่าง
               </button>
               <button
-                onClick={() => setActiveTab("bookmarks")}
+                onClick={() => selectTab("bookmarks")}
                 className={`flex items-center gap-2 px-6 py-3.5 rounded-xl font-bold whitespace-nowrap transition-all cursor-pointer ${activeTab === "bookmarks" ? "bg-primary text-white shadow-lg shadow-primary/20" : tabInactiveClass}`}
               >
                 <Star className="h-5 w-5" /> บุ๊คมาร์ก
@@ -700,7 +708,7 @@ export default function Profile() {
           )}
 
           <button
-            onClick={() => setActiveTab("achievements")}
+            onClick={() => selectTab("achievements")}
             className={`flex items-center gap-2 px-6 py-3.5 rounded-xl font-bold whitespace-nowrap transition-all cursor-pointer ${activeTab === "achievements" ? "bg-primary text-white shadow-lg shadow-primary/20" : tabInactiveClass}`}
           >
             <Trophy className="h-5 w-5" /> ความสำเร็จ
