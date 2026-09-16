@@ -69,7 +69,7 @@ export function normalize(n) {
     link, postId, actorId,
     createdAt: Number.isNaN(Date.parse(n.createdAt || n.created_at)) ? new Date(0).toISOString() : new Date(n.createdAt || n.created_at).toISOString(),
     actorName: n.actorName || n.actor?.username || null,
-    actorAvatar: n.actorAvatar || n.actor?.avatar_url || null,
+    actorAvatar: n.actorAvatar || n.actor?.avatarUrl || n.actor?.avatar_url || null,
   };
 }
 const sorted = (items) => [...new Map(items.filter(Boolean).map(n => [n.id, n])).values()].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
@@ -124,7 +124,9 @@ export function createNotificationStore(service, realtime) {
         const socket = realtime.connectSocket(userId);
         const refresh = () => { if (session === epoch) get().fetchNotifications(); };
         const receive = payload => { if (session === epoch) get().addNotification(payload?.data ?? payload); };
+        const remove = payload => { if (session === epoch) get().removeNotification(payload?.data ?? payload); };
         socket.on('new_notification', receive);
+        socket.on('notification_removed', remove);
         socket.on('connect', refresh);
         const timer = setInterval(refresh, 60000);
         globalThis.window?.addEventListener('online', refresh);
@@ -132,6 +134,7 @@ export function createNotificationStore(service, realtime) {
         cleanup = () => {
           clearInterval(timer);
           socket.off('new_notification', receive);
+          socket.off('notification_removed', remove);
           socket.off('connect', refresh);
           globalThis.window?.removeEventListener('online', refresh);
           globalThis.window?.removeEventListener('focus', refresh);
@@ -150,6 +153,26 @@ export function createNotificationStore(service, realtime) {
         return mutate(() => service.markAllAsRead(), items => items.map(n => ids.has(n.id) ? { ...n, isRead: true } : n));
       },
       deleteNotification: id => mutate(() => service.deleteNotification(id), items => items.filter(n => n.id !== String(id))),
+      removeNotification: payload => {
+        if (!payload || typeof payload !== 'object') return;
+        const notificationId = asId(payload.notificationId ?? payload.notification_id);
+        const type = String(payload.type || '').trim().replace(/[\s-]+/g, '_').toUpperCase();
+        const actorId = asId(payload.actorId ?? payload.actor_id);
+        const postId = asId(payload.postId ?? payload.post_id);
+        revision++;
+        set(state => ({
+          notifications: state.notifications.filter(notification => {
+            if (notificationId && notification.id === notificationId) return false;
+            return !(
+              !notificationId &&
+              (type === 'LIKE' || type === 'NEW_LIKE') &&
+              (notification.type === 'LIKE' || notification.type === 'NEW_LIKE') &&
+              actorId && notification.actorId === actorId &&
+              postId && notification.postId === postId
+            );
+          }),
+        }));
+      },
       clearAll: () => {
         const session = epoch;
         const ids = get().notifications.map(n => n.id);
