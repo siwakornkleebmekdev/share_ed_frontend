@@ -20,7 +20,8 @@ export const postService = {
     try {
       const response = await api.get('/posts', { params });
       if (response.data.success) {
-        return response.data.data.map(formatPostData);
+        const posts = response.data.data.map(formatPostData);
+        return await mergeBookmarkStatus(posts);
       }
       return [];
     } catch (error) {
@@ -197,6 +198,38 @@ export const postService = {
     }
   }
 };
+
+// Public post endpoints cannot know which user is viewing the list.  When a
+// user is signed in, merge their persisted bookmarks into the formatted posts
+// so a refresh/navigation does not reset every bookmark icon to false.
+async function mergeBookmarkStatus(posts) {
+  const token = localStorage.getItem('access_token');
+  if (!token || token === 'undefined' || token === 'null' || !posts.length) {
+    return posts;
+  }
+
+  try {
+    const response = await api.get('/bookmarks');
+    const bookmarks = response.data?.success && Array.isArray(response.data?.data)
+      ? response.data.data
+      : [];
+    const bookmarkedIds = new Set(
+      bookmarks
+        .map(bookmark => bookmark.post_id || bookmark.postId || bookmark.post?.id)
+        .filter(Boolean)
+        .map(String)
+    );
+
+    return posts.map(post => ({
+      ...post,
+      isBookmarked: bookmarkedIds.has(String(post.id)),
+    }));
+  } catch (error) {
+    // The post list should still render if bookmark status cannot be loaded.
+    console.error('Error merging bookmark status:', error);
+    return posts;
+  }
+}
 
 export const KNOWN_SUBJECTS = [
   'คณิตศาสตร์',

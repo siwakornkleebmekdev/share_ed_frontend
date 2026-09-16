@@ -249,9 +249,9 @@ export const profileService = {
     try {
       const response = await api.get("/posts/user/my-posts");
       if (response.data.success) {
-        return formatPosts(
+        return await mergeProfileBookmarkStatus(formatPosts(
           response.data.data.filter((p) => p.post_status === "ACTIVE"),
-        );
+        ));
       }
       return [];
     } catch (error) {
@@ -520,7 +520,9 @@ export const profileService = {
       try {
         const response = await api.get(`/posts/user/${userId}`);
         if (response.data?.success && Array.isArray(response.data?.data)) {
-          return formatPosts(response.data.data.filter((p) => p.post_status === "ACTIVE"));
+          return await mergeProfileBookmarkStatus(
+            formatPosts(response.data.data.filter((p) => p.post_status === "ACTIVE")),
+          );
         }
       } catch (_) {}
 
@@ -530,7 +532,7 @@ export const profileService = {
         const userPosts = response.data.data.filter(
           (p) => String(p.author_id || p.author?.id || p.user_id) === String(userId) && p.post_status === "ACTIVE"
         );
-        return formatPosts(userPosts);
+        return await mergeProfileBookmarkStatus(formatPosts(userPosts));
       }
       return [];
     } catch (error) {
@@ -676,6 +678,34 @@ function mapMilestoneToAchievement(m) {
 }
 
 import { resolveCategoryName } from './post.service';
+
+async function mergeProfileBookmarkStatus(posts) {
+  const token = localStorage.getItem("access_token");
+  if (!token || token === "undefined" || token === "null" || !posts.length) {
+    return posts;
+  }
+
+  try {
+    const response = await api.get("/bookmarks");
+    const bookmarks = response.data?.success && Array.isArray(response.data?.data)
+      ? response.data.data
+      : [];
+    const bookmarkedIds = new Set(
+      bookmarks
+        .map((bookmark) => bookmark.post_id || bookmark.postId || bookmark.post?.id)
+        .filter(Boolean)
+        .map(String),
+    );
+
+    return posts.map((post) => ({
+      ...post,
+      isBookmarked: bookmarkedIds.has(String(post.id)),
+    }));
+  } catch (error) {
+    console.error("Error merging profile bookmark status:", error);
+    return posts;
+  }
+}
 
 // Helper function to format data for PostCard component
 function formatPosts(data) {

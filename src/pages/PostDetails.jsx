@@ -55,8 +55,11 @@ export default function PostDetails() {
             }))
           );
           setIsLiked(userLiked);
-          if (data.isBookmarked !== undefined) {
-            setIsBookmarked(data.isBookmarked);
+          // For signed-in users, checkUserStatuses is the source of truth.
+          // The generic post response defaults this field to false and could
+          // otherwise race with (and overwrite) the persisted bookmark state.
+          if (!isAuthenticated) {
+            setIsBookmarked(false);
           }
           const targetAuthorId = data.authorId || data.author_id || data.author?.id;
           if (targetAuthorId) {
@@ -93,6 +96,7 @@ export default function PostDetails() {
     };
 
     if (id) {
+      setIsBookmarked(false);
       fetchPost();
       if (isAuthenticated) {
         checkUserStatuses();
