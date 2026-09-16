@@ -92,6 +92,21 @@ export default function Profile() {
     followingCount: 0,
   });
 
+  const handleBookmarkChange = (postId, isBookmarked) => {
+    setMyPosts((posts) =>
+      posts.map((post) =>
+        String(post.id) === String(postId) ? { ...post, isBookmarked } : post,
+      ),
+    );
+    setBookmarks((posts) =>
+      isBookmarked
+        ? posts.map((post) =>
+            String(post.id) === String(postId) ? { ...post, isBookmarked: true } : post,
+          )
+        : posts.filter((post) => String(post.id) !== String(postId)),
+    );
+  };
+
   const theme = isOtherUser
     ? otherProfile?.current_theme?.settings || {}
     : user?.user_metadata?.theme_settings || {};
@@ -735,6 +750,7 @@ export default function Profile() {
                         post={post}
                         viewMode="grid"
                         dark={isDarkHero}
+                        onBookmarkChange={handleBookmarkChange}
                       />
                     ))
                   ) : (
@@ -852,6 +868,7 @@ export default function Profile() {
                         post={post}
                         viewMode="grid"
                         dark={isDarkHero}
+                        onBookmarkChange={handleBookmarkChange}
                       />
                     ))
                   ) : (

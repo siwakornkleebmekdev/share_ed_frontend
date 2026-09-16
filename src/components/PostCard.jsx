@@ -7,7 +7,7 @@ import useAuthStore from '../store/authStore';
 import useHeroThemeStore from '../store/heroThemeStore';
 import { getGlassColor, rgbToRgba } from '../utils/colorUtils';
 
-export default function PostCard({ post, viewMode, rank = null, dark = false }) {
+export default function PostCard({ post, viewMode, rank = null, dark = false, onBookmarkChange }) {
   const [isLiked, setIsLiked] = useState(Boolean(post.isLiked || post.is_liked));
   const [isBookmarked, setIsBookmarked] = useState(Boolean(post.isBookmarked || post.is_bookmarked));
   const [likesCount, setLikesCount] = useState(post.likes);
@@ -97,6 +97,7 @@ export default function PostCard({ post, viewMode, rank = null, dark = false }) 
           : (resData?.bookmarked !== undefined ? resData.bookmarked : !isBookmarked));
 
       setIsBookmarked(newIsBookmarked);
+      onBookmarkChange?.(post.id, newIsBookmarked);
       if (newIsBookmarked) {
         toast('เพิ่มบุ๊คมาร์กเรียบร้อย', { icon: <Bookmark className="h-5 w-5 text-amber-500 fill-amber-500" /> });
       } else {
