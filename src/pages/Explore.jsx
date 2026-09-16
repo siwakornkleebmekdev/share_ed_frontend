@@ -1,10 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router';
 import { LayoutGrid, List, SlidersHorizontal, Search, X } from 'lucide-react';
 import PostCard from '@/components/PostCard';
 import { postService } from '@/services/post.service';
 import { categoryService } from '@/services/category.service';
 import { Loader2 } from 'lucide-react';
+
+const normalizeSearchText = (value) =>
+  String(value ?? '').normalize('NFKC').toLocaleLowerCase('th-TH').trim();
+
+const getTagName = (tag) => {
+  if (typeof tag === 'string') return tag;
+  return tag?.tag?.tag_name || tag?.tag_name || tag?.name || '';
+};
 
 export default function Explore() {
   const [posts, setPosts] = useState([]);
@@ -14,11 +22,13 @@ export default function Explore() {
   const initialSubject = searchParams.get('subject');
   const initialLevel = searchParams.get('level');
   const initialSearch = searchParams.get('search') || searchParams.get('q') || '';
+  const initialTag = searchParams.get('tag');
 
   const [viewMode, setViewMode] = useState('grid');
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const [selectedLevels, setSelectedLevels] = useState(initialLevel ? [initialLevel] : []);
   const [selectedSubjects, setSelectedSubjects] = useState(initialSubject ? [initialSubject] : []);
+  const [selectedTags, setSelectedTags] = useState(initialTag ? [initialTag.replace(/^#+/, '')] : []);
   const [searchQuery, setSearchQuery] = useState(initialSearch);
 
   useEffect(() => {
@@ -41,6 +51,12 @@ export default function Explore() {
     const searchParam = searchParams.get('search') || searchParams.get('q');
     if (searchParam) {
       setSearchQuery(searchParam);
+    }
+
+    const tagParam = searchParams.get('tag');
+    if (tagParam) {
+      const normalizedTag = tagParam.replace(/^#+/, '');
+      setSelectedTags(prev => prev.includes(normalizedTag) ? prev : [...prev, normalizedTag]);
     }
   }, [searchParams]);
 
@@ -75,22 +91,61 @@ export default function Explore() {
     );
   };
 
+  const toggleTag = (tagName) => {
+    setSelectedTags(prev => {
+      const isSelected = prev.some(tag => normalizeSearchText(tag) === normalizeSearchText(tagName));
+      return isSelected
+        ? prev.filter(tag => normalizeSearchText(tag) !== normalizeSearchText(tagName))
+        : [...prev, tagName];
+    });
+  };
+
+  const popularTags = useMemo(() => {
+    const tagCounts = new Map();
+
+    posts.forEach(post => {
+      const tags = [...(Array.isArray(post.tags) ? post.tags : []), ...(Array.isArray(post.hashtags) ? post.hashtags : [])];
+      const uniquePostTags = new Set(
+        tags.map(getTagName).map(tag => tag.replace(/^#+/, '').trim()).filter(Boolean)
+      );
+
+      uniquePostTags.forEach(tag => {
+        const key = normalizeSearchText(tag);
+        const current = tagCounts.get(key);
+        tagCounts.set(key, { name: current?.name || tag, count: (current?.count || 0) + 1 });
+      });
+    });
+
+    return [...tagCounts.values()]
+      .sort((tagA, tagB) => tagB.count - tagA.count || tagA.name.localeCompare(tagB.name, 'th'))
+      .slice(0, 12)
+  }, [posts]);
+
   const filteredPosts = posts.filter(post => {
-    const q = searchQuery.toLowerCase().trim();
-    const matchSearch = !q || 
-      (post.title && post.title.toLowerCase().includes(q)) || 
-      (post.subject && post.subject.toLowerCase().includes(q)) ||
-      (post.description && post.description.toLowerCase().includes(q)) ||
-      (post.author && post.author.toLowerCase().includes(q)) ||
-      (Array.isArray(post.tags) && post.tags.some(t => t.toLowerCase().includes(q)));
+    const q = normalizeSearchText(searchQuery);
+    const tagQuery = q.replace(/^#+/, '') || q;
+    const postTags = [...(Array.isArray(post.tags) ? post.tags : []), ...(Array.isArray(post.hashtags) ? post.hashtags : [])]
+      .map(getTagName)
+      .map(tag => normalizeSearchText(tag).replace(/^#+/, ''))
+      .filter(Boolean);
+
+    const matchSearch = !q ||
+      normalizeSearchText(post.title).includes(q) ||
+      normalizeSearchText(post.subject).includes(q) ||
+      normalizeSearchText(post.description).includes(q) ||
+      normalizeSearchText(post.author).includes(q) ||
+      postTags.some(tag => tag.includes(tagQuery));
 
     const matchLevel = selectedLevels.length === 0 || selectedLevels.includes(post.level);
     const matchSubject = selectedSubjects.length === 0 || 
       selectedSubjects.includes(post.subject) ||
       (post.category?.name && selectedSubjects.includes(post.category.name)) ||
-      (Array.isArray(post.tags) && post.tags.some(t => selectedSubjects.includes(typeof t === 'string' ? t.replace(/^#/, '').trim() : '')));
+      postTags.some(tag => selectedSubjects.some(subject => normalizeSearchText(subject) === tag));
+    const matchTag = selectedTags.length === 0 || selectedTags.some(selectedTag =>
+      postTags.includes(normalizeSearchText(selectedTag).replace(/^#+/, ''))
+    );
     
-    return matchSearch && matchLevel && matchSubject;
+    return matchSearch && matchLevel && matchSubject && matchTag;
   });
 
   // Unique list of subject names from categories or posts
@@ -132,6 +187,31 @@ export default function Explore() {
           ))}
         </div>
       </div>
+      {popularTags.length > 0 && (
+        <div>
+          <h3 className="font-semibold text-slate-800 mb-3">แท็กยอดนิยม</h3>
+          <div className="flex max-h-48 flex-wrap content-start gap-2 overflow-y-auto overscroll-contain pr-2 [scrollbar-color:#cbd5e1_transparent] [scrollbar-width:thin]">
+            {popularTags.map(tag => {
+              const isSelected = selectedTags.some(selectedTag => normalizeSearchText(selectedTag) === normalizeSearchText(tag.name));
+              return (
+                <button
+                  key={tag.name}
+                  type="button"
+                  onClick={() => toggleTag(tag.name)}
+                  aria-pressed={isSelected}
+                  className={`inline-flex max-w-full items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${isSelected
+                    ? 'border-primary bg-primary text-white shadow-sm'
+                    : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-primary/40 hover:bg-blue-50 hover:text-primary'
+                  }`}
+                >
+                  <span className="truncate">#{tag.name}</span>
+                  <span className={`text-[10px] ${isSelected ? 'text-blue-100' : 'text-slate-400'}`}>{tag.count}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -143,7 +223,7 @@ export default function Explore() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
           <input 
             type="text" 
-            placeholder="ค้นหาสรุปวิชาอะไรดี?" 
+            placeholder="ค้นหาชื่อ เนื้อหา ผู้เขียน หรือ #แท็ก"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors bg-white shadow-sm"
@@ -208,7 +288,7 @@ export default function Explore() {
                 <div className="col-span-full py-12 text-center text-slate-500 bg-white rounded-xl border border-slate-100 shadow-sm flex flex-col items-center justify-center">
                   <Search className="h-10 w-10 text-slate-300 mb-3" />
                   <p className="font-medium">ไม่พบโพสต์ที่ตรงกับตัวกรอง</p>
-                  <button onClick={() => { setSearchQuery(''); setSelectedLevels([]); setSelectedSubjects([]); }} className="mt-3 text-sm text-primary hover:underline">ล้างตัวกรองทั้งหมด</button>
+                  <button onClick={() => { setSearchQuery(''); setSelectedLevels([]); setSelectedSubjects([]); setSelectedTags([]); }} className="mt-3 text-sm text-primary hover:underline">ล้างตัวกรองทั้งหมด</button>
                 </div>
               )}
             </div>
