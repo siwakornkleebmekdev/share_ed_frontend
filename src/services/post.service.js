@@ -245,6 +245,10 @@ export function resolveCategoryName(post) {
 
 function formatPostData(post) {
   const categoryName = resolveCategoryName(post);
+  const authorUsername = post.author?.username || (typeof post.author === 'string' ? post.author : 'ผู้ใช้งาน');
+  const authorId = post.author_id || post.author?.id || post.author?.user_id || post.user_id || null;
+  const authorAvatar = post.author?.avatar_url || post.author?.profile_image || post.author?.avatar || post.author_avatar || null;
+
   return {
     id: post.id,
     title: post.title,
@@ -260,7 +264,11 @@ function formatPostData(post) {
     isLiked: Boolean(post.is_liked || post.isLiked || post.has_liked),
     isBookmarked: Boolean(post.is_bookmarked || post.isBookmarked || post.has_bookmarked),
     image: post.cover_image || 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=1280&q=90',
-    author: post.author?.username || 'ผู้ใช้งาน',
+    author: authorUsername,
+    author_id: authorId,
+    authorId: authorId,
+    authorAvatar: authorAvatar,
+    author_avatar: authorAvatar,
     created_at: post.created_at,
   };
 }

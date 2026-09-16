@@ -107,14 +107,18 @@ export default function Navbar() {
   const getNotificationIcon = (type) => {
     switch (type) {
       case "LIKE":
+      case "NEW_LIKE":
         return <Heart className="h-4 w-4 text-pink-500" />;
       case "COMMENT":
+      case "NEW_COMMENT":
         return <MessageSquare className="h-4 w-4 text-blue-500" />;
       case "FOLLOW":
+      case "NEW_FOLLOWER":
         return <UserPlus className="h-4 w-4 text-green-500" />;
       case "NEW_POST":
         return <Newspaper className="h-4 w-4 text-purple-500" />;
       case "BOOKMARK":
+      case "BOOKMARK_REMOVED":
         return <Bookmark className="h-4 w-4 text-amber-500" />;
       case "SYSTEM":
         return <Info className="h-4 w-4 text-indigo-500" />;

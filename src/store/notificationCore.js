@@ -3,8 +3,21 @@ import { create } from 'zustand';
 export function normalize(n) {
   if (!n || typeof n !== 'object' || (n.id ?? n._id) == null) return null;
   const type = String(n.type || n.notification_type || 'SYSTEM').toUpperCase();
-  const labels = { LIKE: 'มีคนถูกใจโพสต์ของคุณ', COMMENT: 'ความคิดเห็นใหม่', FOLLOW: 'มีคนติดตามคุณ', NEW_POST: 'โพสต์ใหม่จากคนที่คุณติดตาม', SYSTEM: 'การแจ้งเตือนจากระบบ', BOOKMARK: 'มีคนบุ๊กมาร์กโพสต์ของคุณ' };
-  const link = n.link || (n.post_id ? `/post/${encodeURIComponent(n.post_id)}` : null);
+  const labels = {
+    LIKE: 'มีคนถูกใจโพสต์ของคุณ', NEW_LIKE: 'มีคนถูกใจโพสต์ของคุณ',
+    COMMENT: 'ความคิดเห็นใหม่', NEW_COMMENT: 'ความคิดเห็นใหม่',
+    FOLLOW: 'มีคนติดตามคุณ', NEW_FOLLOWER: 'มีคนติดตามคุณ',
+    NEW_POST: 'โพสต์ใหม่จากคนที่คุณติดตาม', SYSTEM: 'การแจ้งเตือนจากระบบ',
+    BOOKMARK: 'มีคนบุ๊กมาร์กโพสต์ของคุณ', BOOKMARK_REMOVED: 'มีคนยกเลิกบุ๊กมาร์กโพสต์ของคุณ',
+  };
+  const postId = n.postId || n.post_id;
+  const followerId = n.followerId || n.follower_id || n.actorId || n.actor_id || n.actor?.id || n.actor?._id;
+  const generatedLink = postId
+    ? `/post/${encodeURIComponent(postId)}`
+    : (type === 'FOLLOW' || type === 'NEW_FOLLOWER') && followerId
+      ? `/profile/${encodeURIComponent(followerId)}`
+      : null;
+  const link = n.link || generatedLink;
   const read = n.isRead ?? n.is_read ?? false;
   return {
     id: String(n.id ?? n._id), type, title: n.title || labels[type] || 'การแจ้งเตือน',

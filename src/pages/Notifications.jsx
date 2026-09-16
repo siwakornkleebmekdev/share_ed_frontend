@@ -41,11 +41,15 @@ export default function Notifications() {
   const getNotificationIcon = (type) => {
     const cls = 'h-5 w-5';
     switch (type) {
-      case 'LIKE':     return <Heart className={`${cls} text-pink-500`} />;
-      case 'COMMENT':  return <MessageSquare className={`${cls} text-blue-500`} />;
-      case 'FOLLOW':   return <UserPlus className={`${cls} text-green-500`} />;
+      case 'LIKE':
+      case 'NEW_LIKE': return <Heart className={`${cls} text-pink-500`} />;
+      case 'COMMENT':
+      case 'NEW_COMMENT': return <MessageSquare className={`${cls} text-blue-500`} />;
+      case 'FOLLOW':
+      case 'NEW_FOLLOWER': return <UserPlus className={`${cls} text-green-500`} />;
       case 'NEW_POST': return <Newspaper className={`${cls} text-purple-500`} />;
-      case 'BOOKMARK': return <Bookmark className={`${cls} text-amber-500`} />;
+      case 'BOOKMARK':
+      case 'BOOKMARK_REMOVED': return <Bookmark className={`${cls} text-amber-500`} />;
       case 'SYSTEM':   return <Info className={`${cls} text-indigo-500`} />;
       default:         return <Bell className={`${cls} text-slate-500`} />;
     }
@@ -54,10 +58,14 @@ export default function Notifications() {
   const getBgColor = (type) => {
     const map = {
       LIKE: 'bg-pink-50',
+      NEW_LIKE: 'bg-pink-50',
       COMMENT: 'bg-blue-50',
+      NEW_COMMENT: 'bg-blue-50',
       FOLLOW: 'bg-green-50',
+      NEW_FOLLOWER: 'bg-green-50',
       NEW_POST: 'bg-purple-50',
       BOOKMARK: 'bg-amber-50',
+      BOOKMARK_REMOVED: 'bg-amber-50',
       SYSTEM: 'bg-indigo-50',
     };
     return map[type] || 'bg-slate-50';
@@ -203,13 +211,9 @@ export default function Notifications() {
                             {notif.message}
                           </p>
                           {notif.link && (
-                            <Link
-                              to={notif.link}
-                              className="inline-flex mt-2 text-sm font-bold text-primary hover:text-blue-700 transition-colors"
-
-                            >
+                            <span className="inline-flex mt-2 text-sm font-bold text-primary hover:text-blue-700 transition-colors">
                               ดูรายละเอียด →
-                            </Link>
+                            </span>
                           )}
                         </button>
 
