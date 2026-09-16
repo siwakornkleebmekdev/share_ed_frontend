@@ -164,10 +164,10 @@ export default function PostDetails() {
       setIsLiking(true);
       const response = await postService.likePost(post.id);
       const resData = response?.data || response;
-      const newIsLiked = resData?.isLiked !== undefined 
-        ? resData.isLiked 
-        : (resData?.is_liked !== undefined 
-          ? resData.is_liked 
+      const newIsLiked = resData?.isLiked !== undefined
+        ? resData.isLiked
+        : (resData?.is_liked !== undefined
+          ? resData.is_liked
           : (resData?.liked !== undefined ? resData.liked : !isLiked));
 
       setIsLiked(newIsLiked);
@@ -201,10 +201,10 @@ export default function PostDetails() {
       setIsBookmarking(true);
       const response = await postService.bookmarkPost(post.id);
       const resData = response?.data || response;
-      const newIsBookmarked = resData?.isBookmarked !== undefined 
-        ? resData.isBookmarked 
-        : (resData?.is_bookmarked !== undefined 
-          ? resData.is_bookmarked 
+      const newIsBookmarked = resData?.isBookmarked !== undefined
+        ? resData.isBookmarked
+        : (resData?.is_bookmarked !== undefined
+          ? resData.is_bookmarked
           : (resData?.bookmarked !== undefined ? resData.bookmarked : !isBookmarked));
 
       setIsBookmarked(newIsBookmarked);
@@ -223,7 +223,7 @@ export default function PostDetails() {
 
   const handleDelete = async () => {
     const result = await Swal.fire({
-      title: 'คุณต้องการลบโพสต์นี้ใช่หรือไม่?',
+      title: `คุณต้องการลบโพสต์ "${post?.title}" ใช่หรือไม่?`,
       text: 'การดำเนินการนี้จะทำการลบโพสต์แบบ Soft Delete (ซ่อนโพสต์ชั่วคราว)',
       icon: 'warning',
       showCancelButton: true,
