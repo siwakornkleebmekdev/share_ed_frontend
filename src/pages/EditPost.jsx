@@ -94,7 +94,11 @@ export default function EditPost() {
           String(currentUserId) === String(postAuthorId)
         );
 
-        if (!isAuthor && !isAdmin) {
+        // ไม่อนุญาตให้ admin แก้ไขโพสต์คนอื่น และไม่อนุญาตให้คนอื่นที่ไม่ใช่เจ้าของโพสต์แก้ไข
+        if (isAdmin || !isAuthor) {
+          toast.error('คุณไม่มีสิทธิ์แก้ไขโพสต์นี้ เฉพาะเจ้าของโพสต์เท่านั้นที่สามารถแก้ไขได้', {
+            id: 'unauthorized-edit-post'
+          });
           navigate('/home', { replace: true });
           return;
         }
@@ -103,7 +107,7 @@ export default function EditPost() {
         setTitle(post.title || '');
         setSummary(post.summary || post.description || '');
         setContent(post.content || post.details || '');
-        
+
         // Fetch categories list & match post category
         try {
           const catList = await categoryService.getAllCategories();
@@ -111,9 +115,9 @@ export default function EditPost() {
 
           const resolvedSubject = resolveCategoryName(post);
           const postCatId = post.category_id || post.category?.id;
-          
-          const matchedCat = catList.find(c => 
-            (postCatId && isValidCategoryUuid(postCatId) && c.id === postCatId) || 
+
+          const matchedCat = catList.find(c =>
+            (postCatId && isValidCategoryUuid(postCatId) && c.id === postCatId) ||
             (resolvedSubject && c.name && c.name.toLowerCase().trim() === resolvedSubject.toLowerCase().trim()) ||
             (post.category?.name && c.name && c.name.toLowerCase().trim() === post.category.name.toLowerCase().trim())
           );
@@ -171,6 +175,8 @@ export default function EditPost() {
         })));
       } catch (error) {
         console.error('Error fetching post for editing:', error);
+        const errMsg = error.response?.data?.message || 'คุณไม่มีสิทธิ์เข้าถึงหรือแก้ไขโพสต์นี้';
+        toast.error(errMsg, { id: 'unauthorized-edit-post' });
         navigate('/home', { replace: true });
       } finally {
         setIsPageLoading(false);
@@ -414,7 +420,7 @@ export default function EditPost() {
       formData.append('title', title.trim());
       formData.append('summary', summary.trim());
       formData.append('content', content);
-      
+
       // Resolve valid category UUID from selected category
       let validCatId = isValidCategoryUuid(categoryId) ? categoryId : null;
       if (!validCatId && categoryName) {
