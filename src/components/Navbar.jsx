@@ -233,33 +233,36 @@ export default function Navbar() {
                             {notifications.slice(0, 6).map((notif) => (
                               <div
                                 key={notif.id}
-                                className={`group relative p-3.5 flex gap-3 hover:bg-slate-50 transition-colors ${
+                                role={notif.link ? "link" : undefined}
+                                tabIndex={notif.link ? 0 : undefined}
+                                onClick={() => {
+                                  if (!notif.isRead) markAsRead(notif.id);
+                                  if (notif.link) {
+                                    setShowNotifications(false);
+                                    navigate(notif.link);
+                                  }
+                                }}
+                                onKeyDown={(event) => {
+                                  if (notif.link && (event.key === "Enter" || event.key === " ")) {
+                                    event.preventDefault();
+                                    event.currentTarget.click();
+                                  }
+                                }}
+                                className={`group relative p-3.5 flex gap-3 hover:bg-slate-50 transition-colors ${notif.link ? "cursor-pointer" : ""} ${
                                   !notif.isRead ? "bg-blue-50/40" : ""
                                 }`}
                               >
                                 {/* Icon */}
-                                <button
-                                  onClick={() => {
-                                    if (!notif.isRead) markAsRead(notif.id);
-                                    setShowNotifications(false);
-                                    if (notif.link) navigate(notif.link);
-                                  }}
+                                <div
                                   className={`mt-0.5 p-2 rounded-full h-fit flex-shrink-0 cursor-pointer ${
                                     !notif.isRead ? "bg-white shadow-sm" : "bg-slate-100"
                                   }`}
                                 >
                                   {getNotificationIcon(notif.type)}
-                                </button>
+                                </div>
 
                                 {/* Text */}
-                                <button
-                                  onClick={() => {
-                                    if (!notif.isRead) markAsRead(notif.id);
-                                    setShowNotifications(false);
-                                    if (notif.link) navigate(notif.link);
-                                  }}
-                                  className="flex-1 min-w-0 text-left"
-                                >
+                                <div className="flex-1 min-w-0 text-left">
                                   <p className={`text-sm mb-0.5 truncate ${
                                     !notif.isRead ? "font-bold text-slate-800" : "font-medium text-slate-700"
                                   }`}>
@@ -271,7 +274,7 @@ export default function Navbar() {
                                   <p className="text-[10px] text-slate-400 mt-0.5">
                                     {formatRelativeTime(notif.createdAt)}
                                   </p>
-                                </button>
+                                </div>
 
                                 {/* Unread dot + delete */}
                                 <div className="flex flex-col items-center gap-1 flex-shrink-0 ml-1">

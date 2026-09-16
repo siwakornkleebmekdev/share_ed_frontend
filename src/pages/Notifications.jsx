@@ -180,7 +180,19 @@ export default function Notifications() {
                     {items.map((notif) => (
                       <div
                         key={notif.id}
-                        className={`group relative p-5 sm:p-6 flex gap-4 sm:items-start transition-colors ${
+                        role={notif.link ? 'link' : undefined}
+                        tabIndex={notif.link ? 0 : undefined}
+                        onClick={() => {
+                          if (!notif.isRead) markAsRead(notif.id);
+                          if (notif.link) navigate(notif.link);
+                        }}
+                        onKeyDown={(event) => {
+                          if (notif.link && (event.key === 'Enter' || event.key === ' ')) {
+                            event.preventDefault();
+                            event.currentTarget.click();
+                          }
+                        }}
+                        className={`group relative p-5 sm:p-6 flex gap-4 sm:items-start transition-colors ${notif.link ? 'cursor-pointer' : ''} ${
                           !notif.isRead ? 'bg-blue-50/20' : 'hover:bg-slate-50'
                         }`}
                       >
@@ -192,13 +204,7 @@ export default function Notifications() {
                         </div>
 
                         {/* Text content */}
-                        <button
-                          onClick={() => {
-                            if (!notif.isRead) markAsRead(notif.id);
-                            if (notif.link) navigate(notif.link);
-                          }}
-                          className="flex-1 min-w-0 text-left"
-                        >
+                        <div className="flex-1 min-w-0 text-left">
                           <div className="flex items-start justify-between gap-4">
                             <h3 className={`text-base ${!notif.isRead ? 'font-bold text-slate-900' : 'font-semibold text-slate-700'}`}>
                               {notif.title}
@@ -215,7 +221,7 @@ export default function Notifications() {
                               ดูรายละเอียด →
                             </span>
                           )}
-                        </button>
+                        </div>
 
                         {/* Actions: unread dot + delete */}
                         <div className="flex flex-col items-center gap-2 flex-shrink-0 ml-2">
@@ -223,7 +229,10 @@ export default function Notifications() {
                             <div className="w-2.5 h-2.5 bg-blue-500 rounded-full shadow-sm ring-4 ring-blue-50 mt-1"></div>
                           )}
                           <button
-                            onClick={() => deleteNotification(notif.id)}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              deleteNotification(notif.id);
+                            }}
                             className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500"
                             disabled={isMutating} aria-label="ลบการแจ้งเตือน" title="ลบการแจ้งเตือน"
                           >
