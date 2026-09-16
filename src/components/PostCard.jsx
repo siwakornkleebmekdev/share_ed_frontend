@@ -28,6 +28,23 @@ export default function PostCard({ post, viewMode, rank = null, dark = false }) 
   const heroColor = useHeroThemeStore((state) => state.heroColor);
   const cardGlassStyle = dark ? { backgroundColor: rgbToRgba(getGlassColor(heroColor, isDarkHero), 25) } : undefined;
 
+  const authorName = typeof post.author === 'string'
+    ? post.author
+    : (post.author?.username || post.author?.name || 'ผู้ใช้งาน');
+  const authorId = post.authorId || post.author_id || post.author?.id || post.author?.user_id || post.user_id;
+  const rawAuthorAvatar = post.authorAvatar
+    || post.author_avatar
+    || (typeof post.author === 'object' ? (post.author?.avatar_url || post.author?.profile_image || post.author?.avatar) : null);
+  const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(authorName || 'User')}&background=1e293b&color=38bdf8`;
+  const authorAvatar = rawAuthorAvatar || defaultAvatar;
+
+  const handleAuthorClick = (e) => {
+    if (authorId) {
+      e.stopPropagation();
+      navigate(`/profile/${authorId}`);
+    }
+  };
+
   const handleLike = async (e) => {
     e.stopPropagation();
     if (!isAuthenticated) {
@@ -143,11 +160,22 @@ export default function PostCard({ post, viewMode, rank = null, dark = false }) 
             </span>
           </div>
           <div className={`flex items-center justify-between mt-4 sm:mt-0 pt-4 border-t sm:pt-0 ${dark ? 'border-white/10 sm:border-transparent' : 'border-slate-50 sm:border-transparent'}`}>
-            <div className="flex items-center gap-2">
-              <div className={`h-7 w-7 rounded-full flex items-center justify-center font-bold text-xs ${dark ? 'bg-white/10 border border-white/10 text-primary' : 'bg-blue-50 border border-blue-100 text-primary'}`}>
-                {post.author[0]}
+            <div
+              onClick={handleAuthorClick}
+              className={`flex items-center gap-2 min-w-0 ${authorId ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+            >
+              <div className={`h-7 w-7 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center font-bold text-xs ${dark ? 'bg-white/10 border border-white/10 text-primary' : 'bg-blue-50 border border-blue-100 text-primary'}`}>
+                <img
+                  src={authorAvatar}
+                  alt={authorName}
+                  className="h-full w-full object-cover"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = defaultAvatar;
+                  }}
+                />
               </div>
-              <span className={`text-sm font-semibold transition-colors ${dark ? 'text-slate-300 group-hover:text-white' : 'text-slate-600 group-hover:text-slate-900'}`}>{post.author}</span>
+              <span className={`text-sm font-semibold transition-colors line-clamp-1 ${dark ? 'text-slate-300 group-hover:text-white' : 'text-slate-600 group-hover:text-slate-900'}`}>{authorName}</span>
             </div>
             <div className="flex items-center gap-4 text-slate-400 text-sm font-medium">
               <div className={`flex items-center gap-1.5 transition-colors ${dark ? 'hover:text-slate-200' : 'hover:text-slate-600'}`}><Eye className="h-4 w-4" /> {post.views}</div>
@@ -183,11 +211,22 @@ export default function PostCard({ post, viewMode, rank = null, dark = false }) 
         </span>
         <h3 className={`text-lg font-bold line-clamp-2 mb-4 group-hover:text-primary transition-colors flex-1 ${dark ? 'text-white' : 'text-slate-800'}`}>{post.title}</h3>
         <div className={`flex items-center justify-between pt-4 border-t mt-auto ${dark ? 'border-white/10' : 'border-slate-100'}`}>
-          <div className="flex items-center gap-2">
-            <div className={`h-7 w-7 rounded-full flex items-center justify-center font-bold text-xs ${dark ? 'bg-white/10 border border-white/10 text-primary' : 'bg-blue-50 border border-blue-100 text-primary'}`}>
-              {post.author[0]}
+          <div
+            onClick={handleAuthorClick}
+            className={`flex items-center gap-2 min-w-0 ${authorId ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+          >
+            <div className={`h-7 w-7 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center font-bold text-xs ${dark ? 'bg-white/10 border border-white/10 text-primary' : 'bg-blue-50 border border-blue-100 text-primary'}`}>
+              <img
+                src={authorAvatar}
+                alt={authorName}
+                className="h-full w-full object-cover"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = defaultAvatar;
+                }}
+              />
             </div>
-            <span className={`text-sm font-semibold transition-colors line-clamp-1 ${dark ? 'text-slate-300 group-hover:text-white' : 'text-slate-600 group-hover:text-slate-900'}`}>{post.author}</span>
+            <span className={`text-sm font-semibold transition-colors line-clamp-1 ${dark ? 'text-slate-300 group-hover:text-white' : 'text-slate-600 group-hover:text-slate-900'}`}>{authorName}</span>
           </div>
           <div className="flex items-center gap-3 text-slate-400 text-sm font-medium flex-shrink-0">
             <div className={`flex items-center gap-1 transition-colors ${dark ? 'hover:text-slate-200' : 'hover:text-slate-600'}`}><Eye className="h-3.5 w-3.5" /> {post.views}</div>

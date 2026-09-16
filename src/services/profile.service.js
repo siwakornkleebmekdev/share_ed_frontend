@@ -680,22 +680,32 @@ import { resolveCategoryName } from './post.service';
 // Helper function to format data for PostCard component
 function formatPosts(data) {
   if (!data) return [];
-  return data.map((post) => ({
-    id: post.id,
-    title: post.title,
-    description: post.summary || "ไม่มีคำอธิบาย",
-    level: mapEducationLevel(post.education_level),
-    subject: resolveCategoryName(post),
-    views: formatNumber(post.view_count),
-    likes: post._count?.likes || (typeof post.likes === 'number' ? post.likes : 0),
-    isLiked: Boolean(post.is_liked || post.isLiked || post.has_liked),
-    isBookmarked: Boolean(post.is_bookmarked || post.isBookmarked || post.has_bookmarked),
-    image:
-      post.cover_image ||
-      "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=500&q=80",
-    author: post.author?.username || "ผู้ใช้งาน",
-    created_at: post.created_at,
-  }));
+  return data.map((post) => {
+    const authorUsername = post.author?.username || (typeof post.author === 'string' ? post.author : "ผู้ใช้งาน");
+    const authorId = post.author_id || post.author?.id || post.author?.user_id || post.user_id || null;
+    const authorAvatar = post.author?.avatar_url || post.author?.profile_image || post.author?.avatar || post.author_avatar || null;
+
+    return {
+      id: post.id,
+      title: post.title,
+      description: post.summary || "ไม่มีคำอธิบาย",
+      level: mapEducationLevel(post.education_level),
+      subject: resolveCategoryName(post),
+      views: formatNumber(post.view_count),
+      likes: post._count?.likes || (typeof post.likes === 'number' ? post.likes : 0),
+      isLiked: Boolean(post.is_liked || post.isLiked || post.has_liked),
+      isBookmarked: Boolean(post.is_bookmarked || post.isBookmarked || post.has_bookmarked),
+      image:
+        post.cover_image ||
+        "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=500&q=80",
+      author: authorUsername,
+      author_id: authorId,
+      authorId: authorId,
+      authorAvatar: authorAvatar,
+      author_avatar: authorAvatar,
+      created_at: post.created_at,
+    };
+  });
 }
 
 function formatNumber(num) {
