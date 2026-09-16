@@ -374,7 +374,14 @@ function App() {
           <Route path="/home" element={<Home />} />
           <Route path="/explore" element={<Explore />} />
           <Route path="/trending" element={<Trending />} />
-          <Route path="/post/:id" element={<PostDetails />} />
+          <Route
+            path="/post/:id"
+            element={
+              <ProtectedRoute>
+                <PostDetails />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/post/edit/:id"
             element={
