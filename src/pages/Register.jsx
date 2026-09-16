@@ -30,6 +30,37 @@ export default function Register() {
     }
   }, [isAuthenticated, user, navigate]);
 
+  const checkAvailability = async ({ checkEmail = false, checkUsername = false } = {}) => {
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedUsername = username.trim();
+
+    if ((checkEmail && !normalizedEmail) || (checkUsername && !normalizedUsername)) return true;
+
+    try {
+      const availability = await authService.checkRegistrationAvailability({
+        email: checkEmail ? normalizedEmail : '',
+        username: checkUsername ? normalizedUsername : ''
+      });
+      const availabilityErrors = {};
+
+      if (checkEmail && !availability.emailAvailable) {
+        availabilityErrors.email = 'อีเมลนี้ถูกใช้งานแล้ว รวมถึงบัญชีที่สมัครผ่าน Google';
+      }
+      if (checkUsername && !availability.usernameAvailable) {
+        availabilityErrors.username = 'ชื่อผู้ใช้นี้ถูกใช้งานแล้ว';
+      }
+
+      setFieldErrors(prev => ({
+        ...prev,
+        ...(checkEmail ? { email: availabilityErrors.email || null } : {}),
+        ...(checkUsername ? { username: availabilityErrors.username || null } : {})
+      }));
+      return Object.keys(availabilityErrors).length === 0;
+    } catch {
+      return true;
+    }
+  };
+
   const handleRegister = async (e) => {
     e.preventDefault();
     setFieldErrors({});
@@ -40,6 +71,8 @@ export default function Register() {
     }
     if (!email || !email.trim()) {
       newErrors.email = 'กรุณากรอกอีเมล';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      newErrors.email = 'รูปแบบอีเมลไม่ถูกต้อง';
     }
     if (!educationLevel) {
       newErrors.educationLevel = 'กรุณาเลือกระดับการศึกษา';
@@ -48,6 +81,10 @@ export default function Register() {
       newErrors.password = 'กรุณากรอกรหัสผ่าน';
     } else if (password.length < 8) {
       newErrors.password = 'รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร';
+    } else if (!/[A-Za-z]/.test(password)) {
+      newErrors.password = 'รหัสผ่านต้องมีตัวอักษรภาษาอังกฤษอย่างน้อย 1 ตัว';
+    } else if (!/\d/.test(password)) {
+      newErrors.password = 'รหัสผ่านต้องมีตัวเลขอย่างน้อย 1 ตัว';
     }
     if (!confirmPassword) {
       newErrors.confirmPassword = 'กรุณายืนยันรหัสผ่าน';
@@ -63,10 +100,26 @@ export default function Register() {
     try {
       setIsLoading(true);
 
+      const availability = await authService.checkRegistrationAvailability({
+        email: email.trim().toLowerCase(),
+        username: username.trim()
+      });
+      const duplicateErrors = {};
+      if (!availability.emailAvailable) {
+        duplicateErrors.email = 'อีเมลนี้ถูกใช้งานแล้ว รวมถึงบัญชีที่สมัครผ่าน Google';
+      }
+      if (!availability.usernameAvailable) {
+        duplicateErrors.username = 'ชื่อผู้ใช้นี้ถูกใช้งานแล้ว';
+      }
+      if (Object.keys(duplicateErrors).length > 0) {
+        setFieldErrors(duplicateErrors);
+        return;
+      }
+
       const data = await authService.register({
-        email,
+        email: email.trim().toLowerCase(),
         password,
-        username,
+        username: username.trim(),
         education_level: educationLevel,
         age: 0,
         bio: 'ยังไม่ได้ระบุ'
@@ -75,14 +128,20 @@ export default function Register() {
       const registeredUser = data?.session?.user || data?.user || {};
       const meta = registeredUser.user_metadata || {};
 
+      if (!data?.session) {
+        toast.success('สมัครสมาชิกสำเร็จ กรุณาเข้าสู่ระบบ');
+        navigate('/login');
+        return;
+      }
+
       loginAction({
         ...registeredUser,
         id: registeredUser.id || 'new_user',
         user_id: registeredUser.id || 'new_user',
-        email,
-        name: username,
-        display_name: username,
-        username,
+        email: email.trim().toLowerCase(),
+        name: username.trim(),
+        display_name: username.trim(),
+        username: username.trim(),
         education_level: educationLevel,
         age: 0,
         bio: 'ยังไม่ได้ระบุ',
@@ -92,7 +151,14 @@ export default function Register() {
       toast.success('สมัครสมาชิกสำเร็จ ยินดีต้อนรับสู่ SHARE-ED!');
       navigate('/home');
     } catch (error) {
-      setFieldErrors({ general: error.message || 'เกิดข้อผิดพลาดในการสมัครสมาชิก' });
+      const message = error.message || 'เกิดข้อผิดพลาดในการสมัครสมาชิก';
+      if (message.includes('ชื่อผู้ใช้')) {
+        setFieldErrors({ username: message });
+      } else if (message.includes('อีเมล')) {
+        setFieldErrors({ email: message });
+      } else {
+        setFieldErrors({ general: message });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -146,6 +212,7 @@ export default function Register() {
                     setUsername(e.target.value);
                     if (fieldErrors.username) setFieldErrors(prev => ({ ...prev, username: null }));
                   }}
+                  onBlur={() => checkAvailability({ checkUsername: true })}
                   className={`block w-full pl-10 pr-3 py-2.5 border rounded-lg focus:outline-none transition-colors ${fieldErrors.username
                     ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
                     : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
@@ -170,6 +237,11 @@ export default function Register() {
                   onChange={(e) => {
                     setEmail(e.target.value);
                     if (fieldErrors.email) setFieldErrors(prev => ({ ...prev, email: null }));
+                  }}
+                  onBlur={() => {
+                    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+                      checkAvailability({ checkEmail: true });
+                    }
                   }}
                   className={`block w-full pl-10 pr-3 py-2.5 border rounded-lg focus:outline-none transition-colors ${fieldErrors.email
                     ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
@@ -233,7 +305,7 @@ export default function Register() {
                     ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
                     : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
                     }`}
-                  placeholder="ตั้งรหัสผ่านอย่างน้อย 8 ตัวอักษร"
+                  placeholder="อย่างน้อย 8 ตัว มีตัวอักษรอังกฤษและตัวเลข"
                 />
               </div>
               {fieldErrors.password && (
