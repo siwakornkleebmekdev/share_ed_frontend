@@ -1,5 +1,5 @@
-import api from '../utils/api';
-import { categoryService } from './category.service';
+import api from '../utils/api.js';
+import { categoryService } from './category.service.js';
 
 // ดึงชื่อไฟล์จาก URL (รองรับทั้ง URL ปกติและ Cloudinary URL ที่มี URL encoding)
 function extractFileNameFromUrl(url) {
@@ -49,10 +49,94 @@ export const postService = {
     }
   },
 
-  // Create a new post
-  createPost: async (formData) => {
+  // Get upload signature from backend for direct Cloudinary upload
+  getUploadSignature: async (type = 'media') => {
     try {
-      const response = await api.post('/posts', formData);
+      const response = await api.get('/posts/upload-signature', {
+        params: { type }
+      });
+      if (response.data?.success && response.data?.data) {
+        return response.data.data;
+      }
+      throw new Error(response.data?.message || 'ไม่สามารถสร้าง Signature สำหรับอัปโหลดไฟล์ได้');
+    } catch (error) {
+      console.error('Error fetching upload signature:', error);
+      throw error;
+    }
+  },
+
+  // Upload single file directly to Cloudinary CDN using signed credentials
+  uploadDirectToCloudinary: async (file, type = 'media') => {
+    if (!file) return null;
+    try {
+      const sigData = await postService.getUploadSignature(type);
+      const { signature, timestamp, apiKey, folder, uploadUrl } = sigData;
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('api_key', apiKey);
+      formData.append('timestamp', timestamp);
+      formData.append('signature', signature);
+      formData.append('folder', folder);
+
+      const response = await fetch(uploadUrl, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        const errJson = await response.json().catch(() => ({}));
+        throw new Error(errJson?.error?.message || `Cloudinary upload failed (status ${response.status})`);
+      }
+
+      const result = await response.json();
+      return result.secure_url || result.url;
+    } catch (error) {
+      console.error(`Error uploading ${type} to Cloudinary:`, error);
+      throw error;
+    }
+  },
+
+  // Upload multiple files directly to Cloudinary in parallel
+  uploadMultipleDirectToCloudinary: async (files, type = 'media') => {
+    if (!files || files.length === 0) return [];
+    try {
+      const sigData = await postService.getUploadSignature(type);
+      const { signature, timestamp, apiKey, folder, uploadUrl } = sigData;
+
+      const uploadPromises = Array.from(files).map(async (file) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('api_key', apiKey);
+        formData.append('timestamp', timestamp);
+        formData.append('signature', signature);
+        formData.append('folder', folder);
+
+        const response = await fetch(uploadUrl, {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!response.ok) {
+          const errJson = await response.json().catch(() => ({}));
+          throw new Error(errJson?.error?.message || `Cloudinary upload failed (status ${response.status})`);
+        }
+
+        const result = await response.json();
+        return result.secure_url || result.url;
+      });
+
+      return await Promise.all(uploadPromises);
+    } catch (error) {
+      console.error(`Error uploading multiple ${type} files to Cloudinary:`, error);
+      throw error;
+    }
+  },
+
+  // Create a new post (supports both JSON payload and FormData)
+  createPost: async (postData) => {
+    try {
+      const response = await api.post('/posts', postData);
       return response.data;
     } catch (error) {
       console.error('Error creating post:', error);

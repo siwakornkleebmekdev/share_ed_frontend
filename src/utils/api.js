@@ -1,10 +1,8 @@
 import axios from 'axios';
-import { supabase } from './supabase';
-
 
 const api = axios.create({
   // ดึงค่านำจาก Environment Variable เสมอ ไม่ว่าจะเป็น Dev หรือ Prod
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://share-ed-backend-6jer.onrender.com/api/v1',
+  baseURL: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) || 'https://share-ed-backend-6jer.onrender.com/api/v1',
   headers: {
     'Content-Type': 'application/json',
   },

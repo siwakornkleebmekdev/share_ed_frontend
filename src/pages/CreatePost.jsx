@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router';
 import { UploadCloud, File, X, GraduationCap, Tag, AlignLeft, BookOpen, PenTool, Save, Image as ImageIcon, Plus, Eye, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -7,7 +7,6 @@ import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import { postService } from '../services/post.service';
 import { categoryService, isValidCategoryUuid } from '../services/category.service';
-import { uploadFileToSupabase } from '@/utils/storage';
 
 const SUGGESTED_TAGS = ['#AI', '#เรียนรู้ไปด้วยกัน', '#เตรียมสอบ', '#TCAS67', '#สรุปย่อ', '#แชร์ความรู้', '#เด็กซิ่ว', '#สรุปชีท'];
 
@@ -16,6 +15,31 @@ export default function CreatePost() {
   const [coverImage, setCoverImage] = useState(null);
   const [pdfFile, setPdfFile] = useState(null);
   const [images, setImages] = useState([]);
+
+  // Memoize preview URLs to prevent repeated network fetching / memory leak on re-renders
+  const coverPreviewUrl = useMemo(() => {
+    if (!coverImage) return null;
+    return URL.createObjectURL(coverImage);
+  }, [coverImage]);
+
+  useEffect(() => {
+    return () => {
+      if (coverPreviewUrl) URL.revokeObjectURL(coverPreviewUrl);
+    };
+  }, [coverPreviewUrl]);
+
+  const imagePreviews = useMemo(() => {
+    return images.map(img => ({
+      file: img,
+      previewUrl: URL.createObjectURL(img)
+    }));
+  }, [images]);
+
+  useEffect(() => {
+    return () => {
+      imagePreviews.forEach(item => URL.revokeObjectURL(item.previewUrl));
+    };
+  }, [imagePreviews]);
 
   const [title, setTitle] = useState('');
   const [summary, setSummary] = useState('');
@@ -31,7 +55,7 @@ export default function CreatePost() {
   const tagInputRef = useRef(null);
 
   const [showModal, setShowModal] = useState(false);
-  const [previewFile, setPreviewFile] = useState(null); // { type: 'image' | 'pdf', url: string }
+  const [previewFile, setPreviewFile] = useState(null); // { type: 'image' | 'pdf', url: string, isBlob?: boolean }
   const [fieldErrors, setFieldErrors] = useState({});
 
   // Fetch categories on mount
@@ -135,7 +159,7 @@ export default function CreatePost() {
         continue;
       }
 
-      if (file.size > 5 * 1024 * 1024) {
+      if (file.size > 2 * 1024 * 1024) {
         hasOversized = true;
         continue;
       }
@@ -151,7 +175,7 @@ export default function CreatePost() {
     }
 
     if (hasOversized) {
-      toast.error('รูปภาพบางรูปมีขนาดเกิน 5 MB และถูกข้ามไป');
+      toast.error('รูปภาพบางรูปมีขนาดเกิน 2 MB และถูกข้ามไป');
     }
 
     setImages(newImages);
@@ -162,11 +186,18 @@ export default function CreatePost() {
     setImages(images.filter((_, i) => i !== index));
   };
 
-  const openPreview = (file, type) => {
-    setPreviewFile({ type, url: URL.createObjectURL(file) });
+  const openPreview = (fileOrUrl, type) => {
+    if (typeof fileOrUrl === 'string') {
+      setPreviewFile({ type, url: fileOrUrl });
+    } else if (fileOrUrl instanceof File || fileOrUrl instanceof Blob) {
+      setPreviewFile({ type, url: URL.createObjectURL(fileOrUrl), isBlob: true });
+    }
   };
 
   const closePreview = () => {
+    if (previewFile?.isBlob && previewFile?.url) {
+      URL.revokeObjectURL(previewFile.url);
+    }
     setPreviewFile(null);
   };
 
@@ -239,6 +270,16 @@ export default function CreatePost() {
     if (!summary.trim()) newErrors.summary = 'กรุณากรอกบทสรุปย่อ';
     if (!categoryId && !categoryName) newErrors.category = 'กรุณาเลือกหมวดหมู่วิชา';
 
+    if (!coverImage) {
+      newErrors.cover = 'กรุณาอัปโหลดรูปภาพหน้าปก';
+      toast.error('กรุณาอัปโหลดรูปภาพหน้าปก');
+    }
+
+    if (!pdfFile && (!images || images.length === 0)) {
+      newErrors.media = 'กรุณาแนบไฟล์ PDF หรือรูปภาพประกอบอย่างน้อย 1 ไฟล์';
+      toast.error('กรุณาแนบไฟล์ PDF หรือรูปภาพประกอบอย่างน้อย 1 ไฟล์');
+    }
+
     if (Object.keys(newErrors).length > 0) {
       setFieldErrors(newErrors);
       return;
@@ -247,18 +288,38 @@ export default function CreatePost() {
     try {
       Swal.fire({
         title: status === 'ACTIVE' ? 'กำลังโพสต์สรุปความรู้...' : 'กำลังบันทึกแบบร่าง...',
+        html: '<div id="swal-upload-status" style="font-size: 14px; color: #64748b; margin-top: 8px;">กำลังเตรียมการอัปโหลดไฟล์ตรงไปยัง Cloudinary...</div>',
         allowOutsideClick: false,
         didOpen: () => {
           Swal.showLoading();
         }
       });
 
-      const formData = new FormData();
-      formData.append('title', title.trim());
-      formData.append('summary', summary.trim());
-      formData.append('content', content);
+      const updateSwalStatus = (message) => {
+        const el = document.getElementById('swal-upload-status');
+        if (el) el.innerText = message;
+      };
 
-      // Resolve valid category UUID from selected category
+      // 1. Parallel Direct Upload to Cloudinary CDN using Signed Credentials
+      updateSwalStatus('กำลังอัปโหลดรูปหน้าปกและไฟล์ประกอบไปยัง Cloud CDN...');
+      const [coverUrl, pdfUrl, uploadedImageUrls] = await Promise.all([
+        postService.uploadDirectToCloudinary(coverImage, 'cover'),
+        pdfFile ? postService.uploadDirectToCloudinary(pdfFile, 'pdf') : Promise.resolve(null),
+        images && images.length > 0
+          ? postService.uploadMultipleDirectToCloudinary(images, 'media')
+          : Promise.resolve([])
+      ]);
+
+      // 2. Prepare media URLs array
+      const media_urls = [];
+      if (pdfUrl) {
+        media_urls.push(pdfUrl);
+      }
+      if (uploadedImageUrls && uploadedImageUrls.length > 0) {
+        media_urls.push(...uploadedImageUrls);
+      }
+
+      // 3. Resolve category and education level
       let validCatId = isValidCategoryUuid(categoryId) ? categoryId : null;
       if (!validCatId && categoryName) {
         const matchInList = categoriesList.find(c => c.name === categoryName && isValidCategoryUuid(c.id));
@@ -266,58 +327,28 @@ export default function CreatePost() {
           validCatId = matchInList.id;
         }
       }
-      if (validCatId) {
-        formData.append('category_id', validCatId);
-      }
-      if (categoryName) {
-        formData.append('category', categoryName);
-      }
 
       let backendLevel = 'UNIVERSITY';
       if (level === 'มัธยมศึกษาตอนต้น') backendLevel = 'MIDDLE_SCHOOL';
       else if (level === 'มัธยมศึกษาตอนปลาย') backendLevel = 'HIGH_SCHOOL';
-      formData.append('education_level', backendLevel);
 
-      formData.append('post_status', status);
+      updateSwalStatus('กำลังบันทึกข้อมูลโพสต์ที่ระบบหลังบ้าน...');
 
-      if (coverImage) {
-        formData.append('cover_image', coverImage);
-        try {
-          const coverUrl = await uploadFileToSupabase(coverImage, 'posts', 'covers');
-          if (coverUrl) formData.append('cover_image_url', coverUrl);
-        } catch (e) {
-          console.log('Cover upload to Supabase storage notice:', e);
-        }
-      }
+      // 4. Send clean JSON payload with direct URLs to backend
+      const postPayload = {
+        title: title.trim(),
+        summary: summary.trim(),
+        content,
+        education_level: backendLevel,
+        category_id: validCatId,
+        category: categoryName,
+        cover_image_url: coverUrl,
+        media_urls,
+        tags: hashtags,
+        post_status: status
+      };
 
-      if (pdfFile) {
-        formData.append('media_files', pdfFile);
-        try {
-          const pdfUrl = await uploadFileToSupabase(pdfFile, 'posts', 'documents');
-          if (pdfUrl) formData.append('pdf_url', pdfUrl);
-        } catch (e) {
-          console.log('PDF upload to Supabase storage notice:', e);
-        }
-      }
-
-      if (images && images.length > 0) {
-        const imageUrls = [];
-        for (const img of images) {
-          formData.append('media_files', img);
-          try {
-            const url = await uploadFileToSupabase(img, 'posts', 'images');
-            if (url) imageUrls.push(url);
-          } catch (e) { }
-        }
-        if (imageUrls.length > 0) {
-          formData.append('image_urls', JSON.stringify(imageUrls));
-        }
-      }
-
-      // Send only user-entered hashtags
-      formData.append('tags', JSON.stringify(hashtags));
-
-      const result = await postService.createPost(formData);
+      const result = await postService.createPost(postPayload);
       Swal.close();
 
       if (result.success) {
@@ -376,10 +407,10 @@ export default function CreatePost() {
               ) : (
                 <div className="relative w-full aspect-video rounded-2xl overflow-hidden border border-slate-200 group">
                   <img
-                    src={URL.createObjectURL(coverImage)}
+                    src={coverPreviewUrl}
                     alt="Cover"
                     className="w-full h-full object-cover object-center rounded-2xl cursor-pointer transition-transform duration-300 group-hover:scale-[1.02]"
-                    onClick={() => openPreview(coverImage, 'image')}
+                    onClick={() => openPreview(coverPreviewUrl, 'image')}
                   />
                   <button onClick={(e) => { e.stopPropagation(); setCoverImage(null); }} className="absolute top-3 right-3 p-1.5 bg-white/90 backdrop-blur-sm text-slate-500 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-all z-10 shadow-sm border border-slate-200 hover:border-rose-200" title="ลบรูปปก">
                     <X className="h-5 w-5" />
@@ -574,13 +605,13 @@ export default function CreatePost() {
               </label>
 
               <div className="flex flex-wrap gap-4 pt-1">
-                {images.map((img, idx) => (
+                {imagePreviews.map((item, idx) => (
                   <div key={idx} className="relative w-20 h-20 rounded-xl border border-slate-200 overflow-visible group">
                     <img
-                      src={URL.createObjectURL(img)}
+                      src={item.previewUrl}
                       alt={`img-${idx}`}
                       className="w-full h-full object-cover rounded-xl cursor-pointer"
-                      onClick={() => openPreview(img, 'image')}
+                      onClick={() => openPreview(item.previewUrl, 'image')}
                     />
                     <button
                       onClick={(e) => { e.stopPropagation(); removeImage(idx); }}

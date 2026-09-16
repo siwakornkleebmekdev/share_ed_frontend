@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { UploadCloud, File, X, GraduationCap, Tag, AlignLeft, BookOpen, PenTool, Save, Image as ImageIcon, Plus, Eye, FileText, ChevronLeft, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -31,6 +31,33 @@ export default function EditPost() {
   const [coverImage, setCoverImage] = useState(null);
   const [pdfFile, setPdfFile] = useState(null);
   const [images, setImages] = useState([]);
+
+  // Memoize preview URLs to avoid repeated fetching / memory leaks on re-renders
+  const coverPreviewUrl = useMemo(() => {
+    if (coverImage) return URL.createObjectURL(coverImage);
+    return existingCoverImage || null;
+  }, [coverImage, existingCoverImage]);
+
+  useEffect(() => {
+    return () => {
+      if (coverImage && coverPreviewUrl && coverPreviewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(coverPreviewUrl);
+      }
+    };
+  }, [coverPreviewUrl, coverImage]);
+
+  const newImagePreviews = useMemo(() => {
+    return images.map(img => ({
+      file: img,
+      previewUrl: URL.createObjectURL(img)
+    }));
+  }, [images]);
+
+  useEffect(() => {
+    return () => {
+      newImagePreviews.forEach(item => URL.revokeObjectURL(item.previewUrl));
+    };
+  }, [newImagePreviews]);
 
   // Fields
   const [title, setTitle] = useState('');
@@ -265,7 +292,7 @@ export default function EditPost() {
         continue;
       }
 
-      if (file.size > 5 * 1024 * 1024) {
+      if (file.size > 2 * 1024 * 1024) {
         hasOversized = true;
         continue;
       }
@@ -281,7 +308,7 @@ export default function EditPost() {
     }
 
     if (hasOversized) {
-      toast.error('รูปภาพบางรูปมีขนาดเกิน 5 MB และถูกข้ามไป');
+      toast.error('รูปภาพบางรูปมีขนาดเกิน 2 MB และถูกข้ามไป');
     }
 
     setImages(newImages);
@@ -292,11 +319,18 @@ export default function EditPost() {
     setImages(images.filter((_, i) => i !== index));
   };
 
-  const openPreview = (file, type) => {
-    setPreviewFile({ type, url: URL.createObjectURL(file) });
+  const openPreview = (fileOrUrl, type) => {
+    if (typeof fileOrUrl === 'string') {
+      setPreviewFile({ type, url: fileOrUrl });
+    } else if (fileOrUrl instanceof File || fileOrUrl instanceof Blob) {
+      setPreviewFile({ type, url: URL.createObjectURL(fileOrUrl), isBlob: true });
+    }
   };
 
   const closePreview = () => {
+    if (previewFile?.isBlob && previewFile?.url) {
+      URL.revokeObjectURL(previewFile.url);
+    }
     setPreviewFile(null);
   };
 
@@ -550,18 +584,17 @@ export default function EditPost() {
                 <label className="flex flex-col items-center justify-center w-full aspect-video border-2 border-dashed border-slate-300 rounded-2xl hover:border-primary hover:bg-slate-50 cursor-pointer transition-all">
                   <ImageIcon className="h-10 w-10 text-slate-400 mb-3" />
                   <span className="text-sm font-medium text-slate-500">คลิกเพื่ออัปโหลดรูปปกใหม่</span>
-                  <span className="text-xs text-slate-400 mt-1">อัตราส่วนที่แนะนำ 16:9 (1280×720px) รูปภาพขนาดไม่เกิน 20 Mb</span>
+                  <span className="text-xs text-slate-400 mt-1">อัตราส่วนที่แนะนำ 16:9 (1280×720px) รูปภาพขนาดไม่เกิน 2 MB</span>
                   <input type="file" className="hidden" accept=".jpg,.jpeg,.png" onChange={handleCoverUpload} />
                 </label>
               ) : (
                 <div className="relative w-full aspect-video rounded-2xl overflow-hidden border border-slate-200 group">
                   <img
-                    src={coverImage ? URL.createObjectURL(coverImage) : existingCoverImage}
+                    src={coverPreviewUrl}
                     alt="Cover"
                     className="w-full h-full object-cover object-center rounded-2xl cursor-pointer transition-transform duration-300 group-hover:scale-[1.02]"
                     onClick={() => {
-                      if (coverImage) openPreview(coverImage, 'image');
-                      else setPreviewFile({ type: 'image', url: existingCoverImage });
+                      if (coverPreviewUrl) openPreview(coverPreviewUrl, 'image');
                     }}
                   />
                   <button
@@ -790,7 +823,7 @@ export default function EditPost() {
             <div>
               <label className="flex items-center justify-between text-base font-bold text-slate-800 mb-3">
                 <span>รูปภาพประกอบ ({existingImages.length + images.length}/15)</span>
-                <span className="text-xs font-normal text-slate-500">ไม่เกินรูปละ 5 MB</span>
+                <span className="text-xs font-normal text-slate-500">ไม่เกินรูปละ 2 MB</span>
               </label>
 
               <div className="flex flex-wrap gap-4 pt-1">
@@ -823,13 +856,13 @@ export default function EditPost() {
                 ))}
 
                 {/* Newly uploaded images */}
-                {images.map((img, idx) => (
+                {newImagePreviews.map((item, idx) => (
                   <div key={`new-${idx}`} className="relative w-20 h-20 rounded-xl border border-slate-200 overflow-visible group">
                     <img
-                      src={URL.createObjectURL(img)}
+                      src={item.previewUrl}
                       alt={`img-${idx}`}
                       className="w-full h-full object-cover rounded-xl cursor-pointer"
-                      onClick={() => openPreview(img, 'image')}
+                      onClick={() => openPreview(item.previewUrl, 'image')}
                     />
                     <button
                       onClick={(e) => {
