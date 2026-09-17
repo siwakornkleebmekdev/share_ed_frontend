@@ -3,6 +3,7 @@ import { Heart, Eye, Bookmark, BookmarkPlus, BookmarkCheck, Crown, Medal } from 
 import { useNavigate } from 'react-router';
 import toast from 'react-hot-toast';
 import { postService } from '../services/post.service';
+import { DEFAULT_FRAMES } from '../services/profile.service';
 import useAuthStore from '../store/authStore';
 import useHeroThemeStore from '../store/heroThemeStore';
 import { getGlassColor, rgbToRgba } from '../utils/colorUtils';
@@ -14,6 +15,7 @@ export default function PostCard({ post, viewMode, rank = null, dark = false, on
   const [isLiking, setIsLiking] = useState(false);
   const [isBookmarking, setIsBookmarking] = useState(false);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const user = useAuthStore((state) => state.user);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -37,6 +39,44 @@ export default function PostCard({ post, viewMode, rank = null, dark = false, on
     || (typeof post.author === 'object' ? (post.author?.avatar_url || post.author?.profile_image || post.author?.avatar) : null);
   const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(authorName || 'User')}&background=1e293b&color=38bdf8`;
   const authorAvatar = rawAuthorAvatar || defaultAvatar;
+
+  const isCurrentUser = user && authorId && (String(user.id) === String(authorId) || String(user.user_id) === String(authorId));
+  const authorFrameId =
+    (isCurrentUser
+      ? user?.user_metadata?.profile_frame_id ||
+        user?.current_frame_id ||
+        user?.profile_frame_id ||
+        (authorId ? localStorage.getItem(`profile_frame_id_${authorId}`) : null) ||
+        localStorage.getItem('profile_frame_id')
+      : null) ||
+    post.author_frame_id ||
+    post.authorFrameId ||
+    post.author?.current_frame_id ||
+    post.author?.profile_frame_id ||
+    post.author?.frame_id ||
+    post.current_frame_id ||
+    (authorId ? localStorage.getItem(`profile_frame_id_${authorId}`) : null);
+
+  const authorFrameObj = authorFrameId
+    ? DEFAULT_FRAMES.find(
+        (df) =>
+          df.id === authorFrameId ||
+          df.reward_item_id === authorFrameId ||
+          df.reward?.id === authorFrameId
+      )
+    : null;
+
+  const serverFrame = post.authorFrame || post.author_frame || post.author?.current_frame || post.current_frame;
+
+  const authorFrameUrl =
+    serverFrame?.image_url ||
+    serverFrame?.previewUrl ||
+    serverFrame?.reward?.previewUrl ||
+    serverFrame?.metadata?.previewUrl ||
+    authorFrameObj?.reward?.previewUrl ||
+    authorFrameObj?.image_url ||
+    authorFrameObj?.previewUrl ||
+    (typeof authorFrameId === 'string' && (authorFrameId.startsWith('/') || authorFrameId.startsWith('http')) ? authorFrameId : null);
 
   const handleAuthorClick = (e) => {
     if (authorId) {
@@ -165,16 +205,25 @@ export default function PostCard({ post, viewMode, rank = null, dark = false, on
               onClick={handleAuthorClick}
               className={`flex items-center gap-2 min-w-0 ${authorId ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
             >
-              <div className={`h-7 w-7 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center font-bold text-xs ${dark ? 'bg-white/10 border border-white/10 text-primary' : 'bg-blue-50 border border-blue-100 text-primary'}`}>
-                <img
-                  src={authorAvatar}
-                  alt={authorName}
-                  className="h-full w-full object-cover"
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.src = defaultAvatar;
-                  }}
-                />
+              <div className="relative flex-shrink-0 flex items-center justify-center">
+                <div className={`h-7 w-7 rounded-full overflow-hidden flex items-center justify-center font-bold text-xs ${dark ? 'bg-white/10 border border-white/10 text-primary' : 'bg-blue-50 border border-blue-100 text-primary'}`}>
+                  <img
+                    src={authorAvatar}
+                    alt={authorName}
+                    className="h-full w-full object-cover"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = defaultAvatar;
+                    }}
+                  />
+                </div>
+                {authorFrameUrl && (
+                  <img
+                    src={authorFrameUrl}
+                    alt="Frame"
+                    className="absolute inset-0 w-full h-full pointer-events-none scale-125 z-10"
+                  />
+                )}
               </div>
               <span className={`text-sm font-semibold transition-colors line-clamp-1 ${dark ? 'text-slate-300 group-hover:text-white' : 'text-slate-600 group-hover:text-slate-900'}`}>{authorName}</span>
             </div>
@@ -216,16 +265,25 @@ export default function PostCard({ post, viewMode, rank = null, dark = false, on
             onClick={handleAuthorClick}
             className={`flex items-center gap-2 min-w-0 ${authorId ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
           >
-            <div className={`h-7 w-7 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center font-bold text-xs ${dark ? 'bg-white/10 border border-white/10 text-primary' : 'bg-blue-50 border border-blue-100 text-primary'}`}>
-              <img
-                src={authorAvatar}
-                alt={authorName}
-                className="h-full w-full object-cover"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = defaultAvatar;
-                }}
-              />
+            <div className="relative flex-shrink-0 flex items-center justify-center">
+              <div className={`h-7 w-7 rounded-full overflow-hidden flex items-center justify-center font-bold text-xs ${dark ? 'bg-white/10 border border-white/10 text-primary' : 'bg-blue-50 border border-blue-100 text-primary'}`}>
+                <img
+                  src={authorAvatar}
+                  alt={authorName}
+                  className="h-full w-full object-cover"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = defaultAvatar;
+                  }}
+                />
+              </div>
+              {authorFrameUrl && (
+                <img
+                  src={authorFrameUrl}
+                  alt="Frame"
+                  className="absolute inset-0 w-full h-full pointer-events-none scale-125 z-10"
+                />
+              )}
             </div>
             <span className={`text-sm font-semibold transition-colors line-clamp-1 ${dark ? 'text-slate-300 group-hover:text-white' : 'text-slate-600 group-hover:text-slate-900'}`}>{authorName}</span>
           </div>

@@ -360,11 +360,13 @@ export function resolveCategoryName(post) {
   return 'ทั่วไป';
 }
 
-function formatPostData(post) {
+export function formatPostData(post) {
   const categoryName = resolveCategoryName(post);
   const authorUsername = post.author?.username || (typeof post.author === 'string' ? post.author : 'ผู้ใช้งาน');
   const authorId = post.author_id || post.author?.id || post.author?.user_id || post.user_id || null;
   const authorAvatar = post.author?.avatar_url || post.author?.profile_image || post.author?.avatar || post.author_avatar || null;
+  const authorFrameId = post.author?.current_frame_id || post.author_frame_id || post.authorFrameId || null;
+  const authorFrame = post.author?.current_frame || post.author_frame || post.authorFrame || null;
 
   return {
     id: post.id,
@@ -386,15 +388,21 @@ function formatPostData(post) {
     authorId: authorId,
     authorAvatar: authorAvatar,
     author_avatar: authorAvatar,
+    author_frame_id: authorFrameId,
+    authorFrameId: authorFrameId,
+    author_frame: authorFrame,
+    authorFrame: authorFrame,
     created_at: post.created_at,
   };
 }
 
-function formatSinglePostData(post) {
+export function formatSinglePostData(post) {
   const pdfMedia = post.media?.find(m => m.media_type === 'PDF');
   const hashtags = post.tags?.map(t => typeof t === 'string' ? t : (t.tag?.tag_name || t.name)) || [];
   const images = post.media?.filter(m => m.media_type === 'IMAGE').map(m => m.media_url) || [];
   const authorId = post.author?.id || post.author?.user_id || post.author_id || post.user_id || post.userId;
+  const authorFrameId = post.author?.current_frame_id || post.author?.profile_frame_id || post.author?.frame_id || post.author_frame_id || post.current_frame_id || null;
+  const authorFrame = post.author?.current_frame || post.author_frame || post.authorFrame || null;
   const categoryName = resolveCategoryName(post);
 
   const comments = (post.comments || []).map(c => {
@@ -439,6 +447,11 @@ function formatSinglePostData(post) {
     author_id: authorId,
     user_id: authorId,
     authorId: authorId,
+    author_frame_id: authorFrameId,
+    authorFrameId: authorFrameId,
+    author_frame: authorFrame,
+    authorFrame: authorFrame,
+    current_frame_id: authorFrameId,
     pdf: pdfMedia ? {
       id: pdfMedia.id,
       name: extractFileNameFromUrl(pdfMedia.media_url),
@@ -451,6 +464,8 @@ function formatSinglePostData(post) {
       username: post.author?.username || 'ผู้ใช้งาน',
       role: 'Contributor',
       avatar: post.author?.avatar_url || post.author?.profile_image || post.author?.avatar || ('https://ui-avatars.com/api/?name=' + encodeURIComponent(post.author?.username || 'User')),
+      current_frame_id: authorFrameId,
+      current_frame: authorFrame
     },
     createdAt: new Date(post.created_at).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' }),
   };

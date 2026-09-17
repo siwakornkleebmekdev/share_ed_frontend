@@ -714,6 +714,8 @@ function formatPosts(data) {
     const authorUsername = post.author?.username || (typeof post.author === 'string' ? post.author : "ผู้ใช้งาน");
     const authorId = post.author_id || post.author?.id || post.author?.user_id || post.user_id || null;
     const authorAvatar = post.author?.avatar_url || post.author?.profile_image || post.author?.avatar || post.author_avatar || null;
+    const authorFrameId = post.author?.current_frame_id || post.author_frame_id || post.authorFrameId || null;
+    const authorFrame = post.author?.current_frame || post.author_frame || post.authorFrame || null;
 
     return {
       id: post.id,
@@ -733,6 +735,10 @@ function formatPosts(data) {
       authorId: authorId,
       authorAvatar: authorAvatar,
       author_avatar: authorAvatar,
+      author_frame_id: authorFrameId,
+      authorFrameId: authorFrameId,
+      author_frame: authorFrame,
+      authorFrame: authorFrame,
       created_at: post.created_at,
     };
   });
