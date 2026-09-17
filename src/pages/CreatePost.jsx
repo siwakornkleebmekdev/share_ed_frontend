@@ -52,6 +52,7 @@ export default function CreatePost() {
 
   const [hashtags, setHashtags] = useState([]);
   const [hashtagInput, setHashtagInput] = useState('');
+  const [hashtagError, setHashtagError] = useState('');
   const tagInputRef = useRef(null);
 
   const [showModal, setShowModal] = useState(false);
@@ -175,10 +176,13 @@ export default function CreatePost() {
     }
 
     if (hasOversized) {
-      toast.error('รูปภาพบางรูปมีขนาดเกิน 2 MB และถูกข้ามไป');
+      toast.error('รูปภาพบางรูปมีขนาดเกิน 2 MB');
     }
 
     setImages(newImages);
+    if (newImages.length > 0) {
+      setFieldErrors(prev => ({ ...prev, media: null }));
+    }
     e.target.value = '';
   };
 
@@ -206,23 +210,47 @@ export default function CreatePost() {
     const valueToAdd = customValue !== null ? customValue : hashtagInput;
     if (!valueToAdd || valueToAdd.trim() === '') return;
 
-    // Split by commas, spaces, or semicolons
     const rawTags = valueToAdd.split(/[\s,;]+/);
     const newTags = [...hashtags];
+    let error = '';
 
     rawTags.forEach(rawTag => {
-      let tag = rawTag.trim();
-      if (!tag) return;
-      if (!tag.startsWith('#')) {
-        tag = '#' + tag;
+      const tagName = rawTag.trim().replace(/^#/, '');
+      if (!tagName) return;
+
+      if (!/^[\p{L}\p{M}\p{N}]+$/u.test(tagName)) {
+        error = 'แท็กต้องไม่มีอักษรพิเศษ';
+        return;
       }
+
+      const tag = `#${tagName}`;
       if (!newTags.includes(tag)) {
+        if (newTags.length >= 3) {
+          error = 'ไม่สามารถเพิ่มเกิน 3 อัน';
+          return;
+        }
         newTags.push(tag);
       }
     });
 
     setHashtags(newTags);
-    setHashtagInput('');
+    setHashtagError(error);
+    if (!error || newTags.length >= 3) setHashtagInput('');
+  };
+
+  const handleHashtagInputChange = (value) => {
+    if (value.endsWith(',') || value.endsWith(' ') || value.endsWith(';')) {
+      handleAddHashtag(value);
+      return;
+    }
+
+    if (value && !/^[\p{L}\p{M}\p{N}]+$/u.test(value)) {
+      setHashtagError('แท็กต้องไม่มีอักษรพิเศษ');
+      return;
+    }
+
+    setHashtagError('');
+    setHashtagInput(value);
   };
 
   const handleKeyDownHashtag = (e) => {
@@ -236,13 +264,18 @@ export default function CreatePost() {
 
   const handleRemoveHashtag = (tagToRemove) => {
     setHashtags(hashtags.filter(tag => tag !== tagToRemove));
+    setHashtagError('');
   };
 
   const toggleSuggestedTag = (tag) => {
     if (hashtags.includes(tag)) {
       setHashtags(hashtags.filter(t => t !== tag));
+      setHashtagError('');
+    } else if (hashtags.length >= 3) {
+      setHashtagError('ไม่สามารถเพิ่มเกิน 3 อัน');
     } else {
       setHashtags([...hashtags, tag]);
+      setHashtagError('');
     }
   };
 
@@ -275,9 +308,9 @@ export default function CreatePost() {
       toast.error('กรุณาอัปโหลดรูปภาพหน้าปก');
     }
 
-    if (!pdfFile && (!images || images.length === 0)) {
-      newErrors.media = 'กรุณาแนบไฟล์ PDF หรือรูปภาพประกอบอย่างน้อย 1 ไฟล์';
-      toast.error('กรุณาแนบไฟล์ PDF หรือรูปภาพประกอบอย่างน้อย 1 ไฟล์');
+    if (!images || images.length === 0) {
+      newErrors.media = 'กรุณาแนบรูปภาพประกอบอย่างน้อย 1 รูป';
+      toast.error('กรุณาแนบรูปภาพประกอบอย่างน้อย 1 รูป');
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -592,7 +625,7 @@ export default function CreatePost() {
             {/* Right: Images */}
             <div>
               <label className="flex items-center justify-between text-base font-bold text-slate-800 mb-3">
-                <span>รูปภาพประกอบ ({images.length}/15)</span>
+                <span>รูปภาพประกอบ ({images.length}/15) <span className="text-rose-500">*</span></span>
                 <span className="text-xs font-normal text-slate-500">ไม่เกินรูปละ 2 MB</span>
               </label>
 
@@ -640,6 +673,9 @@ export default function CreatePost() {
                   )}
                 </div>
               </div>
+              {fieldErrors.media && (
+                <p className="mt-2 text-xs font-medium text-rose-500" role="alert">{fieldErrors.media}</p>
+              )}
             </div>
           </div>
 
@@ -705,7 +741,7 @@ export default function CreatePost() {
                 {/* Tag Container acting like an input field */}
                 <div
                   onClick={() => tagInputRef.current?.focus()}
-                  className="flex flex-wrap items-center gap-1.5 p-1.5 px-2.5 border border-slate-200 rounded-xl focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-colors min-h-[44px] bg-white cursor-text"
+                  className={`flex flex-wrap items-center gap-1.5 p-1.5 px-2.5 border rounded-xl focus-within:ring-2 transition-colors min-h-[44px] bg-white cursor-text ${hashtagError ? 'border-rose-400 focus-within:ring-rose-100 focus-within:border-rose-500' : 'border-slate-200 focus-within:ring-primary/20 focus-within:border-primary'}`}
                 >
                   {hashtags.map(tag => (
                     <span key={tag} className="px-2 py-0.5 bg-blue-50 text-primary rounded-lg text-xs font-semibold flex items-center gap-1 border border-blue-100/50 animate-in zoom-in-95 duration-200">
@@ -719,21 +755,17 @@ export default function CreatePost() {
                     ref={tagInputRef}
                     type="text"
                     value={hashtagInput}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      // If the user pastes/types a comma, space, or semicolon, handle it immediately
-                      if (val.endsWith(',') || val.endsWith(' ') || val.endsWith(';')) {
-                        handleAddHashtag(val);
-                      } else {
-                        setHashtagInput(val);
-                      }
-                    }}
+                    onChange={(e) => handleHashtagInputChange(e.target.value)}
                     onKeyDown={handleKeyDownHashtag}
                     onBlur={() => handleAddHashtag()}
                     className="flex-1 min-w-[120px] outline-none border-none py-0.5 px-1.5 text-sm bg-transparent text-slate-800 placeholder-slate-400 focus:ring-0 focus:outline-none"
                     placeholder={hashtags.length === 0 ? "พิมพ์แท็กที่ต้องการแล้วกด Enter หรือ Space..." : "เพิ่มแฮชแท็ก..."}
                   />
                 </div>
+                {hashtagError && (
+                  <p className="mt-1.5 text-xs font-medium text-rose-500" role="alert">{hashtagError}</p>
+                )}
+                <p className="mt-1.5 text-xs text-slate-400">เพิ่มได้สูงสุด 3 แท็ก และใช้ได้เฉพาะตัวอักษรหรือตัวเลข</p>
 
                 {/* Suggested Tags Area */}
                 <div className="mt-4 pt-4 border-t border-slate-100">
