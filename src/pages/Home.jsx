@@ -1,15 +1,19 @@
 import { useState, useEffect } from 'react';
-import { ArrowRight, BookOpen, Clock, Heart, Eye, TrendingUp, ChevronRight } from 'lucide-react';
-import { Link } from 'react-router';
+import { ArrowRight, BookOpen, Clock, Heart, Eye } from 'lucide-react';
+import { Link, useLocation } from 'react-router';
 import Categories from '@/components/Categories';
-import { postService } from '@/services/post.service';
+import { formatPostData, postService } from '@/services/post.service';
 import heroImage from '@/assets/home-hero.webp';
 
 export default function Home() {
+  const location = useLocation();
+  const [createdPost] = useState(() => location.state?.createdPost
+    ? formatPostData(location.state.createdPost)
+    : null);
   const [activeTab, setActiveTab] = useState('ALL');
   const [currentPage, setCurrentPage] = useState(1);
-  const [posts, setPosts] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [posts, setPosts] = useState(createdPost ? [createdPost] : []);
+  const [isLoading, setIsLoading] = useState(!createdPost);
   const postsPerPage = 8;
 
   const filteredPosts = activeTab === 'ALL'
@@ -32,7 +36,7 @@ export default function Home() {
   useEffect(() => {
     const fetchPosts = async () => {
       try {
-        setIsLoading(true);
+        if (!createdPost) setIsLoading(true);
         let fetchedPosts = [];
         try {
           fetchedPosts = await postService.getAllPosts();
@@ -40,7 +44,13 @@ export default function Home() {
           console.error('Error fetching home posts:', e);
         }
 
-        setPosts(fetchedPosts || []);
+        setPosts(() => {
+          const nextPosts = fetchedPosts || [];
+          if (!createdPost || nextPosts.some(post => post.id === createdPost.id)) {
+            return nextPosts;
+          }
+          return [createdPost, ...nextPosts];
+        });
       } catch (error) {
         console.error('Error loading home data:', error);
       } finally {
@@ -48,7 +58,7 @@ export default function Home() {
       }
     };
     fetchPosts();
-  }, []);
+  }, [createdPost]);
 
   useEffect(() => {
     if (currentPage > 1) {

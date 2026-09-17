@@ -247,21 +247,6 @@ export default function CreatePost() {
   };
 
   const handleSubmit = async (status = 'ACTIVE') => {
-    const token = localStorage.getItem('access_token');
-    console.log('--- Submitting Post Diagnostic ---');
-    console.log('Token in localStorage:', token);
-    console.log('Token Type:', token ? (token.split('.').length === 3 ? 'JWT' : 'Other') : 'None');
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        console.log('Token Payload:', payload);
-        const expTime = payload.exp * 1000;
-        console.log('Token Expired:', Date.now() > expTime ? 'YES' : 'NO', 'Expires at:', new Date(expTime).toLocaleString());
-      } catch (e) {
-        console.log('Failed to decode token payload:', e.message);
-      }
-    }
-
     setFieldErrors({});
     const newErrors = {};
     if (!title.trim()) newErrors.title = 'กรุณากรอกชื่อหัวข้อสรุปความรู้';
@@ -350,7 +335,15 @@ export default function CreatePost() {
           text: status === 'ACTIVE' ? 'โพสต์สรุปความรู้เรียบร้อยแล้ว' : 'บันทึกแบบร่างเรียบร้อยแล้ว',
           confirmButtonColor: '#3b82f6'
         }).then(() => {
-          navigate('/home');
+          navigate('/home', {
+            state: {
+              createdPost: {
+                ...result.data,
+                category_id: validCatId,
+                category: { id: validCatId, name: categoryName }
+              }
+            }
+          });
         });
       } else {
         throw new Error(result.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');

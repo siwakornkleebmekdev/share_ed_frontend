@@ -1,34 +1,41 @@
 import { Routes, Route, Navigate } from "react-router";
-import toast, { Toaster } from "react-hot-toast";
-import { useEffect, useRef } from "react";
+import { Toaster } from "react-hot-toast";
+import { lazy, Suspense, useEffect, useRef } from "react";
 import useAuthStore from "./store/authStore";
 import useNotificationStore from "./store/notificationStore";
 import MainLayout from "./layouts/MainLayout";
 import SettingsLayout from "./layouts/SettingsLayout";
 import AdminLayout from "./layouts/AdminLayout";
-import LandingPage from "./pages/LandingPage";
-import Home from "./pages/Home";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import ResetPassword from "./pages/ResetPassword";
-import Explore from "./pages/Explore";
-import CreatePost from "./pages/CreatePost";
-import EditPost from "./pages/EditPost";
-import Trending from "./pages/Trending";
-import Profile from "./pages/Profile";
-import Notifications from "./pages/Notifications";
-import Achievements from "./pages/Achievements";
-import PostDetails from "./pages/PostDetails";
-import SettingsProfile from "./pages/settings/SettingsProfile";
-import SettingsAppearance from "./pages/settings/SettingsAppearance";
-import SettingsWidgets from "./pages/settings/SettingsWidgets";
-import SettingsAccount from "./pages/settings/SettingsAccount";
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import UserManagement from "./pages/admin/UserManagement";
-import UserDetails from "./pages/admin/UserDetails";
-import AchievementManagement from "./pages/admin/AchievementManagement";
 import { authService } from "./services/auth.service";
 import { supabase } from "./utils/supabase";
+
+const LandingPage = lazy(() => import("./pages/LandingPage"));
+const Home = lazy(() => import("./pages/Home"));
+const Login = lazy(() => import("./pages/Login"));
+const Register = lazy(() => import("./pages/Register"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const Explore = lazy(() => import("./pages/Explore"));
+const CreatePost = lazy(() => import("./pages/CreatePost"));
+const EditPost = lazy(() => import("./pages/EditPost"));
+const Trending = lazy(() => import("./pages/Trending"));
+const Profile = lazy(() => import("./pages/Profile"));
+const Notifications = lazy(() => import("./pages/Notifications"));
+const Achievements = lazy(() => import("./pages/Achievements"));
+const PostDetails = lazy(() => import("./pages/PostDetails"));
+const SettingsProfile = lazy(() => import("./pages/settings/SettingsProfile"));
+const SettingsAppearance = lazy(() => import("./pages/settings/SettingsAppearance"));
+const SettingsWidgets = lazy(() => import("./pages/settings/SettingsWidgets"));
+const SettingsAccount = lazy(() => import("./pages/settings/SettingsAccount"));
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const UserManagement = lazy(() => import("./pages/admin/UserManagement"));
+const UserDetails = lazy(() => import("./pages/admin/UserDetails"));
+const AchievementManagement = lazy(() => import("./pages/admin/AchievementManagement"));
+
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+  </div>
+);
 
 // Helper to decode JWT token payload safely
 const getUserFromToken = (token) => {
@@ -368,6 +375,7 @@ function App() {
 
   return (
     <>
+      <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route element={<MainLayout />}>
           <Route path="/" element={<LandingPage />} />
@@ -461,6 +469,7 @@ function App() {
           <Route path="achievements" element={<AchievementManagement />} />
         </Route>
       </Routes>
+      </Suspense>
 
       <Toaster
         position="bottom-right"

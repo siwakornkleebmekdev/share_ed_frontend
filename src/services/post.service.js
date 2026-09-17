@@ -18,10 +18,11 @@ export const postService = {
   // Fetch all posts (Active/Published)
   getAllPosts: async (params = {}) => {
     try {
+      const bookmarkIdsPromise = fetchBookmarkIds();
       const response = await api.get('/posts', { params });
       if (response.data.success) {
         const posts = response.data.data.map(formatPostData);
-        return await mergeBookmarkStatus(posts);
+        return mergeBookmarkStatus(posts, await bookmarkIdsPromise);
       }
       return [];
     } catch (error) {
@@ -286,33 +287,36 @@ export const postService = {
 // Public post endpoints cannot know which user is viewing the list.  When a
 // user is signed in, merge their persisted bookmarks into the formatted posts
 // so a refresh/navigation does not reset every bookmark icon to false.
-async function mergeBookmarkStatus(posts) {
+async function fetchBookmarkIds() {
   const token = localStorage.getItem('access_token');
-  if (!token || token === 'undefined' || token === 'null' || !posts.length) {
-    return posts;
+  if (!token || token === 'undefined' || token === 'null') {
+    return new Set();
   }
 
   try {
-    const response = await api.get('/bookmarks');
+    const response = await api.get('/bookmarks', { params: { idsOnly: true } });
     const bookmarks = response.data?.success && Array.isArray(response.data?.data)
       ? response.data.data
       : [];
-    const bookmarkedIds = new Set(
+    return new Set(
       bookmarks
         .map(bookmark => bookmark.post_id || bookmark.postId || bookmark.post?.id)
         .filter(Boolean)
         .map(String)
     );
-
-    return posts.map(post => ({
-      ...post,
-      isBookmarked: bookmarkedIds.has(String(post.id)),
-    }));
   } catch (error) {
     // The post list should still render if bookmark status cannot be loaded.
     console.error('Error merging bookmark status:', error);
-    return posts;
+    return new Set();
   }
+}
+
+function mergeBookmarkStatus(posts, bookmarkedIds) {
+  if (!posts.length || !bookmarkedIds.size) return posts;
+  return posts.map(post => ({
+    ...post,
+    isBookmarked: bookmarkedIds.has(String(post.id)),
+  }));
 }
 
 export const KNOWN_SUBJECTS = [
