@@ -287,21 +287,15 @@ export default function CreatePost() {
 
     try {
       Swal.fire({
-        title: status === 'ACTIVE' ? 'กำลังโพสต์สรุปความรู้...' : 'กำลังบันทึกแบบร่าง...',
-        html: '<div id="swal-upload-status" style="font-size: 14px; color: #64748b; margin-top: 8px;">กำลังเตรียมการอัปโหลดไฟล์ตรงไปยัง Cloudinary...</div>',
         allowOutsideClick: false,
+        allowEscapeKey: false,
+        showConfirmButton: false,
         didOpen: () => {
           Swal.showLoading();
         }
       });
 
-      const updateSwalStatus = (message) => {
-        const el = document.getElementById('swal-upload-status');
-        if (el) el.innerText = message;
-      };
-
       // 1. Parallel Direct Upload to Cloudinary CDN using Signed Credentials
-      updateSwalStatus('กำลังอัปโหลดรูปหน้าปกและไฟล์ประกอบไปยัง Cloud CDN...');
       const [coverUrl, pdfUrl, uploadedImageUrls] = await Promise.all([
         postService.uploadDirectToCloudinary(coverImage, 'cover'),
         pdfFile ? postService.uploadDirectToCloudinary(pdfFile, 'pdf') : Promise.resolve(null),
@@ -331,8 +325,6 @@ export default function CreatePost() {
       let backendLevel = 'UNIVERSITY';
       if (level === 'มัธยมศึกษาตอนต้น') backendLevel = 'MIDDLE_SCHOOL';
       else if (level === 'มัธยมศึกษาตอนปลาย') backendLevel = 'HIGH_SCHOOL';
-
-      updateSwalStatus('กำลังบันทึกข้อมูลโพสต์ที่ระบบหลังบ้าน...');
 
       // 4. Send clean JSON payload with direct URLs to backend
       const postPayload = {
