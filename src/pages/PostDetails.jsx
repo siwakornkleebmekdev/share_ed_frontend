@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router';
-import { FileText, Download, Heart, Share2, Tag, ChevronLeft, Calendar, Eye, EyeOff, ExternalLink, Bookmark, X, Edit3, Trash2, Send, MessageSquare, AlignLeft, ImageIcon } from 'lucide-react';
+import { FileText, Download, Heart, Share2, Tag, ChevronLeft, ChevronRight, Calendar, Eye, EyeOff, ExternalLink, Bookmark, X, Edit3, Trash2, Send, MessageSquare, AlignLeft, ImageIcon } from 'lucide-react';
 import { postService } from '@/services/post.service';
 import { profileService, DEFAULT_FRAMES } from '@/services/profile.service';
 import useAuthStore from '@/store/authStore';
@@ -8,6 +8,8 @@ import api from '@/utils/api';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import { supabase } from '@/utils/supabase';
+
+const COMMENTS_PER_PAGE = 5;
 
 export default function PostDetails() {
   const { id } = useParams();
@@ -21,6 +23,7 @@ export default function PostDetails() {
 
   // Comments state
   const [comments, setComments] = useState([]);
+  const [commentPage, setCommentPage] = useState(1);
   const [newCommentText, setNewCommentText] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
 
@@ -46,6 +49,7 @@ export default function PostDetails() {
         setPost(data);
         if (data) {
           setComments(data.comments || []);
+          setCommentPage(1);
           const curUserId = user?.id || user?.user_id;
           const userLiked = Boolean(
             data.isLiked ||
@@ -128,6 +132,24 @@ export default function PostDetails() {
       channel.unsubscribe();
     };
   }, [id, isAuthenticated]);
+
+  const commentPageCount = Math.max(1, Math.ceil(comments.length / COMMENTS_PER_PAGE));
+  const visibleComments = comments.slice(
+    (commentPage - 1) * COMMENTS_PER_PAGE,
+    commentPage * COMMENTS_PER_PAGE
+  );
+  const firstVisibleCommentPage = Math.max(
+    1,
+    Math.min(commentPage - 2, commentPageCount - 4)
+  );
+  const visibleCommentPages = Array.from(
+    { length: Math.min(5, commentPageCount) },
+    (_, index) => firstVisibleCommentPage + index
+  );
+
+  useEffect(() => {
+    setCommentPage(currentPage => Math.min(currentPage, commentPageCount));
+  }, [commentPageCount]);
 
   const currentUserId = user?.id || user?.user_id;
   const postAuthorId = post?.author?.id || post?.author?.user_id || post?.user_id || post?.author_id;
@@ -304,6 +326,7 @@ export default function PostDetails() {
 
         // Update local state
         setComments(prev => [newComment, ...prev]);
+        setCommentPage(1);
         setNewCommentText('');
         toast.success('ส่งความคิดเห็นเรียบร้อยแล้ว');
 
@@ -611,7 +634,7 @@ export default function PostDetails() {
                   ยังไม่มีความคิดเห็น มาร่วมเป็นคนแรกที่แบ่งปันความคิดเห็นกัน!
                 </div>
               ) : (
-                comments.map((comment) => (
+                visibleComments.map((comment) => (
                   <div key={comment.id} className="flex gap-4 items-start pb-6 border-b border-slate-50 last:border-b-0 last:pb-0 group">
                     <img
                       src={comment.user?.avatar_url || comment.user?.avatar || comment.user?.profile_image || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.user?.username || 'User')}&background=1e293b&color=38bdf8`}
@@ -645,6 +668,54 @@ export default function PostDetails() {
                 ))
               )}
             </div>
+
+            {comments.length > 0 && (
+              <nav
+                className="mt-6 flex justify-center"
+                aria-label="การแบ่งหน้าความคิดเห็น"
+              >
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCommentPage(page => Math.max(1, page - 1))}
+                    disabled={commentPage === 1}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 shadow-sm transition-colors hover:border-primary/30 hover:bg-blue-50 hover:text-primary disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-slate-200 disabled:hover:bg-white disabled:hover:text-slate-600"
+                    aria-label="ไปยังหน้าความคิดเห็นก่อนหน้า"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    ย้อนกลับ
+                  </button>
+                  <div className="hidden items-center gap-1 sm:flex">
+                    {visibleCommentPages.map(page => (
+                      <button
+                        key={page}
+                        type="button"
+                        onClick={() => setCommentPage(page)}
+                        aria-label={`ไปยังหน้าความคิดเห็น ${page}`}
+                        aria-current={commentPage === page ? 'page' : undefined}
+                        className={`h-9 min-w-9 rounded-lg px-2 text-sm font-bold transition-colors ${
+                          commentPage === page
+                            ? 'bg-primary text-white shadow-sm'
+                            : 'text-slate-500 hover:bg-white hover:text-primary'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setCommentPage(page => Math.min(commentPageCount, page + 1))}
+                    disabled={commentPage === commentPageCount}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 shadow-sm transition-colors hover:border-primary/30 hover:bg-blue-50 hover:text-primary disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-slate-200 disabled:hover:bg-white disabled:hover:text-slate-600"
+                    aria-label="ไปยังหน้าความคิดเห็นถัดไป"
+                  >
+                    ถัดไป
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </nav>
+            )}
           </div>
 
         </div>
