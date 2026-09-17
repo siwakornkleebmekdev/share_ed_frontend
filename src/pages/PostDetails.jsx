@@ -38,14 +38,43 @@ export default function PostDetails() {
   const [post, setPost] = useState(null);
   const [authorProfile, setAuthorProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDeletedPost, setIsDeletedPost] = useState(false);
+  const [isDeletedPostOwner, setIsDeletedPostOwner] = useState(false);
+
+  useEffect(() => {
+    if (!isDeletedPost) return undefined;
+
+    const redirectTimer = window.setTimeout(() => {
+      navigate('/home', { replace: true });
+    }, 2000);
+
+    return () => window.clearTimeout(redirectTimer);
+  }, [isDeletedPost, navigate]);
 
   useEffect(() => {
     const fetchPost = async () => {
       try {
+        setIsDeletedPost(false);
+        setIsDeletedPostOwner(false);
         if (!post || String(post.id) !== String(id)) {
           setIsLoading(true);
         }
         const data = await postService.getPostById(id);
+
+        if (String(data?.postStatus || data?.post_status).toUpperCase() === 'DELETED') {
+          const viewerId = user?.id || user?.user_id;
+          const deletedPostAuthorId = data?.authorId || data?.author_id || data?.user_id || data?.author?.id;
+
+          setPost(null);
+          setIsDeletedPostOwner(Boolean(
+            viewerId &&
+            deletedPostAuthorId &&
+            String(viewerId) === String(deletedPostAuthorId)
+          ));
+          setIsDeletedPost(true);
+          return;
+        }
+
         setPost(data);
         if (data) {
           setComments(data.comments || []);
@@ -74,6 +103,14 @@ export default function PostDetails() {
         }
       } catch (error) {
         console.error('Error loading post details:', error);
+        const errorMessage = error?.response?.data?.message || error?.message || '';
+        const deletedResponse = error?.response?.status === 410 || /ถูกลบ|deleted/i.test(errorMessage);
+
+        setPost(null);
+        // Other members receive a 404 for a deleted post, without its author
+        // data, so this branch must use the non-owner wording.
+        setIsDeletedPostOwner(false);
+        setIsDeletedPost(deletedResponse);
       } finally {
         setIsLoading(false);
       }
@@ -381,8 +418,48 @@ export default function PostDetails() {
     return <div className="text-center py-20 text-slate-500 font-medium">กำลังโหลดข้อมูล...</div>;
   }
 
+  if (isDeletedPost) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center px-4 py-16" role="status" aria-live="polite">
+        <div className="w-full max-w-lg rounded-3xl border border-red-100 bg-white p-8 sm:p-10 text-center shadow-xl shadow-red-100/50">
+          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-red-50 text-red-500">
+            <Trash2 className="h-8 w-8" aria-hidden="true" />
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">
+            {isDeletedPostOwner ? 'โพสต์ของคุณถูกลบไปแล้ว' : 'โพสต์นี้ถูกลบไปแล้ว'}
+          </h1>
+          <p className="mt-3 text-slate-500">กำลังพาคุณกลับไปหน้า Home ภายใน 2 วินาที...</p>
+          <Link
+            to="/home"
+            replace
+            className="mt-6 inline-flex items-center justify-center rounded-xl bg-primary px-5 py-2.5 font-semibold text-white transition-opacity hover:opacity-90"
+          >
+            กลับหน้า Home
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   if (!post) {
-    return <div className="text-center py-20 text-slate-500 font-medium">ไม่พบโพสต์ที่คุณต้องการ</div>;
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center px-4 py-16" role="status" aria-live="polite">
+        <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-8 sm:p-10 text-center shadow-xl shadow-slate-200/50">
+          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+            <FileText className="h-8 w-8" aria-hidden="true" />
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">ไม่พบโพสต์ที่คุณต้องการ</h1>
+          <p className="mt-3 text-slate-500">โพสต์นี้อาจไม่มีอยู่ หรือ URL ที่เปิดไม่ถูกต้อง</p>
+          <Link
+            to="/home"
+            replace
+            className="mt-6 inline-flex items-center justify-center rounded-xl bg-primary px-5 py-2.5 font-semibold text-white transition-opacity hover:opacity-90"
+          >
+            กลับหน้า Home
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   return (
