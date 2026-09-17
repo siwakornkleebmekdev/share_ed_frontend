@@ -59,44 +59,18 @@ export const authService = {
     return supData;
   },
 
-  // Login user via Supabase Auth or Backend API fallback
+  // Supabase is the single source of truth for the browser session.
+  // Backend profile provisioning happens through authenticated /auth/me.
   login: async (email, password) => {
-    let supData = null;
-    let supError = null;
-
-    // 1. Try Supabase Auth
     try {
-      const res = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      supData = res.data;
-      supError = res.error;
-    } catch (err) {
-      supError = err;
-    }
-
-    if (!supError && supData?.session?.access_token) {
-      localStorage.setItem('access_token', supData.session.access_token);
-
-      // Sync login with backend API in background if needed
-      try {
-        await api.post('/auth/login', { email, password });
-      } catch (e) { }
-
-      return supData;
-    }
-
-    // 2. Fallback to Backend API if Supabase login fails
-    try {
-      const response = await api.post('/auth/login', { email, password });
-      const token = response.data?.token || response.data?.access_token || response.data?.data?.token || response.data?.session?.access_token;
-      if (token) {
-        localStorage.setItem('access_token', token);
-      }
-      return response.data;
-    } catch (backendError) {
-      const msg = supError?.message || backendError?.response?.data?.message || backendError?.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error || !data?.session?.access_token) throw error || new Error('ไม่พบ session หลังเข้าสู่ระบบ');
+      // Kept temporarily for old code paths. API requests read the current
+      // Supabase session directly and never treat this value as authoritative.
+      localStorage.setItem('access_token', data.session.access_token);
+      return data;
+    } catch (loginError) {
+      const msg = loginError?.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
       if (msg.includes('Invalid login credentials') || msg.includes('Invalid credentials') || msg.includes('invalid_credentials')) {
         throw new Error('อีเมลหรือรหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง');
       }
@@ -206,10 +180,6 @@ export const authService = {
 
   // Logout user
   logout: async () => {
-    try {
-      await api.post('/auth/logout').catch(() => { });
-    } catch (e) { }
-
     try {
       await supabase.auth.signOut({ scope: 'global' }).catch(() => {
         return supabase.auth.signOut();
