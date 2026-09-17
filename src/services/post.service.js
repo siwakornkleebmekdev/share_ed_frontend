@@ -425,6 +425,10 @@ export function formatSinglePostData(post) {
 
   return {
     id: post.id,
+    // Keep the server-side lifecycle status so detail pages can prevent a
+    // soft-deleted post from being rendered to its author or moderators.
+    postStatus: post.post_status || post.status || null,
+    post_status: post.post_status || post.status || null,
     title: post.title,
     description: post.summary || 'ไม่มีคำอธิบาย',
     details: post.content || '<p>ไม่มีเนื้อหา</p>',
