@@ -152,10 +152,11 @@ export default function PostDetails() {
 
   const authorFrameId = isAuthor
     ? (user?.user_metadata?.profile_frame_id || user?.current_frame_id || (currentUserId ? localStorage.getItem(`profile_frame_id_${currentUserId}`) : null) || localStorage.getItem('profile_frame_id'))
-    : (authorProfile?.user_metadata?.profile_frame_id || authorProfile?.current_frame_id);
+    : (authorProfile?.user_metadata?.profile_frame_id || authorProfile?.current_frame_id || post?.author_frame_id || post?.author?.current_frame_id || (postAuthorId ? localStorage.getItem(`profile_frame_id_${postAuthorId}`) : null));
 
-  const authorFrameObj = DEFAULT_FRAMES.find(df => df.id === authorFrameId || df.reward_item_id === authorFrameId) || authorProfile?.current_frame;
-  const authorFrameUrl = authorFrameObj?.reward?.previewUrl || authorFrameObj?.image_url || authorFrameObj?.previewUrl;
+  const serverFrame = authorProfile?.current_frame || post?.authorFrame || post?.author_frame || post?.author?.current_frame;
+  const authorFrameObj = serverFrame || DEFAULT_FRAMES.find(df => df.id === authorFrameId || df.reward_item_id === authorFrameId);
+  const authorFrameUrl = authorFrameObj?.image_url || authorFrameObj?.previewUrl || authorFrameObj?.reward?.previewUrl || authorFrameObj?.metadata?.previewUrl;
 
   const handleLike = async () => {
     if (!isAuthenticated) {
