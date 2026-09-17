@@ -7,6 +7,7 @@ import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import { postService } from '../services/post.service';
 import { categoryService, isValidCategoryUuid } from '../services/category.service';
+import { getDefaultDraftCoverFile } from '../utils/draftCover';
 
 const SUGGESTED_TAGS = ['#AI', '#เรียนรู้ไปด้วยกัน', '#เตรียมสอบ', '#TCAS67', '#สรุปย่อ', '#แชร์ความรู้', '#เด็กซิ่ว', '#สรุปชีท'];
 
@@ -280,37 +281,27 @@ export default function CreatePost() {
   };
 
   const handleSubmit = async (status = 'ACTIVE') => {
-    const token = localStorage.getItem('access_token');
-    console.log('--- Submitting Post Diagnostic ---');
-    console.log('Token in localStorage:', token);
-    console.log('Token Type:', token ? (token.split('.').length === 3 ? 'JWT' : 'Other') : 'None');
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        console.log('Token Payload:', payload);
-        const expTime = payload.exp * 1000;
-        console.log('Token Expired:', Date.now() > expTime ? 'YES' : 'NO', 'Expires at:', new Date(expTime).toLocaleString());
-      } catch (e) {
-        console.log('Failed to decode token payload:', e.message);
-      }
-    }
-
     setFieldErrors({});
     const newErrors = {};
-    if (!title.trim()) newErrors.title = 'กรุณากรอกชื่อหัวข้อสรุปความรู้';
-    else if (title.length > 100) newErrors.title = 'ชื่อหัวข้อต้องมีความยาวไม่เกิน 100 ตัวอักษร';
-    if (!level) newErrors.level = 'กรุณาเลือกระดับชั้น';
-    if (!summary.trim()) newErrors.summary = 'กรุณากรอกบทสรุปย่อ';
-    if (!categoryId && !categoryName) newErrors.category = 'กรุณาเลือกหมวดหมู่วิชา';
+    const isDraft = status === 'DRAFT';
 
-    if (!coverImage) {
-      newErrors.cover = 'กรุณาอัปโหลดรูปภาพหน้าปก';
-      toast.error('กรุณาอัปโหลดรูปภาพหน้าปก');
-    }
+    // Drafts may be saved at any point. Publish validation only runs for ACTIVE posts.
+    if (!isDraft) {
+      if (!title.trim()) newErrors.title = 'กรุณากรอกชื่อหัวข้อสรุปความรู้';
+      else if (title.length > 100) newErrors.title = 'ชื่อหัวข้อต้องมีความยาวไม่เกิน 100 ตัวอักษร';
+      if (!level) newErrors.level = 'กรุณาเลือกระดับชั้น';
+      if (!summary.trim()) newErrors.summary = 'กรุณากรอกบทสรุปย่อ';
+      if (!categoryId && !categoryName) newErrors.category = 'กรุณาเลือกหมวดหมู่วิชา';
 
-    if (!images || images.length === 0) {
-      newErrors.media = 'กรุณาแนบรูปภาพประกอบอย่างน้อย 1 รูป';
-      toast.error('กรุณาแนบรูปภาพประกอบอย่างน้อย 1 รูป');
+      if (!coverImage) {
+        newErrors.cover = 'กรุณาอัปโหลดรูปภาพหน้าปก';
+        toast.error('กรุณาอัปโหลดรูปภาพหน้าปก');
+      }
+
+      if (!images || images.length === 0) {
+        newErrors.media = 'กรุณาแนบรูปภาพประกอบอย่างน้อย 1 รูป';
+        toast.error('กรุณาแนบรูปภาพประกอบอย่างน้อย 1 รูป');
+      }
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -328,25 +319,7 @@ export default function CreatePost() {
         }
       });
 
-      // 1. Parallel Direct Upload to Cloudinary CDN using Signed Credentials
-      const [coverUrl, pdfUrl, uploadedImageUrls] = await Promise.all([
-        postService.uploadDirectToCloudinary(coverImage, 'cover'),
-        pdfFile ? postService.uploadDirectToCloudinary(pdfFile, 'pdf') : Promise.resolve(null),
-        images && images.length > 0
-          ? postService.uploadMultipleDirectToCloudinary(images, 'media')
-          : Promise.resolve([])
-      ]);
-
-      // 2. Prepare media URLs array
-      const media_urls = [];
-      if (pdfUrl) {
-        media_urls.push(pdfUrl);
-      }
-      if (uploadedImageUrls && uploadedImageUrls.length > 0) {
-        media_urls.push(...uploadedImageUrls);
-      }
-
-      // 3. Resolve category and education level
+      // Resolve category and education level
       let validCatId = isValidCategoryUuid(categoryId) ? categoryId : null;
       if (!validCatId && categoryName) {
         const matchInList = categoriesList.find(c => c.name === categoryName && isValidCategoryUuid(c.id));
@@ -359,19 +332,24 @@ export default function CreatePost() {
       if (level === 'มัธยมศึกษาตอนต้น') backendLevel = 'MIDDLE_SCHOOL';
       else if (level === 'มัธยมศึกษาตอนปลาย') backendLevel = 'HIGH_SCHOOL';
 
-      // 4. Send clean JSON payload with direct URLs to backend
-      const postPayload = {
-        title: title.trim(),
-        summary: summary.trim(),
-        content,
-        education_level: backendLevel,
-        category_id: validCatId,
-        category: categoryName,
-        cover_image_url: coverUrl,
-        media_urls,
-        tags: hashtags,
-        post_status: status
-      };
+      // The database fields are non-nullable, so unfinished drafts receive neutral
+      // placeholders without requiring the user to enter anything.
+      const postPayload = new FormData();
+      postPayload.append('title', title.trim() || 'Untitled draft');
+      postPayload.append('summary', summary.trim());
+      postPayload.append('content', content || '<p></p>');
+      postPayload.append('education_level', backendLevel);
+      postPayload.append('post_status', isDraft ? 'DRAFT' : 'ACTIVE');
+      postPayload.append('tags', JSON.stringify(hashtags));
+      if (validCatId) postPayload.append('category_id', validCatId);
+      if (categoryName) postPayload.append('category', categoryName);
+      if (coverImage) {
+        postPayload.append('cover_image', coverImage);
+      } else if (isDraft) {
+        postPayload.append('cover_image', await getDefaultDraftCoverFile());
+      }
+      if (pdfFile) postPayload.append('media_files', pdfFile);
+      images.forEach((image) => postPayload.append('media_files', image));
 
       const result = await postService.createPost(postPayload);
       Swal.close();
