@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { supabase } from './supabase.js';
 
 const api = axios.create({
   // ดึงค่านำจาก Environment Variable เสมอ ไม่ว่าจะเป็น Dev หรือ Prod
@@ -19,7 +20,7 @@ const api = axios.create({
 
 // Request Interceptor: Attach token automatically
 api.interceptors.request.use(
-  (config) => {
+  async (config) => {
     // If the data is FormData, remove the default Content-Type header
     // so Axios can set it automatically with the correct boundary parameter.
     if (config.data instanceof FormData) {
@@ -33,7 +34,17 @@ api.interceptors.request.use(
       }
     }
 
-    const token = localStorage.getItem('access_token');
+    let token = null;
+    try {
+      const { data, error } = await supabase.auth.getSession();
+      if (!error) token = data?.session?.access_token || null;
+      if (token) localStorage.setItem('access_token', token);
+      else localStorage.removeItem('access_token');
+    } catch {
+      // Storage can be unavailable in restricted browser contexts. In that
+      // case only, retain compatibility with the last known token.
+      token = localStorage.getItem('access_token');
+    }
     if (token && token !== 'undefined' && token !== 'null') {
       if (config.headers && typeof config.headers.set === 'function') {
         config.headers.set('Authorization', `Bearer ${token}`);
