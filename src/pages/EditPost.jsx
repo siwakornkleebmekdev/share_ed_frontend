@@ -9,6 +9,7 @@ import { postService, resolveCategoryName } from '@/services/post.service';
 import { categoryService, isValidCategoryUuid, DEFAULT_SUBJECT_NAMES } from '@/services/category.service';
 import { uploadFileToSupabase } from '@/utils/storage';
 import useAuthStore from '@/store/authStore';
+import { getDefaultDraftCoverFile } from '@/utils/draftCover';
 import api from '../utils/api';
 
 const SUGGESTED_TAGS = ['#AI', '#เรียนรู้ไปด้วยกัน', '#เตรียมสอบ', '#TCAS67', '#สรุปย่อ', '#แชร์ความรู้', '#เด็กซิ่ว', '#สรุปชีท'];
@@ -114,16 +115,15 @@ export default function EditPost() {
         const post = data.data;
         const currentUserId = user?.id || user?.user_id;
         const postAuthorId = post.author?.id || post.author?.user_id || post.author_id || post.user_id || post.userId;
-        const isAdmin = user?.role === 'ADMIN';
-
         const isAuthor = Boolean(
           currentUserId &&
           postAuthorId &&
           String(currentUserId) === String(postAuthorId)
         );
 
-        // ไม่อนุญาตให้ admin แก้ไขโพสต์คนอื่น และไม่อนุญาตให้คนอื่นที่ไม่ใช่เจ้าของโพสต์แก้ไข
-        if (isAdmin || !isAuthor) {
+        // Editing is based on ownership only. An admin may edit their own post,
+        // but neither admins nor members may edit another user's post here.
+        if (!isAuthor) {
           toast.error('คุณไม่มีสิทธิ์แก้ไขโพสต์นี้ เฉพาะเจ้าของโพสต์เท่านั้นที่สามารถแก้ไขได้', {
             id: 'unauthorized-edit-post'
           });
@@ -464,15 +464,18 @@ export default function EditPost() {
   const handleSubmit = async (status = 'ACTIVE') => {
     setFieldErrors({});
     const newErrors = {};
-    if (!title.trim()) newErrors.title = 'กรุณากรอกชื่อหัวข้อสรุปความรู้';
-    else if (title.length > 100) newErrors.title = 'ชื่อหัวข้อต้องมีความยาวไม่เกิน 100 ตัวอักษร';
-    if (!level) newErrors.level = 'กรุณาเลือกระดับชั้น';
-    if (!summary.trim()) newErrors.summary = 'กรุณากรอกบทสรุปย่อ';
-    if (!categoryId && !categoryName) newErrors.category = 'กรุณาเลือกหมวดหมู่วิชา';
+    const isDraft = status === 'DRAFT';
+    if (!isDraft) {
+      if (!title.trim()) newErrors.title = 'กรุณากรอกชื่อหัวข้อสรุปความรู้';
+      else if (title.length > 100) newErrors.title = 'ชื่อหัวข้อต้องมีความยาวไม่เกิน 100 ตัวอักษร';
+      if (!level) newErrors.level = 'กรุณาเลือกระดับชั้น';
+      if (!summary.trim()) newErrors.summary = 'กรุณากรอกบทสรุปย่อ';
+      if (!categoryId && !categoryName) newErrors.category = 'กรุณาเลือกหมวดหมู่วิชา';
 
-    if (existingImages.length + images.length === 0) {
-      newErrors.media = 'กรุณาแนบรูปภาพประกอบอย่างน้อย 1 รูป';
-      toast.error('กรุณาแนบรูปภาพประกอบอย่างน้อย 1 รูป');
+      if (existingImages.length + images.length === 0) {
+        newErrors.media = 'กรุณาแนบรูปภาพประกอบอย่างน้อย 1 รูป';
+        toast.error('กรุณาแนบรูปภาพประกอบอย่างน้อย 1 รูป');
+      }
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -490,9 +493,9 @@ export default function EditPost() {
       });
 
       const formData = new FormData();
-      formData.append('title', title.trim());
+      formData.append('title', title.trim() || 'Untitled draft');
       formData.append('summary', summary.trim());
-      formData.append('content', content);
+      formData.append('content', content || '<p></p>');
 
       // Resolve valid category UUID from selected category
       let validCatId = isValidCategoryUuid(categoryId) ? categoryId : null;
@@ -512,7 +515,7 @@ export default function EditPost() {
       if (level === 'มัธยมศึกษาตอนต้น') backendLevel = 'MIDDLE_SCHOOL';
       else if (level === 'มัธยมศึกษาตอนปลาย') backendLevel = 'HIGH_SCHOOL';
       formData.append('education_level', backendLevel);
-      formData.append('post_status', status);
+      formData.append('post_status', isDraft ? 'DRAFT' : 'ACTIVE');
 
       if (coverImage) {
         formData.append('cover_image', coverImage);
@@ -522,6 +525,8 @@ export default function EditPost() {
         } catch (e) {
           console.log('Cover upload to Supabase storage notice:', e);
         }
+      } else if (isDraft && !existingCoverImage) {
+        formData.append('cover_image', await getDefaultDraftCoverFile());
       }
 
       if (pdfFile) {
@@ -566,7 +571,7 @@ export default function EditPost() {
           text: 'แก้ไขโพสต์สรุปความรู้เรียบร้อยแล้ว',
           confirmButtonColor: '#3b82f6'
         }).then(() => {
-          navigate(`/post/${id}`);
+          navigate(isDraft ? '/profile?tab=drafts' : `/post/${id}`);
         });
       } else {
         throw new Error(result.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');

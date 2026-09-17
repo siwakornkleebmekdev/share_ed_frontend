@@ -729,7 +729,9 @@ function formatPosts(data) {
       isBookmarked: Boolean(post.is_bookmarked || post.isBookmarked || post.has_bookmarked),
       image:
         post.cover_image ||
-        "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=500&q=80",
+        (post.post_status === "DRAFT"
+          ? "/draft-placeholder.png"
+          : "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=500&q=80"),
       author: authorUsername,
       author_id: authorId,
       authorId: authorId,
