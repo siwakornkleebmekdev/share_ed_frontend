@@ -81,6 +81,8 @@ export default function Register() {
       newErrors.password = 'กรุณากรอกรหัสผ่าน';
     } else if (password.length < 8) {
       newErrors.password = 'รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร';
+    } else if (!/^[A-Za-z0-9]+$/.test(password)) {
+      newErrors.password = 'รหัสผ่านใช้ได้เฉพาะตัวอักษรภาษาอังกฤษและตัวเลขเท่านั้น';
     } else if (!/[A-Za-z]/.test(password)) {
       newErrors.password = 'รหัสผ่านต้องมีตัวอักษรภาษาอังกฤษอย่างน้อย 1 ตัว';
     } else if (!/\d/.test(password)) {
@@ -296,6 +298,8 @@ export default function Register() {
                 </div>
                 <input
                   type="password"
+                  pattern="[A-Za-z0-9]+"
+                  title="ใช้ได้เฉพาะตัวอักษรภาษาอังกฤษและตัวเลขเท่านั้น"
                   value={password}
                   onChange={(e) => {
                     setPassword(e.target.value);
@@ -305,7 +309,7 @@ export default function Register() {
                     ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
                     : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
                     }`}
-                  placeholder="อย่างน้อย 8 ตัว มีตัวอักษรอังกฤษและตัวเลข"
+                  placeholder="อย่างน้อย 8 ตัว ใช้เฉพาะอักษรอังกฤษและตัวเลข"
                 />
               </div>
               {fieldErrors.password && (
@@ -321,6 +325,8 @@ export default function Register() {
                 </div>
                 <input
                   type="password"
+                  pattern="[A-Za-z0-9]+"
+                  title="ใช้ได้เฉพาะตัวอักษรภาษาอังกฤษและตัวเลขเท่านั้น"
                   value={confirmPassword}
                   onChange={(e) => {
                     setConfirmPassword(e.target.value);
