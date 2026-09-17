@@ -222,10 +222,29 @@ export const authService = {
     }
   },
 
+  // Re-authenticate before allowing a sensitive account change.
+  verifyCurrentPassword: async ({ password }) => {
+    if (!password) {
+      throw new Error('กรุณากรอกรหัสผ่านเดิม');
+    }
+
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    const email = userData?.user?.email;
+    if (userError || !email) {
+      throw new Error('ไม่พบข้อมูลบัญชี กรุณาเข้าสู่ระบบใหม่');
+    }
+
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error || !data?.session) {
+      throw new Error('รหัสผ่านเดิมไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง');
+    }
+
+    return data;
+  },
+
   // Change email and/or password
-  updateAccount: async ({ email, password }) => {
+  updateAccount: async ({ password }) => {
     const payload = {};
-    if (email) payload.email = email;
     if (password) payload.password = password;
 
     const { data, error } = await supabase.auth.updateUser(payload);
