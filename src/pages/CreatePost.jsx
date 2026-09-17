@@ -224,6 +224,11 @@ export default function CreatePost() {
         return;
       }
 
+      if (tagName.length > 10) {
+        error = 'แท็กต้องมีความยาวไม่เกิน 10 ตัวอักษร';
+        return;
+      }
+
       const tag = `#${tagName}`;
       if (!newTags.includes(tag)) {
         if (newTags.length >= 3) {
@@ -245,7 +250,13 @@ export default function CreatePost() {
       return;
     }
 
-    if (value && !/^[\p{L}\p{M}\p{N}]+$/u.test(value)) {
+    const cleanVal = value.replace(/^#/, '');
+    if (cleanVal.length > 10) {
+      setHashtagError('แท็กต้องมีความยาวไม่เกิน 10 ตัวอักษร');
+      return;
+    }
+
+    if (value && !/^#?[\p{L}\p{M}\p{N}]*$/u.test(value)) {
       setHashtagError('แท็กต้องไม่มีอักษรพิเศษ');
       return;
     }
@@ -743,7 +754,7 @@ export default function CreatePost() {
                 {hashtagError && (
                   <p className="mt-1.5 text-xs font-medium text-rose-500" role="alert">{hashtagError}</p>
                 )}
-                <p className="mt-1.5 text-xs text-slate-400">เพิ่มได้สูงสุด 3 แท็ก และใช้ได้เฉพาะตัวอักษรหรือตัวเลข</p>
+                <p className="mt-1.5 text-xs text-slate-400">เพิ่มได้สูงสุด 3 แท็ก, ความยาวไม่เกิน 10 ตัวอักษร และใช้ได้เฉพาะตัวอักษรหรือตัวเลข</p>
 
                 {/* Suggested Tags Area */}
                 <div className="mt-4 pt-4 border-t border-slate-100">
