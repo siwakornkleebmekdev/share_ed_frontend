@@ -2,61 +2,86 @@ import { supabase } from '../utils/supabase';
 import api from '../utils/api';
 
 export const authService = {
-  // Register user via Supabase Auth & Backend API sync
-  register: async ({ email, password, username, education_level, age, bio }) => {
-    // 1. Register with Supabase Auth
-    const { data: supData, error: supError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          username: username || email.split('@')[0],
-          display_name: username || email.split('@')[0],
-          full_name: username || email.split('@')[0],
-          education_level: education_level || 'HIGH_SCHOOL',
-          age: age || 0,
-          bio: bio || 'ยังไม่ได้ระบุ'
-        }
-      }
-    });
+  checkRegistrationAvailability: async ({ email, username }) => {
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedUsername = username.trim();
+    const [emailResult, usernameResult] = await Promise.all([
+      normalizedEmail
+        ? supabase.from('users').select('user_id').eq('email', normalizedEmail).limit(1)
+        : Promise.resolve({ data: [] }),
+      normalizedUsername
+        ? supabase.from('users').select('user_id').ilike('username', normalizedUsername).limit(1)
+        : Promise.resolve({ data: [] })
+    ]);
 
-    if (supData?.session?.access_token) {
-      localStorage.setItem('access_token', supData.session.access_token);
+    // Anonymous clients may not have permission to read the users table.
+    // In that case, defer uniqueness validation to POST /auth/register,
+    // which checks the database securely and returns a field-specific error.
+    if (emailResult.error || usernameResult.error) {
+      return {
+        emailAvailable: true,
+        usernameAvailable: true,
+        deferredToServer: true
+      };
     }
 
-    // 2. Sync with Backend API
+    return {
+      emailAvailable: !emailResult.data?.length,
+      usernameAvailable: !usernameResult.data?.length
+    };
+  },
+
+  // Register user via Supabase Auth & Backend API sync
+  register: async ({ email, password, username, education_level, age, bio }) => {
+    const normalizedUsername = username.trim();
+    const normalizedEmail = email.trim().toLowerCase();
+    let registeredUser = null;
+
+    // Register through the backend first so its database uniqueness constraint
+    // remains the source of truth for both email and username.
     try {
       const regRes = await api.post('/auth/register', {
-        email,
+        email: normalizedEmail,
         password,
         confirmPassword: password,
-        username: username || email.split('@')[0],
-        nickname: username || email.split('@')[0],
-        full_name: username || email.split('@')[0],
+        username: normalizedUsername,
+        nickname: normalizedUsername,
+        full_name: normalizedUsername,
         education_level: education_level || 'HIGH_SCHOOL',
         age: age || 0,
         bio: bio || 'ยังไม่ได้ระบุ'
       });
-      const bToken = regRes.data?.token || regRes.data?.access_token || regRes.data?.data?.token;
-      if (bToken && !localStorage.getItem('access_token')) {
-        localStorage.setItem('access_token', bToken);
+      registeredUser = regRes.data?.data || regRes.data?.user || null;
+    } catch (error) {
+      const message = error?.response?.data?.message || error.message || 'เกิดข้อผิดพลาดในการสมัครสมาชิก';
+      const normalizedMessage = message.toLowerCase();
+      const isDuplicate = normalizedMessage.includes('already registered') ||
+        normalizedMessage.includes('already exists') ||
+        normalizedMessage.includes('already in use') ||
+        normalizedMessage.includes('unique constraint');
+
+      if (isDuplicate && (normalizedMessage.includes('username') || normalizedMessage.includes('ชื่อผู้ใช้'))) {
+        throw new Error('ชื่อผู้ใช้นี้ถูกใช้งานแล้ว');
       }
-    } catch (bErr) {
-      console.log('Backend auto-register notice:', bErr?.response?.data || bErr.message);
+      if (isDuplicate) {
+        throw new Error('อีเมลนี้ถูกใช้งานแล้ว รวมถึงบัญชีที่สมัครผ่าน Google');
+      }
+      throw new Error(message);
     }
 
-    if (supError && !supData?.user) {
-      const errMsg = supError.message || '';
-      if (
-        errMsg.toLowerCase().includes('already registered') ||
-        errMsg.toLowerCase().includes('already exists')
-      ) {
-        throw new Error('อีเมลล์หรือชื่อผู้ใช้นี้เคยถูกใช้งานแล้ว');
-      }
-      throw supError;
+    // The backend creates the Supabase Auth identity. Sign in here only to
+    // establish the browser session after registration succeeds.
+    const { data: sessionData, error: signInError } = await supabase.auth.signInWithPassword({
+      email: normalizedEmail,
+      password
+    });
+
+    if (!signInError && sessionData?.session?.access_token) {
+      localStorage.setItem('access_token', sessionData.session.access_token);
+      return sessionData;
     }
 
-    return supData;
+    return { user: registeredUser, session: null, requiresLogin: true };
   },
 
   // Supabase is the single source of truth for the browser session.
