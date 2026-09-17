@@ -69,7 +69,7 @@ export default function EditPost() {
   const [categoryName, setCategoryName] = useState('');
   const [level, setLevel] = useState('');
   const [hashtags, setHashtags] = useState([]);
-  const [hashtagInput, setCountryInput] = useState('');
+  const [hashtagInput, setHashtagInput] = useState('');
   const [hashtagError, setHashtagError] = useState('');
   const tagInputRef = useRef(null);
   const [fieldErrors, setFieldErrors] = useState({});
@@ -356,6 +356,11 @@ export default function EditPost() {
         return;
       }
 
+      if (tagName.length > 10) {
+        error = 'แท็กต้องมีความยาวไม่เกิน 10 ตัวอักษร';
+        return;
+      }
+
       const tag = `#${tagName}`;
       if (!newTags.includes(tag)) {
         if (newTags.length >= 3) {
@@ -368,7 +373,7 @@ export default function EditPost() {
 
     setHashtags(newTags);
     setHashtagError(error);
-    if (!error || newTags.length >= 3) setCountryInput('');
+    if (!error || newTags.length >= 3) setHashtagInput('');
   };
 
   const handleHashtagInputChange = (value) => {
@@ -377,13 +382,19 @@ export default function EditPost() {
       return;
     }
 
-    if (value && !/^[\p{L}\p{M}\p{N}]+$/u.test(value)) {
+    const cleanVal = value.replace(/^#/, '');
+    if (cleanVal.length > 10) {
+      setHashtagError('แท็กต้องมีความยาวไม่เกิน 10 ตัวอักษร');
+      return;
+    }
+
+    if (value && !/^#?[\p{L}\p{M}\p{N}]*$/u.test(value)) {
       setHashtagError('แท็กต้องไม่มีอักษรพิเศษ');
       return;
     }
 
     setHashtagError('');
-    setCountryInput(value);
+    setHashtagInput(value);
   };
 
   const handleKeyDownHashtag = (e) => {
@@ -1041,7 +1052,7 @@ export default function EditPost() {
                 {hashtagError && (
                   <p className="mt-1.5 text-xs font-medium text-rose-500" role="alert">{hashtagError}</p>
                 )}
-                <p className="mt-1.5 text-xs text-slate-400">เพิ่มได้สูงสุด 3 แท็ก และใช้ได้เฉพาะตัวอักษรหรือตัวเลข</p>
+                <p className="mt-1.5 text-xs text-slate-400">เพิ่มได้สูงสุด 3 แท็ก, ความยาวไม่เกิน 10 ตัวอักษร และใช้ได้เฉพาะตัวอักษรหรือตัวเลข</p>
 
                 {/* Suggested Tags Area */}
                 <div className="mt-4 pt-4 border-t border-slate-100">
