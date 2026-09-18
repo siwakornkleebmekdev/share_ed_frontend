@@ -293,13 +293,6 @@ export const profileService = {
     }
   },
 
-  // Public profile of any user (self or someone else) — GET /users/:id.
-  // Includes _count.{posts,followers,following}.
-  getUserProfile: async (userId) => {
-    const response = await api.get(`/users/${userId}`);
-    return response.data?.data;
-  },
-
   // Fetch Achievements / Milestones from Backend (GET /achievements)
   getMilestones: async () => {
     try {
@@ -503,13 +496,13 @@ export const profileService = {
     }
   },
 
-  // Get User Profile by ID (GET /users/:id)
-  getUserProfile: async (id) => {
+  // Get a public profile by user id or username (GET /users/:identifier)
+  getUserProfile: async (identifier) => {
     try {
-      const response = await api.get(`/users/${id}`);
+      const response = await api.get(`/users/${encodeURIComponent(identifier)}`);
       return response.data?.data || response.data;
     } catch (error) {
-      console.error(`Error fetching profile for user ${id}:`, error);
+      console.error(`Error fetching profile for user ${identifier}:`, error);
       throw error;
     }
   },
@@ -659,8 +652,10 @@ const MOCK_MILESTONES = [
 // Maps that real shape onto the shape Achievements.jsx/achievementStore.js
 // already render (current/target/status/reward.{type,name,previewUrl}).
 function mapMilestoneToAchievement(m) {
+  const rewardItemId = m.reward_item_id || m.reward_item?.id || null;
   return {
     id: m.id,
+    reward_item_id: rewardItemId,
     title: m.title,
     description: m.description,
     current: m.current_progress,
@@ -668,6 +663,7 @@ function mapMilestoneToAchievement(m) {
     status: m.status, // backend already computes LOCKED|READY_TO_CLAIM|CLAIMED
     reward: m.reward_item
       ? {
+          id: rewardItemId,
           type: m.reward_item.item_type, // FRAME | THEME (no WALLPAPER on the real backend)
           name: m.reward_item.item_name,
           previewUrl: m.reward_item.image_url,

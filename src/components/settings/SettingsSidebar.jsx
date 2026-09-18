@@ -111,7 +111,7 @@ export default function SettingsSidebar() {
 
       <div className="px-4 py-4 border-t border-slate-100 shrink-0 flex items-center gap-3">
         <Link
-          to="/profile"
+          to={`/profile/${encodeURIComponent(user?.username || "")}`}
           className="flex-1 min-w-0 flex items-center gap-3 hover:opacity-80 transition-opacity"
         >
           <div className="h-10 w-10 rounded-full bg-slate-100 overflow-hidden shrink-0 flex items-center justify-center text-slate-400 font-bold">

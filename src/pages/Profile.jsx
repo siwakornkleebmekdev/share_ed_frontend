@@ -31,6 +31,7 @@ import {
   normalizeFollowCounts,
   DEFAULT_FRAMES,
 } from "@/services/profile.service";
+import { resolveProfileFrame } from "@/utils/profileFrame";
 import { getPlatformConfig } from "@/pages/settings/widgetConstants";
 import { getGlassColor, rgbToRgba } from "@/utils/colorUtils";
 
@@ -67,14 +68,17 @@ const getEducationLevelLabel = (level) => {
 
 export default function Profile() {
   const navigate = useNavigate();
-  const { id } = useParams();
+  const { username } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, isAuthenticated } = useAuthStore();
 
   const currentUserId = user?.user_id || user?.id;
+  const currentUsername = user?.username;
   // ตรวจสอบว่าเป็นการดูโปรไฟล์ของผู้อื่นหรือไม่
   const isOtherUser = Boolean(
-    id && id !== "edit" && (!currentUserId || String(id) !== String(currentUserId))
+    username &&
+      username !== "edit" &&
+      (!currentUsername || username.toLowerCase() !== currentUsername.toLowerCase())
   );
 
   const [activeTab, setActiveTab] = useState("posts");
@@ -129,6 +133,15 @@ export default function Profile() {
   useEffect(() => {
     setHasEntered(!enterScreenEnabled);
   }, [enterScreenEnabled]);
+
+  // Keep the current user's profile on the same canonical username URL as
+  // every other public profile, while retaining /profile as a safe fallback
+  // during the short period before auth hydration finishes.
+  useEffect(() => {
+    if (!username && currentUsername) {
+      navigate(`/profile/${encodeURIComponent(currentUsername)}`, { replace: true });
+    }
+  }, [username, currentUsername, navigate]);
 
   // วอลเปเปอร์และธีมพื้นหลัง
   const setHeroImage = useHeroThemeStore((state) => state.setHeroImage);
@@ -216,14 +229,25 @@ export default function Profile() {
         setIsLoading(true);
         setUserNotFound(false);
         try {
-          const [profileData, userPosts] = await Promise.all([
-            profileService.getUserProfile(id),
-            profileService.getUserPosts(id),
-          ]);
+          const profileData = await profileService.getUserProfile(username);
 
           if (!profileData) {
             setUserNotFound(true);
             return;
+          }
+
+          const profileUserId =
+            profileData.id || profileData.user_id || profileData._id;
+          const userPosts = profileUserId
+            ? await profileService.getUserPosts(profileUserId)
+            : [];
+
+          // Old id-based links remain usable, but are immediately normalized
+          // to the public username URL returned by the profile API.
+          if (profileData.username && profileData.username !== username) {
+            navigate(`/profile/${encodeURIComponent(profileData.username)}`, {
+              replace: true,
+            });
           }
 
           setOtherProfile(profileData);
@@ -273,7 +297,7 @@ export default function Profile() {
       };
       loadMyProfileData();
     }
-  }, [id, isOtherUser, user]);
+  }, [username, isOtherUser, user, navigate]);
 
   // ฟังก์ชัน Follow / Unfollow ผู้ใช้อื่น
   const handleToggleFollow = async () => {
@@ -282,12 +306,14 @@ export default function Profile() {
       navigate("/login");
       return;
     }
-    if (isFollowLoading || !id) return;
+    const targetUserId =
+      otherProfile?.id || otherProfile?.user_id || otherProfile?._id;
+    if (isFollowLoading || !targetUserId) return;
 
     try {
       setIsFollowLoading(true);
       if (isFollowing) {
-        await profileService.unfollowUser(id);
+        await profileService.unfollowUser(targetUserId);
         setIsFollowing(false);
         setFollowCounts((prev) => ({
           ...prev,
@@ -295,7 +321,7 @@ export default function Profile() {
         }));
         toast.success("เลิกติดตามแล้ว");
       } else {
-        await profileService.followUser(id);
+        await profileService.followUser(targetUserId);
         setIsFollowing(true);
         setFollowCounts((prev) => ({
           ...prev,
@@ -359,24 +385,26 @@ export default function Profile() {
     : user?.bio || "ยังไม่มีคำอธิบายตัวเอง...";
 
   // กรอบรูป
-  const equippedFrameId = isOtherUser
-    ? otherProfile?.current_frame_id || otherProfile?.current_frame?.id
-    : user?.user_metadata?.profile_frame_id ||
-      user?.current_frame_id ||
-      (currentUserId ? localStorage.getItem(`profile_frame_id_${currentUserId}`) : null) ||
-      localStorage.getItem("profile_frame_id") ||
-      null;
-
-  const equippedFrame = allMilestones.find(
-    (m) =>
-      m.id === equippedFrameId ||
-      m.reward_item_id === equippedFrameId ||
-      m.reward?.id === equippedFrameId,
+  const ownProfileWithCachedFrame = isOtherUser
+    ? null
+    : {
+        ...user,
+        profile_frame_id:
+          user?.user_metadata?.profile_frame_id ||
+          user?.current_frame_id ||
+          (currentUserId
+            ? localStorage.getItem(`profile_frame_id_${currentUserId}`)
+            : null) ||
+          localStorage.getItem("profile_frame_id") ||
+          null,
+      };
+  const {
+    frameId: equippedFrameId,
+    previewUrl: framePreviewUrl,
+  } = resolveProfileFrame(
+    isOtherUser ? otherProfile : ownProfileWithCachedFrame,
+    allMilestones,
   );
-
-  const framePreviewUrl = isOtherUser
-    ? otherProfile?.current_frame?.image_url || equippedFrame?.reward?.previewUrl
-    : equippedFrame?.reward?.previewUrl || user?.current_frame?.image_url;
 
   // กรณีไม่พบผู้ใช้งาน
   if (userNotFound) {
