@@ -426,7 +426,7 @@ export default function Navbar() {
 
                       <div className="p-2">
                         <Link
-                          to={`/profile/${encodeURIComponent(user?.username || "")}`}
+                          to={`/profile/${encodeURIComponent(user?.user_id || user?.id || "")}`}
                           onClick={() => setShowProfileMenu(false)}
                           className="flex items-center gap-3 w-full p-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors"
                         >
@@ -444,7 +444,7 @@ export default function Navbar() {
                           </Link>
                         ) : (
                           <Link
-                            to={`/profile/${encodeURIComponent(user?.username || "")}?tab=drafts`}
+                            to={`/profile/${encodeURIComponent(user?.user_id || user?.id || "")}?tab=drafts`}
                             onClick={() => setShowProfileMenu(false)}
                             className="flex items-center gap-3 w-full p-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-primary rounded-xl transition-colors"
                           >

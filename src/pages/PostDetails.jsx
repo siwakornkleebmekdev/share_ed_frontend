@@ -510,7 +510,7 @@ export default function PostDetails() {
 
             <div className="flex flex-wrap items-center justify-between gap-4 py-4 border-y border-slate-100">
               <div className="flex items-center gap-3">
-                <Link to={authorUsername ? `/profile/${encodeURIComponent(authorUsername)}` : '#'} className="relative shrink-0 block group cursor-pointer">
+                <Link to={postAuthorId ? `/profile/${encodeURIComponent(postAuthorId)}` : '#'} className="relative shrink-0 block group cursor-pointer">
                   <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-sm bg-slate-100 flex items-center justify-center">
                     <img
                       src={authorAvatar}
@@ -531,7 +531,7 @@ export default function PostDetails() {
                   )}
                 </Link>
                 <div>
-                  <Link to={authorUsername ? `/profile/${encodeURIComponent(authorUsername)}` : '#'} className="font-bold text-slate-900 hover:text-primary transition-colors block">
+                  <Link to={postAuthorId ? `/profile/${encodeURIComponent(postAuthorId)}` : '#'} className="font-bold text-slate-900 hover:text-primary transition-colors block">
                     {authorUsername}
                   </Link>
                   <p className="text-xs font-medium text-slate-500">{authorRole}</p>
