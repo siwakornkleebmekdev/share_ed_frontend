@@ -8,6 +8,7 @@ import api from '@/utils/api';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import { supabase } from '@/utils/supabase';
+import { sanitizePostContent } from '@/utils/sanitizePostContent';
 
 const COMMENTS_PER_PAGE = 5;
 
@@ -564,7 +565,7 @@ export default function PostDetails() {
               <AlignLeft className="h-5 w-5 text-primary" /> รายละเอียดเพิ่มเติม
             </h3>
             <div className="prose prose-slate max-w-none prose-p:text-slate-600 prose-headings:text-slate-900 prose-a:text-primary p-6 bg-white border border-slate-100 shadow-sm rounded-2xl">
-              <div dangerouslySetInnerHTML={{ __html: post.details || post.content || '<p className="text-slate-400 italic">ไม่มีรายละเอียดเพิ่มเติม</p>' }} />
+              <div className="post-details-content" dangerouslySetInnerHTML={{ __html: sanitizePostContent(post.details || post.content || '<p>ไม่มีรายละเอียดเพิ่มเติม</p>') }} />
             </div>
           </div>
 
