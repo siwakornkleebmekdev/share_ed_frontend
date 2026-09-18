@@ -1,4 +1,5 @@
 import api from "../utils/api";
+import { supabase } from "../utils/supabase";
 
 export const DEFAULT_FRAMES = [
   {
