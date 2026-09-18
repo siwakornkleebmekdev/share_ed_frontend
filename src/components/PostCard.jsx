@@ -8,7 +8,7 @@ import useAuthStore from '../store/authStore';
 import useHeroThemeStore from '../store/heroThemeStore';
 import { getGlassColor, rgbToRgba } from '../utils/colorUtils';
 
-export default function PostCard({ post, viewMode, rank = null, dark = false, onBookmarkChange }) {
+export default function PostCard({ post, viewMode, rank = null, dark = false, onBookmarkChange, authorOverride = null }) {
   const [isLiked, setIsLiked] = useState(Boolean(post.isLiked || post.is_liked));
   const [isBookmarked, setIsBookmarked] = useState(Boolean(post.isBookmarked || post.is_bookmarked));
   const [likesCount, setLikesCount] = useState(post.likes);
@@ -30,11 +30,17 @@ export default function PostCard({ post, viewMode, rank = null, dark = false, on
   const heroColor = useHeroThemeStore((state) => state.heroColor);
   const cardGlassStyle = dark ? { backgroundColor: rgbToRgba(getGlassColor(heroColor, isDarkHero), 25) } : undefined;
 
-  const authorName = typeof post.author === 'string'
-    ? post.author
-    : (post.author?.username || post.author?.name || 'ผู้ใช้งาน');
-  const authorUsername = post.author?.username || authorName;
-  const rawAuthorAvatar = post.authorAvatar
+  const authorName = authorOverride?.username
+    || authorOverride?.display_name
+    || (typeof post.author === 'string'
+      ? post.author
+      : (post.author?.username || post.author?.name || 'ผู้ใช้งาน'));
+  const authorUsername = authorOverride?.username || post.author?.username || authorName;
+  const authorId = post.authorId || post.author_id || post.author?.id || post.author?.user_id || post.user_id;
+  const rawAuthorAvatar = authorOverride?.avatar_url
+    || authorOverride?.profile_image
+    || authorOverride?.avatar
+    || post.authorAvatar
     || post.author_avatar
     || (typeof post.author === 'object' ? (post.author?.avatar_url || post.author?.profile_image || post.author?.avatar) : null);
   const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(authorName || 'User')}&background=1e293b&color=38bdf8`;

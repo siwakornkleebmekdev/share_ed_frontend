@@ -779,6 +779,7 @@ export default function Profile() {
                         viewMode="grid"
                         dark={isDarkHero}
                         onBookmarkChange={handleBookmarkChange}
+                        authorOverride={isOtherUser ? null : user}
                       />
                     ))
                   ) : (
