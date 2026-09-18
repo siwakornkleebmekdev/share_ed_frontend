@@ -13,9 +13,16 @@ import { getValidImageUrl } from "@/utils/imageUtils";
 
 const REWARD_MODES = { NONE: "NONE", EXISTING: "EXISTING", NEW: "NEW" };
 
-// Modal เพิ่ม/แก้ไขความสำเร็จ (milestone) — โครงสร้างเดียวกับ WidgetModal.jsx
-// (มี overlay, ปิดได้ด้วยการคลิก backdrop, พักข้อมูลไว้ใน local state)
-// ใช้ modal เดียวทำได้ทั้งเพิ่ม (initialData: null) และแก้ไข (initialData: ข้อมูลความสำเร็จ)
+/**
+ * =========================================================================
+ * ตำแหน่งบนหน้าเว็บ: หน้าต่างป๊อปอัป (Modal) "เพิ่มความสำเร็จ" หรือ "แก้ไขความสำเร็จ"
+ *                 (จะเด้งขึ้นมาเมื่อกดปุ่ม "+ เพิ่มความสำเร็จใหม่" หรือคลิกแถวภารกิจเพื่อแก้ไข)
+ * หน้าที่: ฟอร์มหลักสำหรับกรอกข้อมูลภารกิจ/ความสำเร็จ ประกอบด้วย:
+ *         - ช่องกรอกชื่อภารกิจ, คำอธิบาย, ตัวเลขเป้าหมาย, เลือกประเภทภารกิจ
+ *         - แถบเลือกของรางวัล (ไม่มีรางวัล / เลือกของรางวัลที่มีอยู่ / สร้างของรางวัลใหม่)
+ *         - ปุ่มบันทึกข้อมูลด้านล่างสุด
+ * =========================================================================
+ */
 export default function AchievementFormModal({ isOpen, onClose, initialData, onConfirm }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -38,6 +45,12 @@ export default function AchievementFormModal({ isOpen, onClose, initialData, onC
   const isEdit = !!initialData;
   const hadExistingReward = !!(initialData?.reward_item_id || initialData?.reward_item);
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ส่วนฟอร์มทั้งหมดใน Modal
+   * หน้าที่: ทำงานอัตโนมัติเมื่อเปิด Modal ขึ้นมา
+   *         - หากเป็นโหมดแก้ไข (isEdit): นำข้อมูลภารกิจเดิมมาใส่ในช่อง Input ทุกช่อง
+   *         - หากเป็นโหมดเพิ่มใหม่: ล้างค่าฟอร์มให้ว่าง พร้อมดึงรายการของรางวัลจาก Backend มาเตรียมไว้
+   */
   useEffect(() => {
     if (!isOpen) return;
 
@@ -80,10 +93,18 @@ export default function AchievementFormModal({ isOpen, onClose, initialData, onC
   const effectiveMilestoneType = selectedTypeKey === "CUSTOM" ? customType.trim() : selectedTypeKey;
   const currentTypeInfo = getMilestoneTypeInfo(effectiveMilestoneType);
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: กล่องการ์ดพรีวิวของรางวัลที่เลือกอยู่ (แสดงใต้ปุ่มแท็บรางวัล ในโหมด "เลือกที่มีอยู่")
+   * หน้าที่: ค้นหา Object ของรางวัลที่ตรงกับ `rewardItemId` ที่ถูกเลือก เพื่อนำมาแสดงชื่อ ประเภท และรูปตัวอย่าง
+   */
   const selectedReward = useMemo(() => {
     return rewardItems.find((item) => String(item.id) === String(rewardItemId)) || null;
   }, [rewardItems, rewardItemId]);
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: รายการ Grid การ์ดของรางวัลให้เลือก ในแท็บ "เลือกที่มีอยู่"
+   * หน้าที่: กรองรายการของรางวัลตามข้อความที่พิมพ์ในช่องค้นหาของรางวัล (`rewardSearch`)
+   */
   const filteredRewards = useMemo(() => {
     if (!rewardSearch.trim()) return rewardItems;
     const q = rewardSearch.toLowerCase().trim();
@@ -108,6 +129,11 @@ export default function AchievementFormModal({ isOpen, onClose, initialData, onC
     (rewardMode !== REWARD_MODES.EXISTING || rewardItemId) &&
     (rewardMode !== REWARD_MODES.NEW || itemName.trim());
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ปุ่มกดสีน้ำเงินด้านล่างสุดของ Modal ("+ เพิ่มความสำเร็จ" หรือ "บันทึกการเปลี่ยนแปลง")
+   * หน้าที่: ทำงานเมื่อผู้ใช้กดปุ่มบันทึก ตรวจสอบความถูกต้องของข้อมูล (Validation),
+   *         รวมข้อมูลภารกิจและของรางวัลเป็น payload ส่งกลับไปยังฟังก์ชัน `onConfirm` แล้วปิด Modal
+   */
   const handleSubmit = () => {
     if (!isValid) return;
 
@@ -133,6 +159,10 @@ export default function AchievementFormModal({ isOpen, onClose, initialData, onC
     onClose();
   };
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ปุ่มไอคอนรูปถังขยะ (Trash) ในการ์ดของรางวัลแต่ละใบ (ในโหมดเลือกของรางวัลที่มีอยู่)
+   * หน้าที่: ลบของรางวัลชิ้นนั้นออกจากระบบฐานข้อมูลอย่างถาวร มี SweetAlert2 แจ้งเตือนยืนยันก่อนลบ
+   */
   const handleDeleteReward = async (item, e) => {
     if (e) e.stopPropagation();
     if (!item) return;
@@ -166,6 +196,10 @@ export default function AchievementFormModal({ isOpen, onClose, initialData, onC
     }
   };
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: กลุ่มปุ่ม 3 ปุ่มเลือกรูปแบบรางวัล ("ไม่มีรางวัล", "เลือกที่มีอยู่", "สร้างใหม่")
+   * หน้าที่: คำนวณ class CSS สำหรับสลับสีปุ่ม โดยปุ่มที่กำลังเลือกอยู่จะเป็นสีน้ำเงิน (bg-primary)
+   */
   const modeButtonClass = (mode) =>
     `flex-1 py-2 rounded-lg text-xs font-bold transition-colors ${
       rewardMode === mode

@@ -11,6 +11,17 @@ import AchievementFormModal from "@/components/admin/AchievementFormModal";
 import RewardManagementModal from "@/components/admin/RewardManagementModal";
 import { getValidImageUrl } from "@/utils/imageUtils";
 
+/**
+ * =========================================================================
+ * ตำแหน่งบนหน้าเว็บ: หน้าจัดการความสำเร็จและภารกิจของผู้ดูแลระบบ (URL: /admin/achievements)
+ * หน้าที่: หน้าหลักสำหรับแอดมินใช้จัดการภารกิจและของรางวัลในระบบ ประกอบไปด้วย:
+ *         1. ปุ่มซิงค์ภารกิจเริ่มต้น (ปุ่มสีส้ม แสดงเมื่อมีแม่แบบภารกิจที่ยังไม่ลง DB)
+ *         2. ปุ่ม "จัดการของรางวัล" (เปิด RewardManagementModal)
+ *         3. ปุ่ม "+ เพิ่มความสำเร็จใหม่" (เปิด AchievementFormModal)
+ *         4. แถบค้นหาและตัวกรองตามประเภทภารกิจ
+ *         5. ตารางแสดงรายการภารกิจทั้งหมด พร้อมปุ่มแก้ไข (ดินสอ) และปุ่มลบ (ถังขยะ)
+ * =========================================================================
+ */
 export default function AchievementManagement() {
   const [achievements, setAchievements] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -22,6 +33,11 @@ export default function AchievementManagement() {
   const [isRewardModalOpen, setIsRewardModalOpen] = useState(false);
   const [editingAchievement, setEditingAchievement] = useState(null);
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ตารางแสดงรายการภารกิจ/ความสำเร็จทั้งหมดกลางหน้าเว็บ
+   * หน้าที่: เรียก API ดึงข้อมูลภารกิจทั้งหมดจาก Backend (`achievementService.getAllAchievements()`)
+   *         มาเก็บใน state `achievements` เพื่อนำไปแสดงผลในตาราง
+   */
   const fetchAchievements = async () => {
     setIsLoading(true);
     try {
@@ -36,14 +52,27 @@ export default function AchievementManagement() {
     }
   };
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ทำงานอัตโนมัติเมื่อผู้ใช้เข้าสู่หน้าจัดการความสำเร็จ
+   * หน้าที่: สั่งเรียก `fetchAchievements()` เพื่อโหลดรายการภารกิจทันทีเมื่อเปิดหน้า
+   */
   useEffect(() => {
     fetchAchievements();
   }, []);
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ตัวเลขในปุ่มสีส้ม "ซิงค์ภารกิจเริ่มต้นสู่ระบบ (X)" ที่มุมบนขวา
+   * หน้าที่: คำนวณนับจำนวนภารกิจแม่แบบเริ่มต้น (is_default_template) ที่ยังไม่ได้ถูกบันทึกลงฐานข้อมูลจริง
+   *         เพื่อแสดงจำนวนบนปุ่ม และใช้ตัดสินใจว่าจะแสดงปุ่มนี้หรือไม่ (ถ้า 0 จะซ่อนปุ่ม)
+   */
   const unsyncedCount = useMemo(() => {
     return achievements.filter((a) => a.is_default_template).length;
   }, [achievements]);
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: รายการตัวเลือกในเมนู Dropdown "ประเภทภารกิจ" บนแถบตัวกรอง
+   * หน้าที่: รวบรวมประเภทภารกิจ (Milestone Types) ทั้งหมดที่พบในระบบแบบไม่ซ้ำกัน เพื่อสร้างเป็นตัวเลือกใน Dropdown
+   */
   const availableTypes = useMemo(() => {
     return Array.from(
       new Set(
@@ -54,6 +83,11 @@ export default function AchievementManagement() {
     );
   }, [achievements]);
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ตารางแสดงรายการภารกิจทั้งหมด
+   * หน้าที่: กรองรายการภารกิจตามคำค้นหาที่พิมพ์ในช่อง Search (ค้นหาจากชื่อภารกิจหรือคำอธิบาย)
+   *         และกรองตามประเภทภารกิจที่เลือกใน Dropdown (typeFilter)
+   */
   const filteredAchievements = useMemo(() => {
     const q = search.trim().toLowerCase();
     return achievements.filter((a) => {
@@ -67,16 +101,31 @@ export default function AchievementManagement() {
     });
   }, [achievements, search, typeFilter]);
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ปุ่มสีน้ำเงิน "+ เพิ่มความสำเร็จใหม่" ที่มุมบนขวาของหน้าจอ
+   * หน้าที่: เคลียร์ข้อมูลเดิม (`editingAchievement = null`) และเปิดหน้าต่าง Modal สำหรับกรอกข้อมูลสร้างภารกิจใหม่
+   */
   const openCreateModal = () => {
     setEditingAchievement(null);
     setIsModalOpen(true);
   };
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: แถวของภารกิจในตาราง (เมื่อคลิกที่แถว) หรือปุ่มไอคอนรูปดินสอในคอลัมน์ "การจัดการ"
+   * หน้าที่: ดึงข้อมูลของภารกิจแถวนั้นมาเก็บใน state `editingAchievement` แล้วเปิดหน้าต่าง Modal ในโหมดแก้ไขข้อมูล
+   */
   const openEditModal = (achievement) => {
     setEditingAchievement(achievement);
     setIsModalOpen(true);
   };
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ปุ่มบันทึกในหน้าต่าง Modal เพิ่ม/แก้ไขความสำเร็จ
+   * หน้าที่: รับข้อมูล payload ที่กรอกจาก Modal แล้วยิง API:
+   *         - หากเป็นการแก้ไข: เรียก `updateAchievement`
+   *         - หากเป็นการสร้างใหม่: เรียก `createAchievement`
+   *         จากนั้นแจ้งเตือน Toast และรีเฟรชโหลดตารางใหม่
+   */
   const handleModalConfirm = async (payload) => {
     try {
       if (editingAchievement) {
@@ -94,6 +143,11 @@ export default function AchievementManagement() {
     }
   };
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ปุ่มสีส้ม "ซิงค์ภารกิจเริ่มต้นสู่ระบบ" ที่อยู่มุมบนขวาของหน้าจอ
+   * หน้าที่: ทำงานเมื่อกดปุ่มซิงค์ แสดง SweetAlert2 ยืนยันการนำเข้าภารกิจแม่แบบเริ่มต้น
+   *         เข้าสู่ฐานข้อมูล Backend ทั้งหมดในคลิกเดียว พร้อมอัปโหลดกรอบรูป SVG อัตโนมัติ
+   */
   const handleSyncDefaultAchievements = async () => {
     const unsyncedItems = achievements.filter((a) => a.is_default_template);
     if (unsyncedItems.length === 0) {
@@ -142,6 +196,11 @@ export default function AchievementManagement() {
     }
   };
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ปุ่มไอคอนรูปถังขยะสีแดง (Trash) ในคอลัมน์ "การจัดการ" ทางขวาสุดของแต่ละแถวในตาราง
+   * หน้าที่: ทำงานเมื่อกดลบภารกิจ แสดงกล่องยืนยัน SweetAlert2
+   *         หากยืนยันจะยิง API ไปลบภารกิจนั้นออกจากระบบฐานข้อมูล แล้วรีเฟรชตารางใหม่
+   */
   const handleDelete = async (achievement) => {
     const isTemplate = !!achievement.is_default_template;
     const result = await Swal.fire({

@@ -26,10 +26,24 @@ const NAV_GROUPS = [
   },
 ];
 
+/**
+ * =========================================================================
+ * ตำแหน่งบนหน้าเว็บ: แถบเมนูด้านซ้ายสุดของหน้าระบบตั้งค่าทั้งหมด (Settings Sidebar)
+ *                 (แสดงผลในทุกหน้า /settings/* เช่น /settings/profile, /settings/appearance ฯลฯ)
+ * หน้าที่: แถบนำทางหลักของส่วนตั้งค่า แสดงโลโก้ SHARE-ED, ลิงก์ไปยังหน้าตั้งค่าต่างๆ
+ *         (โปรไฟล์, รูปลักษณ์, วิดเจ็ต, ตั้งค่าบัญชี, กลับหน้าหลัก)
+ *         และส่วนแสดงข้อมูลโปรไฟล์ย่อของผู้ใช้พร้อมปุ่มออกจากระบบที่ด้านล่างสุด
+ * =========================================================================
+ */
 export default function SettingsSidebar() {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ปุ่มไอคอนออกจากระบบ (LogOut) ที่อยู่มุมล่างขวาของแถบ Sidebar ด้านซ้าย
+   * หน้าที่: ทำงานเมื่อผู้ใช้กดปุ่มออกจากระบบ ล้างสถานะการเข้าสู่ระบบใน store
+   *         และนำทาง (Redirect) ผู้ใช้กลับไปที่หน้าล็อกอิน (/login)
+   */
   const handleLogout = async () => {
     try {
       await authService.logout();
@@ -48,6 +62,11 @@ export default function SettingsSidebar() {
   const educationLabel =
     mapEducationLevel(user?.education_level) || "ไม่ระบุระดับชั้น";
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ปุ่มลิงก์แต่ละเมนูใน Sidebar (โปรไฟล์, รูปลักษณ์, วิดเจ็ต, ตั้งค่า)
+   * หน้าที่: เช็คสถานะการเลือกเมนู (isActive) เพื่อใส่ class สีดำเข้ม (bg-slate-900) เมื่อกำลังเปิดหน้านั้นอยู่
+   *         หรือเป็นสีเทาอ่อนเมื่อไม่ได้เปิด
+   */
   const navLinkClass = ({ isActive }) =>
     `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold transition-colors ${
       isActive

@@ -3,18 +3,35 @@ import { Link } from 'react-router';
 import { Sparkles, X, Lock, Check, ChevronRight } from 'lucide-react';
 import { DEFAULT_FRAMES } from '@/services/profile.service';
 
-// Modal grid picker for equipping a profile-picture frame, styled after the
-// "Change Avatar Decoration" pattern (grid of tiles + live preview + Clear /
-// Confirm) — selection is staged locally and only committed on Confirm, so
-// browsing the grid doesn't equip anything until the user commits to it.
+/**
+ * =========================================================================
+ * ตำแหน่งบนหน้าเว็บ: หน้าต่างป๊อปอัป (Modal) "เลือกกรอบรูปโปรไฟล์"
+ *                 (เปิดขึ้นมาเมื่อกดปุ่ม "เลือกกรอบรูป" ในหน้าตั้งค่าโปรไฟล์ /settings/profile)
+ * หน้าที่: หน้าต่างสำหรับเลือกสวมใส่กรอบรูปโปรไฟล์พิเศษที่ได้จากภารกิจความสำเร็จ
+ *         ประกอบด้วย:
+ *         1. แท็บกรองสถานะกรอบรูป (ทั้งหมด / ปลดล็อกแล้ว / ยังไม่ปลดล็อก)
+ *         2. ตารางกริดแสดงกรอบรูปทั้งหมดให้เลือกคลิก
+ *         3. คอลัมน์พรีวิวตัวอย่างการแสดงผลทางขวา พร้อมเงื่อนไขภารกิจที่ต้องทำเพื่อปลดล็อก
+ *         4. ปุ่ม "ไม่ใช้กรอบ" และปุ่ม "ใช้งานกรอบนี้" ที่ด้านล่าง
+ * =========================================================================
+ */
 export default function FrameDecorationModal({ isOpen, onClose, frames = [], currentFrameId, avatarSrc, avatarShapeClass, onConfirm }) {
   const [selected, setSelected] = useState(currentFrameId ?? null);
   const [filterTab, setFilterTab] = useState('ALL'); // 'ALL' | 'UNLOCKED' | 'LOCKED'
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ส่วนเลือกกรอบรูปใน Modal
+   * หน้าที่: รีเซ็ตหรือกำหนดกรอบรูปที่เลือกเริ่มต้น (`selected`) ให้ตรงกับกรอบรูปที่ผู้ใช้สวมใส่อยู่ปัจจุบัน
+   */
   useEffect(() => {
     if (isOpen) setSelected(currentFrameId ?? null);
   }, [isOpen, currentFrameId]);
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ตาราง Grid แสดงกรอบรูปทั้งหมด
+   * หน้าที่: รวมกรอบรูปจาก Default Templates และกรอบรูปจากภารกิจความสำเร็จ (Milestones) เข้าด้วยกัน
+   *         พร้อมตรวจเช็คสถานะการปลดล็อก (CLAIMED) จาก LocalStorage และ Backend
+   */
   const allFrames = useMemo(() => {
     const list = Array.isArray(frames) && frames.length > 0 ? [...frames] : [];
     DEFAULT_FRAMES.forEach((df) => {
@@ -52,12 +69,20 @@ export default function FrameDecorationModal({ isOpen, onClose, frames = [], cur
   const unlockedCount = allFrames.filter((f) => f.status === 'CLAIMED').length;
   const lockedCount = allFrames.filter((f) => f.status !== 'CLAIMED').length;
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ปุ่มแท็บตัวกรอง (ทั้งหมด / ปลดล็อกแล้ว / ยังไม่ปลดล็อก) และตารางแสดงกรอบรูป
+   * หน้าที่: กรองรายการกรอบรูปที่จะนำไปแสดงในตารางตามแท็บที่ผู้ใช้เลือกคลิก
+   */
   const displayedFrames = allFrames.filter((frame) => {
     if (filterTab === 'UNLOCKED') return frame.status === 'CLAIMED';
     if (filterTab === 'LOCKED') return frame.status !== 'CLAIMED';
     return true;
   });
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: คอลัมน์ตัวอย่างทางขวาของ Modal (รูปโปรไฟล์ขนาดใหญ่ และกล่องรายละเอียดภารกิจ)
+   * หน้าที่: ค้นหา Object ของกรอบรูปที่ผู้ใช้กำลังคลิกเลือกอยู่ เพื่อนำรูปและเงื่อนไขมาแสดงในช่องพรีวิว
+   */
   const selectedFrame = allFrames.find(
     (f) =>
       f.id === selected ||

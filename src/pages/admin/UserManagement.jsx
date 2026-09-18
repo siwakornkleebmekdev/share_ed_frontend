@@ -13,6 +13,16 @@ const STATUS_BADGE_CLASS = {
   BANNED: "admin-badge-banned",
 };
 
+/**
+ * =========================================================================
+ * ตำแหน่งบนหน้าเว็บ: หน้าจัดการผู้ใช้งานของผู้ดูแลระบบ (URL: /admin/users)
+ * หน้าที่: หน้าหลักสำหรับจัดการบัญชีผู้ใช้ทั้งหมดในระบบ ประกอบด้วย:
+ *         1. แถบค้นหาผู้ใช้ (ชื่อ/อีเมล)
+ *         2. Dropdown กรองตามสิทธิ์ (ทุกสิทธิ์ / MEMBER / MODERATOR / ADMIN)
+ *         3. Dropdown กรองตามสถานะ (ทุกสถานะ / ACTIVE / SUSPENDED / BANNED)
+ *         4. ตารางรายชื่อผู้ใช้งานทั้งหมด พร้อมเครื่องมือเปลี่ยน Role, ปุ่มระงับ (Ban) และปุ่มคืนสิทธิ์ (Unban)
+ * =========================================================================
+ */
 export default function UserManagement() {
   const navigate = useNavigate();
   const [users, setUsers] = useState([]); // รายชื่อผู้ใช้ทั้งหมดจาก backend
@@ -22,8 +32,11 @@ export default function UserManagement() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [busyUserId, setBusyUserId] = useState(null); // id ผู้ใช้ที่กำลังกดปุ่มทำรายการอยู่ (กันกดซ้ำ)
 
-  // ดึงรายชื่อผู้ใช้ทั้งหมดใหม่ — เรียกซ้ำหลังทำรายการสำเร็จทุกครั้ง
-  // เพื่อให้ข้อมูลตรงกับ backend เสมอ (ไม่ทำ optimistic update)
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ตารางรายชื่อผู้ใช้งานทั้งหมดกลางหน้าเว็บ
+   * หน้าที่: ยิง API ไปยัง Backend (`adminService.getAllUsers()`) เพื่อดึงรายชื่อผู้ใช้ทั้งหมด
+   *         นำมาบันทึกใน state `users` และถูกเรียกซ้ำทุกครั้งหลังทำรายการสำเร็จเพื่อรีเฟรชข้อมูลให้สดใหม่
+   */
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
@@ -38,11 +51,19 @@ export default function UserManagement() {
     }
   };
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ทำงานอัตโนมัติเมื่อเข้าสู่หน้าจัดการผู้ใช้งาน
+   * หน้าที่: เรียก `fetchUsers()` เพื่อโหลดรายชื่อผู้ใช้ทั้งหมดมาแสดงทันทีเมื่อเปิดหน้า
+   */
   useEffect(() => {
     fetchUsers();
   }, []);
 
-  // กรอง/ค้นหาฝั่ง frontend เอง เพราะ backend ยังไม่มีพารามิเตอร์ค้นหา
+  /**
+   * ตำแหน่งบนหน้าเว็บ: แถบช่องค้นหา, Dropdown กรองสิทธิ์, Dropdown กรองสถานะ และตารางผู้ใช้
+   * หน้าที่: กรองรายชื่อผู้ใช้แบบ Real-time ตามคำค้นหา (ชื่อผู้ใช้, ชื่อเล่น, อีเมล),
+   *         สิทธิ์การใช้งาน (Role) และสถานะบัญชี (Status)
+   */
   const filteredUsers = useMemo(() => {
     const q = search.trim().toLowerCase();
     return users.filter((u) => {
@@ -57,7 +78,11 @@ export default function UserManagement() {
     });
   }, [users, search, roleFilter, statusFilter]);
 
-  // เปลี่ยน role ของผู้ใช้ (MEMBER/MODERATOR/ADMIN) — ต้องยืนยันก่อนทุกครั้ง
+  /**
+   * ตำแหน่งบนหน้าเว็บ: เมนู Dropdown เลือกระดับสิทธิ์ ในคอลัมน์ "สิทธิ์" ของแถวผู้ใช้แต่ละคนในตาราง
+   * หน้าที่: ทำงานเมื่อแอดมินคลิกเปลี่ยน Role ใน Dropdown (MEMBER / MODERATOR / ADMIN)
+   *         จะแสดง SweetAlert2 ให้กดยืนยันก่อน จากนั้นส่ง API ไปอัปเดตสิทธิ์ที่ Backend แล้วโหลดตารางใหม่
+   */
   const handleRoleChange = async (targetUser, nextRole) => {
     if (nextRole === targetUser.role) return;
     const result = await Swal.fire({
@@ -86,8 +111,12 @@ export default function UserManagement() {
     }
   };
 
-  // "ระงับ" ผู้ใช้ — ฝั่ง backend คือ ban (เปลี่ยนสถานะเป็น BANNED)
-  // เก็บเหตุผลจากช่อง input ของ Swal ได้ (ไม่บังคับกรอก)
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ปุ่มไอคอนวงกลมขีดฆ่าสีแดง (Ban) ในคอลัมน์ "การจัดการ" ทางขวาสุดของตาราง
+   *         (แสดงสำหรับผู้ใช้งานที่ยังไม่ได้ถูกแบน)
+   * หน้าที่: ระงับการใช้งาน (แบน) บัญชีผู้ใช้ โดยมี SweetAlert2 พร้อมช่องให้พิมพ์เหตุผลการระงับ
+   *         เมื่อยืนยันจะเรียก API `adminService.banUser` เพื่อเปลี่ยนสถานะเป็น BANNED
+   */
   const handleSuspend = async (targetUser) => {
     const result = await Swal.fire({
       title: "ระงับการใช้งานผู้ใช้นี้?",
@@ -117,7 +146,12 @@ export default function UserManagement() {
     }
   };
 
-  // "คืนสิทธิ์" ผู้ใช้ — ฝั่ง backend คือ unban (เปลี่ยนสถานะกลับเป็น ACTIVE)
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ปุ่มไอคอนลูกศรหมุนวนสีเขียว (RotateCcw คืนสิทธิ์) ในคอลัมน์ "การจัดการ" ทางขวาสุดของตาราง
+   *         (แสดงเฉพาะแถวของผู้ใช้งานที่มีสถานะเป็น BANNED)
+   * หน้าที่: ปลดแบน/คืนสิทธิ์การใช้งานให้ผู้ใช้ มี SweetAlert2 ยืนยัน
+   *         เมื่อยืนยันจะเรียก API `adminService.unbanUser` เพื่อเปลี่ยนสถานะกลับเป็น ACTIVE
+   */
   const handleReactivate = async (targetUser) => {
     const result = await Swal.fire({
       title: "คืนสิทธิ์การใช้งานผู้ใช้นี้?",

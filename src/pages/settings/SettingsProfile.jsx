@@ -19,6 +19,11 @@ import ProfilePreview from "@/components/settings/ProfilePreview";
 import FrameDecorationModal from "@/components/settings/FrameDecorationModal";
 import { supabase } from "@/utils/supabase";
 
+/**
+ * ตำแหน่งบนหน้าเว็บ: ทำงานเบื้องหลังเมื่อผู้ใช้กดปุ่มไอคอนถังขยะ (ลบรูป) ในส่วนรูปพื้นหลังหรือแบนเนอร์
+ * หน้าที่: ฟังก์ชันยูทิลิตี้สร้างไฟล์รูปภาพ PNG (ผ่าน HTML Canvas) ที่มีสีเรียบหรือโปร่งใส
+ *         เพื่อใช้ส่งไปยังเซิร์ฟเวอร์สำหรับรีเซ็ตหรือลบรูปภาพเดิมให้กลับเป็นค่าเริ่มต้น
+ */
 const generateGradientFile = (filename, width, height, color1, color2) => {
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -46,6 +51,16 @@ const generateGradientFile = (filename, width, height, color1, color2) => {
   return new File([blob], filename, { type: "image/png" });
 };
 
+/**
+ * =========================================================================
+ * ตำแหน่งบนหน้าเว็บ: หน้าตั้งค่าโปรไฟล์ผู้ใช้งาน (URL: /settings/profile)
+ * หน้าที่: หน้าหลักสำหรับจัดการข้อมูลส่วนตัวและรูปภาพโปรไฟล์ ประกอบด้วย:
+ *         1. อัปโหลดรูปโปรไฟล์ + ปุ่มเลือกกรอบรูป + เลือกรูปทรง Avatar
+ *         2. อัปโหลดแบนเนอร์โปรไฟล์ และวอลเปเปอร์พื้นหลัง (รองรับรูปภาพและวิดีโอ MP4)
+ *         3. ช่องกรอกชื่อผู้ใช้ (Username), คำแนะนำตัว (Bio), ระดับการศึกษา
+ *         4. กรอบแสดงตัวอย่างสด (ProfilePreview) และปุ่ม "บันทึกข้อมูล"
+ * =========================================================================
+ */
 export default function SettingsProfile() {
   const { user, login } = useAuthStore();
   const { milestones, fetchMilestones } = useAchievementStore();
@@ -70,7 +85,11 @@ export default function SettingsProfile() {
     fetchMilestones();
   }, [fetchMilestones]);
 
-  // Merge live milestones with DEFAULT_FRAMES, honoring local & backend claimed state
+  /**
+   * ตำแหน่งบนหน้าเว็บ: รายการกรอบรูปและวอลเปเปอร์ทั้งหมดในระบบ
+   * หน้าที่: รวบรวมไอเทมรางวัล (Default Frames + Milestones) และตรวจเช็คสถานะการปลดล็อก (CLAIMED)
+   *         เพื่อนำไปแสดงสถานะใน Modal เลือกกรอบรูป และตรวจสอบสิทธิ์การสวมใส่
+   */
   const allMilestones = useMemo(() => {
     const map = new Map();
     DEFAULT_FRAMES.forEach((df) => {
@@ -131,9 +150,11 @@ export default function SettingsProfile() {
     user?.avatar_url ||
     `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.display_name || user?.username || "User")}&background=1e293b&color=38bdf8`;
 
-  // Equipping a claimed reward applies immediately (own toast, own API call)
-  // rather than going through the big form's "บันทึกข้อมูล" button — same
-  // instant-apply pattern the Achievements page already uses for claiming.
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ปุ่ม "ใช้งานกรอบนี้" หรือ "ไม่ใช้กรอบ" ในหน้าต่างป๊อปอัปเลือกกรอบรูป (FrameDecorationModal)
+   * หน้าที่: สวมใส่หรือถอดกรอบรูปโปรไฟล์ทันที บันทึกทั้ง LocalStorage, Supabase Auth Metadata,
+   *         และแจ้ง Backend API (`/users/equip`) โดยไม่ต้องรอกดปุ่มบันทึกใหญ่ด้านบน
+   */
   const handleEquipFrame = async (frameId) => {
     const userId = user?.id || user?.user_id;
     try {
@@ -196,6 +217,10 @@ export default function SettingsProfile() {
     }
   };
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: รายการวอลเปเปอร์รางวัลที่ปลดล็อกแล้ว (ถ้ามี)
+   * หน้าที่: สวมใส่วอลเปเปอร์ที่ปลดล็อกแล้วทันที บันทึกลง LocalStorage, Supabase, และ Backend
+   */
   const handleEquipWallpaper = async (url) => {
     const userId = user?.id || user?.user_id;
     try {
@@ -248,6 +273,14 @@ export default function SettingsProfile() {
     });
   }, [user]);
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ปุ่ม "อัปโหลด" (Upload Button) ของแต่ละส่วน:
+   *         - รูปโปรไฟล์ (Avatar)
+   *         - รูปพื้นหลัง (Wallpaper - รองรับรูปภาพ หรือวิดีโอ MP4)
+   *         - รูปแบนเนอร์ (Banner)
+   * หน้าที่: ทำงานเมื่อเลือกไฟล์ ตรวจสอบขนาดไฟล์ (สูงสุด 8MB หรือ 25MB สำหรับวิดีโอ) และชนิดไฟล์
+   *         สร้าง Object URL ชั่วคราวเพื่อนำไปแสดงบนพรีวิวสดทันทีก่อนกดยืนยันบันทึก
+   */
   const handleFileChange = (e, type) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -271,6 +304,11 @@ export default function SettingsProfile() {
     setMedia((prev) => ({ ...prev, [type]: { file, url, type: file.type, remove: false } }));
   };
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ปุ่มไอคอนรูปถังขยะสีแดง (Trash) ข้างๆ ปุ่มอัปโหลดรูปภาพแต่ละส่วน
+   * หน้าที่: รีเซ็ตรูปภาพ (Avatar, Wallpaper, Banner) ให้กลับเป็นค่าเริ่มต้น โดยสร้างไฟล์เปล่า/ภาพโปร่งใส
+   *         และอัปเดตพรีวิวสดให้ล้างรูปออกทันที
+   */
   const handleRemoveMedia = (type) => {
     let file;
     if (type === "wallpaper") {
@@ -293,6 +331,10 @@ export default function SettingsProfile() {
     }));
   };
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ส่วนเลือกรูปทรง Avatar (สี่เหลี่ยม, โค้งมน, วงกลม ฯลฯ)
+   * หน้าที่: อัปเดตค่าฟิลด์ใน `theme_settings` (เช่น `avatarShape`) เพื่อเปลี่ยนทรงของรูปโปรไฟล์แบบสดๆ
+   */
   const updateTheme = (key, value) => {
     setFormData((prev) => ({
       ...prev,
@@ -300,6 +342,12 @@ export default function SettingsProfile() {
     }));
   };
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ปุ่มสีน้ำเงิน "บันทึกข้อมูล" ที่มุมบนขวาของหน้าตั้งค่าโปรไฟล์
+   * หน้าที่: ทำงานเมื่อกดส่งฟอร์ม ตรวจสอบชื่อผู้ใช้ (Username) รวบรวมไฟล์รูปทั้งหมดที่เลือกไว้ (Avatar, Wallpaper, Banner)
+   *         ส่ง API ไปบันทึกข้อมูลที่ Backend (`profileService.updateProfile`),
+   *         อัปเดต Supabase Auth Metadata และอัปเดตข้อมูลผู้ใช้ใน Zustand Store
+   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     const trimmedUsername = (formData.username || "").trim();

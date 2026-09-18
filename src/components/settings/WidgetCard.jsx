@@ -1,12 +1,17 @@
 import { hexToRgba } from "@/utils/colorUtils";
 
-// Presentational widget card — icon + platform label + URL, styled either
-// from the platform's own brand color or the profile card's own theme.
-// Reused unmodified in WidgetModal's preview pane, SettingsWidgets' list,
-// and Profile.jsx's public hero card. `preview` renders a <div> instead of
-// a live <a> so the modal's staged preview isn't a dead link mid-edit.
-// `showLabel` swaps the main line from the raw URL to the platform's name
-// (used on the public profile card, where a bare link looks noisy).
+/**
+ * =========================================================================
+ * ตำแหน่งบนหน้าเว็บ: 
+ *   1. หน้าต่างป๊อปอัปเพิ่ม/แก้ไขวิดเจ็ต (WidgetModal): ฝั่งขวาในกล่อง "ตัวอย่าง"
+ *   2. หน้าตั้งค่าวิดเจ็ต (SettingsWidgets): ในการ์ดแสดงรายการ "วิดเจ็ตที่เพิ่มแล้ว"
+ *   3. หน้าโปรไฟล์ (Profile.jsx): กล่องการ์ดลิงก์โซเชียลมีเดียใต้ข้อมูลโปรไฟล์
+ * 
+ * หน้าที่: การ์ดแสดงผลวิดเจ็ตโซเชียลมีเดียแต่ละตัว (เช่น Facebook, Instagram, Discord, YouTube, GitHub, เว็บไซต์)
+ *         แสดงไอคอนประจำแพลตฟอร์ม, ชื่อแพลตฟอร์ม, ลิงก์ URL และปรับแต่งสี/ความโค้งมน
+ *         ตามสีแบรนด์ของแพลตฟอร์ม หรือตามสไตล์ของธีมการ์ดโปรไฟล์ที่ผู้ใช้เลือกไว้
+ * =========================================================================
+ */
 export default function WidgetCard({
   platform,
   url,

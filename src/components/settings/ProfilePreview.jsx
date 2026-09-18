@@ -14,12 +14,15 @@ const STYLE_CLASSES = {
   outlined: 'border-2 shadow-none',
 };
 
-// Live phone-mockup preview of the profile hero card, reflecting the current
-// (possibly unsaved) theme settings — layout, style, color, opacity, corner
-// roundness, avatar shape, name/text color, and equipped frame all render
-// here live. Used by the Appearance and Profile settings pages.
-// Note: avatar/wallpaper here always reflect the *saved* user record unless
-// the caller merges in unsaved uploads itself (SettingsProfile does this).
+/**
+ * =========================================================================
+ * ตำแหน่งบนหน้าเว็บ: กรอบโทรศัพท์จำลอง (Live Phone Preview) ทางฝั่งขวาของหน้าจอ
+ *                 (แสดงผลในหน้า /settings/profile และ /settings/appearance)
+ * หน้าที่: แสดงตัวอย่างหน้าโปรไฟล์แบบสดๆ ทันที (Live Preview) เพื่อให้ผู้ใช้เห็นภาพ
+ *         เมื่อมีการเปลี่ยนรูปภาพโปรไฟล์, กรอบรูป, วอลเปเปอร์พื้นหลัง, แบนเนอร์,
+ *         สไตล์การ์ด, เค้าโครง (Layout), สีการ์ด, ความโค้งมน หรือฟอนต์สี
+ * =========================================================================
+ */
 export default function ProfilePreview({ user, formData }) {
   const { milestones } = useAchievementStore();
   const theme = formData.theme_settings;
@@ -73,6 +76,11 @@ export default function ProfilePreview({ user, formData }) {
     borderColor: theme.cardBorderColor || (isOutlined ? effectiveColor : undefined),
   };
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: รูปโปรไฟล์และกรอบรูปที่อยู่ภายในการ์ดโปรไฟล์บนพรีวิวมือถือ
+   * หน้าที่: เรนเดอร์รูป Avatar ผู้ใช้ พร้อมสวมใส่กรอบรูปพิเศษ (SVG Frame)
+   *         ตามรูปทรงที่เลือก (วงกลม, สี่เหลี่ยมมน ฯลฯ)
+   */
   const avatarBlock = (size) => (
     <div className={`relative ${size} bg-slate-200 border-2 border-white/50 overflow-hidden shrink-0 ${avatarShape.className}`}>
       {avatarUrl ? (
@@ -96,6 +104,11 @@ export default function ProfilePreview({ user, formData }) {
     </div>
   );
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ส่วนข้อความชื่อผู้ใช้, คำแนะนำตัว (Bio) และป้ายแท็กความสนใจ ภายในการ์ดพรีวิว
+   * หน้าที่: เรนเดอร์ชื่อผู้ใช้ตามสีตัวอักษรที่ตั้งค่าไว้ และจัดตำแหน่งข้อความ (ชิดซ้าย หรือ กึ่งกลาง)
+   *         ตามเค้าโครงที่ผู้ใช้เลือก (Compact, Stacked, Standard)
+   */
   const nameBlock = (align) => (
     <>
       <h3 className={`text-xl font-black ${align}`} style={{ color: theme.nameColor }}>{formData.username || formData.nickname || 'ผู้ใช้งาน'}</h3>

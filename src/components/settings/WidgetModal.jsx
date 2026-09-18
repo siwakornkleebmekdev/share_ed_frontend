@@ -3,14 +3,23 @@ import { X } from 'lucide-react';
 import { DEFAULT_WIDGET_OPTIONS } from '@/pages/settings/widgetConstants';
 import WidgetCard from '@/components/settings/WidgetCard';
 
-// Add/edit modal for a single platform's widget — structural clone of
-// FrameDecorationModal.jsx (overlay, backdrop-click-to-close, staged local
-// state, live preview pane). Serves both add (initialData: null) and edit
-// (initialData: {url, options}) so there's one modal, not five.
+/**
+ * =========================================================================
+ * ตำแหน่งบนหน้าเว็บ: หน้าต่างป๊อปอัป (Modal) "เพิ่ม/แก้ไข วิดเจ็ต"
+ *                 (จะเด้งขึ้นมาเมื่อคลิกเลือกแพลตฟอร์มโซเชียล หรือกดไอคอนดินสอแก้ไขในการ์ดวิดเจ็ต)
+ * หน้าที่: ฟอร์มสำหรับกรอกลิงก์ URL ของโซเชียลมีเดีย, สวิตช์ตั้งค่าตัวเลือกเสริม (Options),
+ *         มีพรีวิวการ์ดวิดเจ็ตจำลองด้านขวา และปุ่มบันทึก "+ เพิ่มวิดเจ็ต" หรือ "บันทึกการเปลี่ยนแปลง"
+ * =========================================================================
+ */
 export default function WidgetModal({ isOpen, onClose, platformConfig, initialData, cardTheme, onConfirm }) {
   const [url, setUrl] = useState('');
   const [options, setOptions] = useState(DEFAULT_WIDGET_OPTIONS);
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ส่วนฟอร์มกรอกลิงก์และสวิตช์ตัวเลือกใน Modal
+   * หน้าที่: ทำงานเมื่อเปิด Modal เพื่อดึงค่า URL และ options เดิมมาใส่ในช่องฟอร์ม (กรณีแก้ไข)
+   *         หรือตั้งค่าเริ่มต้นใหม่ (กรณีเพิ่มใหม่)
+   */
   useEffect(() => {
     if (isOpen) {
       setUrl(initialData?.url || '');
@@ -26,6 +35,11 @@ export default function WidgetModal({ isOpen, onClose, platformConfig, initialDa
     ? 'URL ต้องขึ้นต้นด้วย http:// หรือ https://'
     : '';
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: แถวสวิตช์เปิด/ปิดตัวเลือก (Toggle Switch) ในคอลัมน์ซ้ายของ Modal
+   *         (เช่น "แสดงในการ์ดโปรไฟล์", "ใช้พื้นตามสไตล์การ์ด", ตัวเลือกเฉพาะแพลตฟอร์ม)
+   * หน้าที่: เรนเดอร์สวิตช์เปิด-ปิด พร้อมอัปเดต state `options` เมื่อผู้ใช้คลิกเปิด/ปิด
+   */
   const toggle = (key, label, desc) => (
     <label key={key} className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl p-4 cursor-pointer">
       <div>

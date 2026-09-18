@@ -52,6 +52,10 @@ const AVATAR_SHAPE_CLASS = {
   circle: "rounded-full",
 };
 
+/**
+ * ตำแหน่งบนหน้าเว็บ: ป้ายข้อความระดับการศึกษา (Education Tag) ในการ์ดโปรไฟล์
+ * หน้าที่: แปลงรหัสระดับการศึกษาภาษาอังกฤษ (เช่น HIGH_SCHOOL, UNIVERSITY) ให้เป็นข้อความภาษาไทยที่อ่านง่าย
+ */
 const getEducationLevelLabel = (level) => {
   switch (level) {
     case "MIDDLE_SCHOOL":
@@ -65,6 +69,17 @@ const getEducationLevelLabel = (level) => {
   }
 };
 
+/**
+ * =========================================================================
+ * ตำแหน่งบนหน้าเว็บ: หน้าแสดงผลโปรไฟล์สาธารณะ (URL: /profile หรือ /profile/:id)
+ * หน้าที่: หน้าหลักสำหรับแสดงโปรไฟล์ของผู้ใช้งาน (ทั้งของตัวเองและของผู้ใช้อื่น) ประกอบด้วย:
+ *         1. การ์ดโปรไฟล์ขนาดใหญ่ (Hero Card): รูป Avatar, กรอบรูป, แบนเนอร์, วอลเปเปอร์เต็มจอ,
+ *            ชื่อผู้ใช้, คำแนะนำตัว (Bio), ระดับการศึกษา, วิดเจ็ตโซเชียล, และตัวเลขผู้ติดตาม
+ *         2. ปุ่ม "แก้ไขโปรไฟล์" (กรณีดูโปรไฟล์ตัวเอง) หรือปุ่ม "ติดตาม" (กรณีดูโปรไฟล์คนอื่น)
+ *         3. แถบแท็บนำทาง (โพสต์ของฉัน, ฉบับร่าง, ที่บันทึกไว้, ความสำเร็จ)
+ *         4. รายการเนื้อหาตามแท็บที่เลือก
+ * =========================================================================
+ */
 export default function Profile() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -92,6 +107,11 @@ export default function Profile() {
     followingCount: 0,
   });
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ปุ่มไอคอนบุ๊กมาร์ก (Bookmark) บนการ์ดโพสต์แต่ละใบ
+   * หน้าที่: ทำงานเมื่อผู้ใช้กดบันทึกหรือยกเลิกการบันทึกโพสต์ ทำการอัปเดตสถานะบุ๊กมาร์ก
+   *         ในรายการโพสต์ของฉัน (`myPosts`) และรายการที่บันทึกไว้ (`bookmarks`) ทันที
+   */
   const handleBookmarkChange = (postId, isBookmarked) => {
     setMyPosts((posts) =>
       posts.map((post) =>
@@ -118,6 +138,11 @@ export default function Profile() {
   const [hasEntered, setHasEntered] = useState(!enterScreenEnabled);
   const [isBannerBlank, setIsBannerBlank] = useState(false);
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: แถบปุ่มแท็บเลือกหมวดหมู่ใต้การ์ดโปรไฟล์
+   *         (โพสต์ของฉัน / ฉบับร่าง / ที่บันทึกไว้ / ความสำเร็จ)
+   * หน้าที่: สลับการแสดงผลหมวดหมู่เนื้อหา พร้อมอัปเดต query string `?tab=...` บน URL
+   */
   const selectTab = (tab) => {
     setActiveTab(tab);
     setSearchParams((current) => {
@@ -275,7 +300,13 @@ export default function Profile() {
     }
   }, [id, isOtherUser, user]);
 
-  // ฟังก์ชัน Follow / Unfollow ผู้ใช้อื่น
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ปุ่ม "ติดตาม" / "กำลังติดตาม" (อยู่มุมขวาบนของการ์ดโปรไฟล์ เมื่อดูโปรไฟล์ของผู้อื่น)
+   * หน้าที่: ทำงานเมื่อกดติดตามหรือเลิกติดตามผู้ใช้นั้น:
+   *         - ถ้ายังไม่ล็อกอิน: นำทางไปยังหน้าล็อกอิน (/login)
+   *         - ถ้าติดตามอยู่แล้ว: เรียก `unfollowUser` และลดจำนวนผู้ติดตามลง 1
+   *         - ถ้ายังไม่ได้ติดตาม: เรียก `followUser` และเพิ่มจำนวนผู้ติดตามขึ้น 1
+   */
   const handleToggleFollow = async () => {
     if (!isAuthenticated) {
       toast.error("กรุณาเข้าสู่ระบบเพื่อติดตาม");

@@ -14,6 +14,18 @@ const STATUS_BADGE_CLASS = {
   BANNED: "admin-badge-banned",
 };
 
+/**
+ * =========================================================================
+ * ตำแหน่งบนหน้าเว็บ: หน้ารายละเอียดผู้ใช้งานรายคน (URL: /admin/users/:id)
+ *                 (เข้าถึงเมื่อกดคลิกที่แถวผู้ใช้ในหน้าตารางจัดการผู้ใช้งาน)
+ * หน้าที่: แสดงข้อมูลโปรไฟล์และสถานะอย่างละเอียดของผู้ใช้งานรายคน ประกอบด้วย:
+ *         1. ปุ่มย้อนกลับ "< กลับไปหน้าจัดการผู้ใช้งาน"
+ *         2. รูปโปรไฟล์, ชื่อผู้ใช้, อีเมล และป้ายสถานะ (ACTIVE / SUSPENDED / BANNED)
+ *         3. ช่องเปลี่ยนสิทธิ์การใช้งาน (Dropdown: MEMBER / MODERATOR / ADMIN)
+ *         4. ระดับการศึกษา, วันที่สมัครสมาชิก และคำแนะนำตัว (Bio)
+ *         5. ปุ่มด้านล่างสุดสำหรับ ระงับการใช้งาน (สีแดง) หรือ คืนสิทธิ์การใช้งาน (สีเขียว)
+ * =========================================================================
+ */
 export default function UserDetails() {
   const { id } = useParams(); // มาจาก route /admin/users/:id
   const navigate = useNavigate();
@@ -21,7 +33,11 @@ export default function UserDetails() {
   const [isLoading, setIsLoading] = useState(true);
   const [isBusy, setIsBusy] = useState(false);
 
-  // ดึงข้อมูลผู้ใช้รายคน (GET /users/:id มี role/status มาให้ด้วย)
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ส่วนแสดงข้อมูลการ์ดโปรไฟล์ของผู้ใช้ทั้งหมดในหน้านี้
+   * หน้าที่: ยิง API ไปยัง Backend (`adminService.getUserDetails(id)`) เพื่อดึงข้อมูลเชิงลึกของผู้ใช้ตาม ID
+   *         แล้วนำมาบันทึกใน state `user` เพื่อแสดงผลบนหน้าจอ
+   */
   const fetchUser = async () => {
     setIsLoading(true);
     try {
@@ -36,11 +52,20 @@ export default function UserDetails() {
     }
   };
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ทำงานอัตโนมัติเมื่อเปิดหน้าดูรายละเอียดผู้ใช้
+   * หน้าที่: สั่งเรียก `fetchUser()` เพื่อโหลดข้อมูลผู้ใช้ทันทีเมื่อเปิดหน้า หรือเมื่อ `id` ใน URL เปลี่ยน
+   */
   useEffect(() => {
     fetchUser();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: กล่อง Dropdown ในช่องฟิลด์ "สิทธิ์การใช้งาน" ตรงกลางการ์ดข้อมูลผู้ใช้
+   * หน้าที่: ทำงานเมื่อแอดมินคลิกเปลี่ยน Role ของผู้ใช้รายนี้ (MEMBER / MODERATOR / ADMIN)
+   *         จะแสดงกล่อง SweetAlert2 ยืนยันก่อน เมื่อกดยืนยันจะส่ง API ไปอัปเดตสิทธิ์ และโหลดข้อมูลใหม่
+   */
   const handleRoleChange = async (nextRole) => {
     if (!user || nextRole === user.role) return;
     const result = await Swal.fire({
@@ -69,6 +94,12 @@ export default function UserDetails() {
     }
   };
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ปุ่มสีแดง "ระงับการใช้งาน" ด้านล่างสุดของการ์ดข้อมูล
+   *         (จะแสดงเฉพาะเมื่อผู้ใช้รายนี้ยังไม่ได้ถูกแบน)
+   * หน้าที่: ทำงานเมื่อกดปุ่มระงับการใช้งาน แสดง SweetAlert2 พร้อมช่องให้กรอกเหตุผล
+   *         เมื่อยืนยันจะยิง API ไปแบนผู้ใช้คนนี้ (เปลี่ยนสถานะเป็น BANNED) และโหลดข้อมูลใหม่
+   */
   const handleSuspend = async () => {
     const result = await Swal.fire({
       title: "ระงับการใช้งานผู้ใช้นี้?",
@@ -98,6 +129,12 @@ export default function UserDetails() {
     }
   };
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ปุ่มสีเขียว "คืนสิทธิ์การใช้งาน" ด้านล่างสุดของการ์ดข้อมูล
+   *         (จะแสดงเฉพาะเมื่อผู้ใช้คนนี้มีสถานะเป็น BANNED อยู่)
+   * หน้าที่: ปลดแบนผู้ใช้คนนี้ มี SweetAlert2 แสดงถามยืนยัน
+   *         เมื่อกดยืนยันจะเรียก API `adminService.unbanUser` เพื่อคืนสิทธิ์ให้กลับมาใช้งานได้ตามปกติ
+   */
   const handleReactivate = async () => {
     const result = await Swal.fire({
       title: "คืนสิทธิ์การใช้งานผู้ใช้นี้?",

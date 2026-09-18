@@ -7,11 +7,27 @@ import ProfilePreview from '@/components/settings/ProfilePreview';
 import { CARD_LAYOUTS, CARD_STYLES, CARD_COLOR_PRESETS, CORNER_OPTIONS, DEFAULT_THEME } from './themeConstants';
 import { supabase } from '@/utils/supabase';
 
+/**
+ * =========================================================================
+ * ตำแหน่งบนหน้าเว็บ: หน้าตั้งค่ารูปลักษณ์โปรไฟล์ (URL: /settings/appearance)
+ * หน้าที่: ควบคุมการปรับแต่งหน้าตาของการ์ดโปรไฟล์ ประกอบด้วย:
+ *         1. เค้าโครง (Compact / Stacked / Standard)
+ *         2. สไตล์การ์ด (Classic / Frosted Square / Frosted Soft / Outlined)
+ *         3. ปรับสีพื้นหลังการ์ด, ความโปร่งใส, และสีขอบการ์ด
+ *         4. ความโค้งมนของมุมการ์ด (เหลี่ยม / มนน้อย / ปานกลาง / มนมาก)
+ *         5. พรีวิวสดบนโทรศัพท์จำลอง (ProfilePreview) ทางขวา และปุ่ม "บันทึกข้อมูล"
+ * =========================================================================
+ */
 export default function SettingsAppearance() {
   const { user, login } = useAuthStore();
   const [isSaving, setIsSaving] = useState(false);
   const [themeSettings, setThemeSettings] = useState(DEFAULT_THEME);
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ตัวเลือกการตั้งค่าทั้งหมดในหน้ารูปลักษณ์
+   * หน้าที่: ทำงานเมื่อโหลดหน้านี้ เพื่อดึงค่า `theme_settings` เดิมของผู้ใช้
+   *         จาก metadata มาใส่ใน state ให้ตรงกับการตั้งค่าล่าสุด
+   */
   useEffect(() => {
     if (!user) return;
     const meta = user.user_metadata || {};
@@ -21,10 +37,22 @@ export default function SettingsAppearance() {
     setThemeSettings({ ...DEFAULT_THEME, ...(meta.theme_settings || {}) });
   }, [user]);
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ทุกปุ่มตัวเลือกในฟอร์ม (ปุ่มเลือกเค้าโครง, ปุ่มสไตล์การ์ด, ตัวเลือกสี, ตัวเลือกมุมโค้ง)
+   * หน้าที่: อัปเดตค่าฟิลด์แต่ละตัวใน state `themeSettings` ทันทีที่ผู้ใช้คลิกเลือกหรือปรับค่า
+   *         ทำให้พรีวิวมือถือทางขวาเปลี่ยนตามแบบ Real-time
+   */
   const updateTheme = (key, value) => {
     setThemeSettings(prev => ({ ...prev, [key]: value }));
   };
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ปุ่มสีน้ำเงิน "บันทึกข้อมูล" ที่มุมบนขวาของหน้าจอ
+   * หน้าที่: ทำงานเมื่อผู้ใช้กดบันทึกรูปลักษณ์ บันทึกการตั้งค่าธีมลง:
+   *         1. LocalStorage เพื่อแสดงผลทันทีแบบ Offline-first
+   *         2. Supabase Auth Metadata เพื่อให้คงอยู่ข้ามเครื่อง/ข้ามเบราว์เซอร์
+   *         3. Backend Database API (`profileService.updateProfile`)
+   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSaving(true);

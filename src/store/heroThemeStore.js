@@ -8,17 +8,28 @@ const DARK_THRESHOLD = 0.55;
 const FALLBACK_DARK_COLOR = { r: 15, g: 23, b: 42 }; // slate-900
 const FALLBACK_LIGHT_COLOR = { r: 255, g: 255, b: 255 };
 
-// Lets a page with a full-bleed custom background (e.g. Profile's wallpaper)
-// tell the navbar/layout what's behind it, so the navbar theme — and the
-// tint of any frosted-glass surface reading `heroColor` — follows the actual
-// image instead of being hardcoded per-route.
+/**
+ * =========================================================================
+ * ตำแหน่งบนหน้าเว็บ:
+ *   1. แถบนำทางด้านบน (Navbar): ปรับสีตัวอักษรและสีพื้นหลังโปร่งใส (Frosted Glass) ให้กลมกลืนกับรูปภาพพื้นหลัง
+ *   2. หน้าโปรไฟล์ (Profile.jsx): ใช้ภาพ Wallpaper/Cover ของผู้ใช้เพื่อปรับธีมทั้งหน้า
+ *   3. ส่วนท้ายเว็บ (Footer.jsx), Layout และการ์ดโพสต์ (PostCard.jsx): ปรับโทนสีตามความมืด/สว่างของภาพ Header
+ * 
+ * หน้าที่: จัดการ Global State สำหรับปรับแต่งธีมสีและความสว่าง (Brightness / Hero Theme) อัตโนมัติ 
+ *         โดยวิเคราะห์สีเฉลี่ยและความสว่างของภาพหน้าปก/วอลเปเปอร์ เพื่อให้ Navbar และองค์ประกอบ UI อื่นๆ
+ *         สามารถแสดงผลตัวหนังสือได้อย่างชัดเจนและสวยงาม
+ * =========================================================================
+ */
 const useHeroThemeStore = create((set, get) => ({
   isDarkHero: false,
   heroColor: FALLBACK_LIGHT_COLOR,
   requestId: 0,
 
-  // `fallbackDark` is used when there's no image to sample (e.g. a page has
-  // no custom wallpaper but still renders a dark-by-default backdrop).
+  /**
+   * ตำแหน่งบนหน้าเว็บ: เรียกใช้ในหน้าโปรไฟล์ (Profile.jsx) เมื่อโหลดรูปภาพหน้าปก/วอลเปเปอร์ของผู้ใช้สำเร็จ
+   * หน้าที่: ดาวน์โหลดและวิเคราะห์รูปภาพ เพื่อตรวจสอบค่าความสว่าง (brightness) และค่าสีเฉลี่ย (RGB) 
+   *         หากภาพมืดกว่าเกณฑ์ (DARK_THRESHOLD) จะปรับ `isDarkHero` เป็น true เพื่อให้ Navbar สลับเป็นธีมตัวหนังสือสีขาว
+   */
   setHeroImage: (url, { fallbackDark = false } = {}) => {
     const requestId = get().requestId + 1;
     set({ requestId });
@@ -46,6 +57,10 @@ const useHeroThemeStore = create((set, get) => ({
       });
   },
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: เรียกใช้เมื่อออกจากหน้าโปรไฟล์ (Unmount) หรือเปลี่ยนไปยังหน้าอื่นที่ไม่มี Wallpaper
+   * หน้าที่: รีเซ็ตค่าธีมกลับเป็นค่าเริ่มต้น (สว่าง) เพื่อให้ Navbar กลับมาเป็นสีมาตรฐานของระบบ
+   */
   clearHeroImage: () =>
     set({ isDarkHero: false, heroColor: FALLBACK_LIGHT_COLOR, requestId: get().requestId + 1 }),
 }));

@@ -27,6 +27,11 @@ function safeInternalLink(value) {
   return /^\/(?!\/)/.test(link) && !/[\\\s]/.test(link) ? link : null;
 }
 
+/**
+ * ตำแหน่งบนหน้าเว็บ: ทุกลิงก์บนรายการแจ้งเตือน (เมื่อคลิกที่การแจ้งเตือนใน Navbar หรือหน้า /notifications)
+ * หน้าที่: คำนวณหา URL ปลายทางที่ต้องเปิด เช่น ลิงก์ไปยังหน้าโพสต์ (`/post/:id`) หรือหน้าโปรไฟล์ (`/profile/:id`)
+ *         ตามประเภทของการแจ้งเตือน (เช่น ไลก์, คอมเมนต์, มีคนติดตาม)
+ */
 export function getNotificationTarget(n, normalizedType) {
   if (!n || typeof n !== 'object') return { link: null, postId: null, actorId: null };
   const type = normalizedType || String(n.type || n.notification_type || 'SYSTEM').trim().replace(/[\s-]+/g, '_').toUpperCase();
@@ -51,6 +56,11 @@ export function getNotificationTarget(n, normalizedType) {
   return { link: explicitLink || generatedLink, postId, actorId };
 }
 
+/**
+ * ตำแหน่งบนหน้าเว็บ: รายการแจ้งเตือนแต่ละแถวที่แสดงผลบนหน้าจอ (ทั้งไอคอน, ข้อความ, วันเวลา, รูปโปรไฟล์ของผู้กระทำ)
+ * หน้าที่: แปลงโครงสร้างข้อมูลการแจ้งเตือนที่ได้จาก API หรือ Socket ให้เป็นฟอร์แมตมาตรฐานเดียวกัน
+ *         พร้อมกำหนดข้อความภาษาไทยเริ่มต้นตามประเภท (LIKE, COMMENT, FOLLOW ฯลฯ)
+ */
 export function normalize(n) {
   if (!n || typeof n !== 'object' || (n.id ?? n._id) == null) return null;
   const type = String(n.type || n.notification_type || 'SYSTEM').trim().replace(/[\s-]+/g, '_').toUpperCase();
@@ -74,6 +84,17 @@ export function normalize(n) {
 }
 const sorted = (items) => [...new Map(items.filter(Boolean).map(n => [n.id, n])).values()].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
 
+/**
+ * =========================================================================
+ * ตำแหน่งบนหน้าเว็บ:
+ *   1. แถบนำทางด้านบน (Navbar): แสดงไอคอนกระดิ่ง, ตัวเลขป้ายแดงแจ้งเตือน, รายการแจ้งเตือนล่าสุดใน Dropdown
+ *   2. หน้าการแจ้งเตือนหลัก (/notifications): แสดงรายการแจ้งเตือนทั้งหมดแบบแยกตามวัน
+ *   3. ตัวควบคุมหลักของเว็บ (App.jsx): เริ่มเชื่อมต่อ Realtime Socket เมื่อล็อกอิน และตัดการเชื่อมต่อเมื่อล็อกเอาท์
+ * 
+ * หน้าที่: Factory Function สำหรับสร้าง Zustand Store จัดการ State ของระบบแจ้งเตือนทั้งหมด
+ *         รองรับการดึงข้อมูลจาก API, การรับ-ส่งข้อมูล Realtime ผ่าน WebSocket, การกดอ่าน และการลบแจ้งเตือน
+ * =========================================================================
+ */
 export function createNotificationStore(service, realtime) {
   let epoch = 0, revision = 0, flight = null, cleanup = () => {};
   return create((set, get) => {
@@ -97,7 +118,17 @@ export function createNotificationStore(service, realtime) {
     };
     return {
       notifications: [], isLoading: false, isMutating: false, error: null,
+
+      /**
+       * ตำแหน่งบนหน้าเว็บ: จุดป้ายตัวเลขสีแดง (Badge) บนไอคอนกระดิ่งใน Navbar และข้อความ "X ใหม่" ในหัวข้อหน้า Notifications
+       * หน้าที่: คำนวณนับจำนวนการแจ้งเตือนที่ยังไม่ได้อ่าน (`!isRead`) ทั้งหมดใน store
+       */
       unreadCount: () => get().notifications.filter(n => !n.isRead).length,
+
+      /**
+       * ตำแหน่งบนหน้าเว็บ: เรียกใช้ตอนเปิดหน้าเว็บ, เปิดเมนูแจ้งเตือนใน Navbar หรือเปิดหน้า /notifications
+       * หน้าที่: ส่งคำขอไปยัง Backend API เพื่อดึงข้อมูลการแจ้งเตือนทั้งหมดของผู้ใช้มาเก็บไว้ใน store
+       */
       fetchNotifications: () => {
         if (flight) return flight;
         if (get().isMutating) return Promise.resolve();
@@ -118,6 +149,12 @@ export function createNotificationStore(service, realtime) {
         flight = request;
         return request;
       },
+
+      /**
+       * ตำแหน่งบนหน้าเว็บ: ทำงานในระดับระบบ (App.jsx) ทันทีที่ผู้ใช้เข้าสู่ระบบสำเร็จ
+       * หน้าที่: เชื่อมต่อ WebSocket กับ Socket.io เซิร์ฟเวอร์ เพื่อรับฟังอีเวนต์แจ้งเตือนสด Realtime 
+       *         (`new_notification`, `notification_removed`) และรีเฟรชข้อมูลอัตโนมัติเมื่อหน้าต่างเบราว์เซอร์กลับมา Active
+       */
       connectRealtime: (userId) => {
         get().disconnectRealtime();
         const session = epoch;
@@ -141,18 +178,43 @@ export function createNotificationStore(service, realtime) {
         };
         refresh();
       },
+
+      /**
+       * ตำแหน่งบนหน้าเว็บ: ทำงานในระดับระบบ (App.jsx) เมื่อผู้ใช้กดปุ่ม "ออกจากระบบ" (Logout)
+       * หน้าที่: ตัดการเชื่อมต่อ WebSocket, เคลียร์ตัวจับเวลาและ Event Listeners พร้อมล้างข้อมูลการแจ้งเตือนใน store
+       */
       disconnectRealtime: () => {
         epoch++; revision++; flight = null;
         cleanup(); cleanup = () => {};
         realtime.disconnectSocket();
         set({ notifications: [], isLoading: false, isMutating: false, error: null });
       },
+
+      /**
+       * ตำแหน่งบนหน้าเว็บ: เมื่อผู้ใช้คลิกที่รายการแจ้งเตือนแต่ละแถว (ทั้งใน Dropdown ของ Navbar และหน้า /notifications)
+       * หน้าที่: ส่ง API อัปเดตสถานะการแจ้งเตือนเป็นอ่านแล้ว และเปลี่ยนสถานะ `isRead: true` ใน store ทันที
+       */
       markAsRead: id => mutate(() => service.markAsRead(id), items => items.map(n => n.id === String(id) ? { ...n, isRead: true } : n)),
+
+      /**
+       * ตำแหน่งบนหน้าเว็บ: ปุ่ม "อ่านทั้งหมด" (ไอคอน Check) บนส่วนหัวของเมนูแจ้งเตือนใน Navbar และหน้า /notifications
+       * หน้าที่: ส่งคำขอ API เพื่ออัปเดตการแจ้งเตือนทั้งหมดของผู้ใช้ให้เป็นสถานะอ่านแล้ว
+       */
       markAllAsRead: () => {
         const ids = new Set(get().notifications.map(n => n.id));
         return mutate(() => service.markAllAsRead(), items => items.map(n => ids.has(n.id) ? { ...n, isRead: true } : n));
       },
+
+      /**
+       * ตำแหน่งบนหน้าเว็บ: ปุ่มไอคอนรูปถังขยะ/ปุ่มลบ ท้ายแถวรายการแจ้งเตือนแต่ละแถว
+       * หน้าที่: ส่งคำขอ API ลบการแจ้งเตือนรายการนั้นออกจากฐานข้อมูล และนำออกจากรายการที่แสดงบนหน้าเว็บ
+       */
       deleteNotification: id => mutate(() => service.deleteNotification(id), items => items.filter(n => n.id !== String(id))),
+
+      /**
+       * ตำแหน่งบนหน้าเว็บ: ทำงานผ่านระบบ Realtime WebSocket เมื่อมีการกระทำที่ทำให้การแจ้งเตือนหายไป (เช่น มีคนยกเลิกการกดถูกใจ Unlike)
+       * หน้าที่: คัดกรองและลบการแจ้งเตือนที่เกี่ยวข้องออกจาก store แบบทันทีโดยไม่ต้องกดรีเฟรชหน้าเว็บ
+       */
       removeNotification: payload => {
         if (!payload || typeof payload !== 'object') return;
         const notificationId = asId(payload.notificationId ?? payload.notification_id);
@@ -173,6 +235,11 @@ export function createNotificationStore(service, realtime) {
           }),
         }));
       },
+
+      /**
+       * ตำแหน่งบนหน้าเว็บ: ปุ่ม "ล้างทั้งหมด" (ไอคอน Trash) ที่ส่วนหัวของหน้า /notifications
+       * หน้าที่: ยิง API ลบการแจ้งเตือนทั้งหมดของผู้ใช้ และล้างรายการแจ้งเตือนทั้งหมดใน store
+       */
       clearAll: () => {
         const session = epoch;
         const ids = get().notifications.map(n => n.id);
@@ -184,6 +251,11 @@ export function createNotificationStore(service, realtime) {
           if (results.some(r => r.status === 'rejected')) throw new Error('Partial delete');
         }, items => items);
       },
+
+      /**
+       * ตำแหน่งบนหน้าเว็บ: รายการแจ้งเตือนใน Navbar และหน้า /notifications ขณะกำลังเปิดใช้งานหน้าเว็บอยู่
+       * หน้าที่: รับข้อมูลการแจ้งเตือนใหม่ที่ส่งมาจาก Socket เซิร์ฟเวอร์ แล้วแทรกขึ้นมาไว้บนสุดของรายการแบบ Realtime
+       */
       addNotification: raw => {
         const n = normalize(raw);
         if (!n) return;

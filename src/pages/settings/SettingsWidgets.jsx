@@ -9,11 +9,25 @@ import { DEFAULT_THEME } from './themeConstants';
 import WidgetCard from '@/components/settings/WidgetCard';
 import WidgetModal from '@/components/settings/WidgetModal';
 
+/**
+ * =========================================================================
+ * ตำแหน่งบนหน้าเว็บ: หน้าตั้งค่าวิดเจ็ตโซเชียลมีเดีย (URL: /settings/widgets)
+ * หน้าที่: หน้าหลักสำหรับจัดการการ์ดลิงก์โซเชียลที่จะนำไปแสดงบนหน้าโปรไฟล์ ประกอบด้วย:
+ *         1. ปุ่มเลือกแพลตฟอร์มที่ต้องการเพิ่ม (Instagram, Facebook, YouTube, Discord ฯลฯ)
+ *         2. รายการการ์ดวิดเจ็ตที่เพิ่มไว้แล้ว พร้อมปุ่มแก้ไข (ดินสอ) และปุ่มลบ (ถังขยะ)
+ *         3. ป๊อปอัปฟอร์มสำหรับกรอกลิงก์และตั้งค่าการแสดงผล (WidgetModal)
+ * =========================================================================
+ */
 export default function SettingsWidgets() {
   const { user, login } = useAuthStore();
   const [widgets, setWidgets] = useState([]);
   const [modalPlatformId, setModalPlatformId] = useState(null);
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: รายการวิดเจ็ตทั้งหมดในหน้านี้
+   * หน้าที่: ทำงานเมื่อเปิดหน้าเว็บ เพื่อดึงรายการวิดเจ็ตที่บันทึกไว้ใน `user.user_metadata.widgets`
+   *         มาเก็บใน state เพื่อแสดงผล
+   */
   useEffect(() => {
     if (!user) return;
     setWidgets(user.user_metadata?.widgets || []);
@@ -21,6 +35,11 @@ export default function SettingsWidgets() {
 
   const cardTheme = { ...DEFAULT_THEME, ...(user?.user_metadata?.theme_settings || {}) };
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: การบันทึกข้อมูลวิดเจ็ตทั้งหมด
+   * หน้าที่: บันทึกรายการวิดเจ็ตล่าสุดลง Supabase Auth Metadata และอัปเดต Auth Store ทันที
+   *         พร้อมแสดงการแจ้งเตือน Toast ความสำเร็จ
+   */
   const persist = async (nextWidgets, successMessage) => {
     try {
       // Save directly to Supabase auth metadata since backend doesn't support widgets column yet
@@ -43,6 +62,11 @@ export default function SettingsWidgets() {
     }
   };
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ปุ่มบันทึกในหน้าต่างป๊อปอัป WidgetModal
+   * หน้าที่: รับข้อมูล URL และ options ที่ผู้ใช้กรอกเข้ามา หากมีวิดเจ็ตเดิมอยู่แล้วจะทำการอัปเดต (Update)
+   *         หากเป็นแพลตฟอร์มใหม่จะเพิ่มเข้าไปในลิสต์ (Create) แล้วเรียก `persist` บันทึกข้อมูล
+   */
   const handleSaveWidget = (platformId, { url, options }) => {
     const next = widgets.some((w) => w.platformId === platformId)
       ? widgets.map((w) => (w.platformId === platformId ? { ...w, url, options } : w))
@@ -50,6 +74,10 @@ export default function SettingsWidgets() {
     persist(next, 'บันทึกวิดเจ็ตแล้ว');
   };
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ปุ่มไอคอนรูปถังขยะสีแดง (Trash) ที่มุมบนขวาของการ์ดวิดเจ็ตแต่ละใบ
+   * หน้าที่: ลบวิดเจ็ตของแพลตฟอร์มนั้นออกจากรายการ และอัปเดตบันทึกข้อมูลทันที
+   */
   const handleDeleteWidget = (platformId) => {
     persist(widgets.filter((w) => w.platformId !== platformId), 'ลบวิดเจ็ตแล้ว');
   };

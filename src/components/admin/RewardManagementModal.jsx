@@ -5,12 +5,25 @@ import Swal from "sweetalert2";
 import { achievementService } from "@/services/achievement.service";
 import { getValidImageUrl } from "@/utils/imageUtils";
 
+/**
+ * =========================================================================
+ * ตำแหน่งบนหน้าเว็บ: หน้าต่างป๊อปอัป (Modal) "จัดการของรางวัลในระบบ"
+ *                 (จะเปิดขึ้นมาเมื่อกดปุ่ม "จัดการของรางวัล" ที่หน้าจัดการความสำเร็จ)
+ * หน้าที่: แสดงรายชื่อของรางวัลทั้งหมด (กรอบรูป/ไอเทม) ที่มีอยู่ในระบบ
+ *         มีช่องค้นหาของรางวัล และปุ่มลบของรางวัลชิ้นที่ไม่ต้องการออกจากระบบ
+ * =========================================================================
+ */
 export default function RewardManagementModal({ isOpen, onClose, onRewardDeleted }) {
   const [rewards, setRewards] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [busyId, setBusyId] = useState(null);
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ส่วนแสดงผลรายการของรางวัลทั้งหมดภายใน Modal (ตาราง Grid การ์ดของรางวัล)
+   * หน้าที่: เรียก API ดึงข้อมูลรายการของรางวัล (Reward Items) ล่าสุดทั้งหมดจาก Backend
+   *         มาเก็บใน state `rewards` เพื่อนำไปแสดงผล
+   */
   const loadRewards = async () => {
     setIsLoading(true);
     try {
@@ -24,6 +37,10 @@ export default function RewardManagementModal({ isOpen, onClose, onRewardDeleted
     }
   };
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ทำงานอัตโนมัติเมื่อผู้ใช้กดเปิดหน้าต่าง Modal นี้ขึ้นมา
+   * หน้าที่: รีเซ็ตช่องค้นหาให้ว่าง และสั่งให้ `loadRewards()` โหลดข้อมูลของรางวัลล่าสุดทันที
+   */
   useEffect(() => {
     if (isOpen) {
       setSearch("");
@@ -31,6 +48,11 @@ export default function RewardManagementModal({ isOpen, onClose, onRewardDeleted
     }
   }, [isOpen]);
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ช่องพิมพ์ค้นหา (Search Bar) และตาราง Grid แสดงการ์ดของรางวัล
+   * หน้าที่: กรองรายการของรางวัลแบบ Real-time ตามคำที่ผู้ใช้พิมพ์ในช่องค้นหา
+   *         (ตรวจค้นหาจากชื่อรางวัล, ประเภท เช่น FRAME, หรือคำอธิบาย)
+   */
   const filteredRewards = useMemo(() => {
     if (!search.trim()) return rewards;
     const q = search.toLowerCase().trim();
@@ -42,6 +64,11 @@ export default function RewardManagementModal({ isOpen, onClose, onRewardDeleted
     );
   }, [rewards, search]);
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ปุ่มไอคอนรูปถังขยะสีแดง (Trash) ที่อยู่มุมขวาของการ์ดของรางวัลแต่ละใบ
+   * หน้าที่: ทำงานเมื่อกดปุ่มลบของรางวัล แสดงกล่องยืนยัน SweetAlert2
+   *         หากยืนยันจะยิง API ลบของรางวัลชิ้นนั้นออกจากระบบ และอัปเดตลบออกจากหน้าจอทันที
+   */
   const handleDelete = async (item) => {
     const result = await Swal.fire({
       title: "ลบของรางวัลนี้?",

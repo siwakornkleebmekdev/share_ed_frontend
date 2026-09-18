@@ -26,10 +26,23 @@ const NAV_GROUPS = [
   },
 ];
 
+/**
+ * =========================================================================
+ * ตำแหน่งบนหน้าเว็บ: แถบเมนูด้านซ้ายสุดของระบบแอดมินทั้งหมด (Sidebar Menu)
+ * หน้าที่: คอมโพเนนต์หลักของแถบนำทาง แสดงโลโก้, เมนูไปยังหน้าต่างๆ
+ *         (แดชบอร์ด, จัดการผู้ใช้, จัดการความสำเร็จ, กลับหน้าหลัก)
+ *         และแสดงข้อมูลโปรไฟล์ของผู้ดูแลระบบพร้อมปุ่มออกจากระบบที่ด้านล่าง
+ * =========================================================================
+ */
 export default function AdminSidebar() {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ปุ่มไอคอนออกจากระบบ (LogOut) ที่อยู่มุมล่างขวาของแถบ Sidebar ด้านซ้าย
+   * หน้าที่: ทำงานเมื่อกดปุ่ม LogOut เพื่อออกจากระบบ ล้าง Auth State แจ้งเตือน Toast
+   *         และเปลี่ยนเส้นทาง (Redirect) ผู้ใช้กลับไปยังหน้าเข้าสู่ระบบ (/login)
+   */
   const handleLogout = async () => {
     try {
       await authService.logout();
@@ -46,6 +59,11 @@ export default function AdminSidebar() {
   const avatarUrl =
     user?.avatar_url || user?.avatar || user?.user_metadata?.avatar_url;
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ปุ่มลิงก์แต่ละเมนูในแถบ Sidebar ด้านซ้าย (แดชบอร์ด, จัดการผู้ใช้งาน, จัดการความสำเร็จ)
+   * หน้าที่: ตรวจสอบสถานะว่าผู้ใช้กำลังเปิดดูหน้านั้นๆ อยู่หรือไม่ (isActive)
+   *         เพื่อใส่ class ไฮไลท์สีพื้นหลังของปุ่มเมนูที่กำลัง active อยู่
+   */
   const navLinkClass = ({ isActive }) =>
     `admin-sidebar-link ${isActive ? "admin-sidebar-link-active" : ""}`;
 

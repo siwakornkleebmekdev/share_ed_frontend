@@ -5,6 +5,13 @@ import { authService } from "@/services/auth.service";
 
 // Notification preferences UI removed per request
 
+/**
+ * =========================================================================
+ * ตำแหน่งบนหน้าเว็บ: หน้าตั้งค่าบัญชีผู้ใช้ (URL: /settings/account)
+ * หน้าที่: จัดการความปลอดภัยของบัญชีผู้ใช้งาน โดยหลักคือส่วน "เปลี่ยนรหัสผ่าน"
+ *         ซึ่งต้องยืนยันรหัสผ่านเดิมให้ถูกต้องก่อน แล้วจึงกำหนดรหัสผ่านใหม่ได้
+ * =========================================================================
+ */
 export default function SettingsAccount() {
   const [passwords, setPasswords] = useState({
     currentPassword: "",
@@ -15,6 +22,12 @@ export default function SettingsAccount() {
   const [isCurrentPasswordVerified, setIsCurrentPasswordVerified] = useState(false);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState(null);
+
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ปุ่ม "ยืนยัน" (สีเทาเข้ม) ข้างช่องกรอกรหัสผ่านเดิม
+   * หน้าที่: ทำงานเมื่อกดปุ่มยืนยัน เพื่อส่งรหัสผ่านเดิมไปตรวจสอบกับ API (`authService.verifyCurrentPassword`)
+   *         หากถูกต้องจะปลดล็อกช่องกรอกรหัสผ่านใหม่และยืนยันรหัสผ่านใหม่ด้านล่าง
+   */
   const handleVerifyCurrentPassword = async () => {
     setPasswordError(null);
     setIsVerifyingPassword(true);
@@ -32,6 +45,15 @@ export default function SettingsAccount() {
     }
   };
 
+  /**
+   * ตำแหน่งบนหน้าเว็บ: ปุ่มกดสีน้ำเงิน "เปลี่ยนรหัสผ่าน" ด้านล่างสุดของฟอร์มรหัสผ่าน
+   * หน้าที่: ทำงานเมื่อผู้ใช้กดส่งฟอร์มเปลี่ยนรหัสผ่าน ทำการตรวจสอบความปลอดภัย:
+   *         - ต้องยืนยันรหัสผ่านเดิมแล้ว
+   *         - ความยาวอย่างน้อย 8 ตัวอักษร
+   *         - มีตัวอักษรภาษาอังกฤษและตัวเลข
+   *         - รหัสผ่านใหม่และการยืนยันรหัสผ่านต้องตรงกัน
+   *         จากนั้นยิง API `authService.updateAccount` เพื่อเปลี่ยนรหัสผ่านในระบบ
+   */
   const handleSavePassword = async (e) => {
     e.preventDefault();
     setPasswordError(null);
