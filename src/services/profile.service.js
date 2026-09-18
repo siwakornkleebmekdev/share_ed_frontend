@@ -1,4 +1,5 @@
 import api from "../utils/api";
+import { supabase } from "../utils/supabase";
 
 export const DEFAULT_FRAMES = [
   {
@@ -496,13 +497,29 @@ export const profileService = {
     }
   },
 
-  // Get a public profile by user id or username (GET /users/:identifier)
-  getUserProfile: async (identifier) => {
+  // Resolve the public username shown in the browser URL to the internal ID
+  // expected by profile/post/follow API endpoints.
+  getUserIdByUsername: async (username) => {
+    const normalizedUsername = String(username || "").trim();
+    if (!normalizedUsername) return null;
+
+    const { data, error } = await supabase
+      .from("users")
+      .select("user_id")
+      .ilike("username", normalizedUsername)
+      .limit(1);
+
+    if (error) throw error;
+    return data?.[0]?.user_id || null;
+  },
+
+  // Get a public profile using the internal user id (GET /users/:id)
+  getUserProfile: async (userId) => {
     try {
-      const response = await api.get(`/users/${encodeURIComponent(identifier)}`);
+      const response = await api.get(`/users/${encodeURIComponent(userId)}`);
       return response.data?.data || response.data;
     } catch (error) {
-      console.error(`Error fetching profile for user ${identifier}:`, error);
+      console.error(`Error fetching profile for user ${userId}:`, error);
       throw error;
     }
   },

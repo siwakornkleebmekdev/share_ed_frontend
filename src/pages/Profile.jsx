@@ -229,18 +229,20 @@ export default function Profile() {
         setIsLoading(true);
         setUserNotFound(false);
         try {
-          const profileData = await profileService.getUserProfile(username);
+          const profileUserId = await profileService.getUserIdByUsername(username);
+          if (!profileUserId) {
+            setUserNotFound(true);
+            return;
+          }
+
+          const profileData = await profileService.getUserProfile(profileUserId);
 
           if (!profileData) {
             setUserNotFound(true);
             return;
           }
 
-          const profileUserId =
-            profileData.id || profileData.user_id || profileData._id;
-          const userPosts = profileUserId
-            ? await profileService.getUserPosts(profileUserId)
-            : [];
+          const userPosts = await profileService.getUserPosts(profileUserId);
 
           // Old id-based links remain usable, but are immediately normalized
           // to the public username URL returned by the profile API.
