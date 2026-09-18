@@ -112,6 +112,15 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
+// Public-only routes must not be accessible once a session is active.
+// This applies to every role; authorization is handled separately by AdminRoute.
+const PublicRoute = ({ children }) => {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+
+  if (isAuthenticated) return <Navigate to="/home" replace />;
+  return children;
+};
+
 // Admin-only Route Guardian — waits for role to be sourced from the backend
 // (Supabase session/JWT has no knowledge of it) before deciding.
 const AdminRoute = ({ children }) => {
@@ -391,7 +400,14 @@ function App() {
             }
           />
 
-          <Route path="/login" element={<Login />} />
+          <Route
+            path="/login"
+            element={
+              <PublicRoute>
+                <Login />
+              </PublicRoute>
+            }
+          />
           <Route path="/register" element={<Register />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route
