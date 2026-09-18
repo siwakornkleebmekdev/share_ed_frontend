@@ -1,5 +1,4 @@
 import api from "../utils/api";
-import { supabase } from "../utils/supabase";
 
 export const DEFAULT_FRAMES = [
   {
@@ -495,22 +494,6 @@ export const profileService = {
       console.error("Error updating profile:", error);
       throw error;
     }
-  },
-
-  // Resolve the public username shown in the browser URL to the internal ID
-  // expected by profile/post/follow API endpoints.
-  getUserIdByUsername: async (username) => {
-    const normalizedUsername = String(username || "").trim();
-    if (!normalizedUsername) return null;
-
-    const { data, error } = await supabase
-      .from("users")
-      .select("user_id")
-      .ilike("username", normalizedUsername)
-      .limit(1);
-
-    if (error) throw error;
-    return data?.[0]?.user_id || null;
   },
 
   // Get a public profile using the internal user id (GET /users/:id)

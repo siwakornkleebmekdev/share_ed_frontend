@@ -3,10 +3,26 @@ import { Heart, Eye, Bookmark, BookmarkPlus, BookmarkCheck, Crown, Medal } from 
 import { useNavigate } from 'react-router';
 import toast from 'react-hot-toast';
 import { postService } from '../services/post.service';
-import { DEFAULT_FRAMES } from '../services/profile.service';
+import { DEFAULT_FRAMES, profileService } from '../services/profile.service';
 import useAuthStore from '../store/authStore';
 import useHeroThemeStore from '../store/heroThemeStore';
 import { getGlassColor, rgbToRgba } from '../utils/colorUtils';
+
+const authorProfileRequests = new Map();
+
+function getAuthorProfile(userId) {
+  const key = String(userId);
+  if (!authorProfileRequests.has(key)) {
+    authorProfileRequests.set(
+      key,
+      profileService.getUserProfile(userId).catch((error) => {
+        authorProfileRequests.delete(key);
+        throw error;
+      }),
+    );
+  }
+  return authorProfileRequests.get(key);
+}
 
 export default function PostCard({ post, viewMode, rank = null, dark = false, onBookmarkChange, authorOverride = null }) {
   const [isLiked, setIsLiked] = useState(Boolean(post.isLiked || post.is_liked));
@@ -14,6 +30,7 @@ export default function PostCard({ post, viewMode, rank = null, dark = false, on
   const [likesCount, setLikesCount] = useState(post.likes);
   const [isLiking, setIsLiking] = useState(false);
   const [isBookmarking, setIsBookmarking] = useState(false);
+  const [fetchedAuthorProfile, setFetchedAuthorProfile] = useState(null);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const user = useAuthStore((state) => state.user);
   const navigate = useNavigate();
@@ -35,8 +52,38 @@ export default function PostCard({ post, viewMode, rank = null, dark = false, on
     || (typeof post.author === 'string'
       ? post.author
       : (post.author?.username || post.author?.name || 'ผู้ใช้งาน'));
-  const authorUsername = authorOverride?.username || post.author?.username || authorName;
   const authorId = post.authorId || post.author_id || post.author?.id || post.author?.user_id || post.user_id;
+
+  useEffect(() => {
+    let cancelled = false;
+    const suppliedFrame =
+      authorOverride?.current_frame ||
+      post.authorFrame ||
+      post.author_frame ||
+      post.author?.current_frame ||
+      post.current_frame;
+    const suppliedFrameId =
+      authorOverride?.current_frame_id ||
+      authorOverride?.profile_frame_id ||
+      post.author_frame_id ||
+      post.authorFrameId ||
+      post.author?.current_frame_id ||
+      post.author?.profile_frame_id ||
+      post.current_frame_id;
+
+    setFetchedAuthorProfile(null);
+    if (!authorId || (suppliedFrame && suppliedFrameId)) return () => { cancelled = true; };
+
+    getAuthorProfile(authorId)
+      .then((profile) => {
+        if (!cancelled) setFetchedAuthorProfile(profile);
+      })
+      .catch(() => {
+        if (!cancelled) setFetchedAuthorProfile(null);
+      });
+
+    return () => { cancelled = true; };
+  }, [authorId, authorOverride, post]);
   const rawAuthorAvatar = authorOverride?.avatar_url
     || authorOverride?.profile_image
     || authorOverride?.avatar
@@ -49,7 +96,10 @@ export default function PostCard({ post, viewMode, rank = null, dark = false, on
   const isCurrentUser = user && authorId && (String(user.id) === String(authorId) || String(user.user_id) === String(authorId));
   const authorFrameId =
     (isCurrentUser
-      ? user?.user_metadata?.profile_frame_id ||
+      ? authorOverride?.current_frame_id ||
+        authorOverride?.profile_frame_id ||
+        authorOverride?.user_metadata?.profile_frame_id ||
+        user?.user_metadata?.profile_frame_id ||
         user?.current_frame_id ||
         user?.profile_frame_id ||
         (authorId ? localStorage.getItem(`profile_frame_id_${authorId}`) : null) ||
@@ -61,6 +111,9 @@ export default function PostCard({ post, viewMode, rank = null, dark = false, on
     post.author?.profile_frame_id ||
     post.author?.frame_id ||
     post.current_frame_id ||
+    fetchedAuthorProfile?.current_frame_id ||
+    fetchedAuthorProfile?.profile_frame_id ||
+    fetchedAuthorProfile?.user_metadata?.profile_frame_id ||
     (authorId ? localStorage.getItem(`profile_frame_id_${authorId}`) : null);
 
   const authorFrameObj = authorFrameId
@@ -72,7 +125,15 @@ export default function PostCard({ post, viewMode, rank = null, dark = false, on
       )
     : null;
 
-  const serverFrame = post.authorFrame || post.author_frame || post.author?.current_frame || post.current_frame;
+  const serverFrame =
+    authorOverride?.current_frame ||
+    authorOverride?.profile_frame ||
+    post.authorFrame ||
+    post.author_frame ||
+    post.author?.current_frame ||
+    post.current_frame ||
+    fetchedAuthorProfile?.current_frame ||
+    fetchedAuthorProfile?.profile_frame;
 
   const authorFrameUrl =
     serverFrame?.image_url ||
@@ -85,9 +146,9 @@ export default function PostCard({ post, viewMode, rank = null, dark = false, on
     (typeof authorFrameId === 'string' && (authorFrameId.startsWith('/') || authorFrameId.startsWith('http')) ? authorFrameId : null);
 
   const handleAuthorClick = (e) => {
-    if (authorUsername) {
+    if (authorId) {
       e.stopPropagation();
-      navigate(`/profile/${encodeURIComponent(authorUsername)}`);
+      navigate(`/profile/${encodeURIComponent(authorId)}`);
     }
   };
 

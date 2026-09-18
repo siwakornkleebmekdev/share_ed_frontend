@@ -68,17 +68,16 @@ const getEducationLevelLabel = (level) => {
 
 export default function Profile() {
   const navigate = useNavigate();
-  const { username } = useParams();
+  const { userId } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, isAuthenticated } = useAuthStore();
 
   const currentUserId = user?.user_id || user?.id;
-  const currentUsername = user?.username;
   // ตรวจสอบว่าเป็นการดูโปรไฟล์ของผู้อื่นหรือไม่
   const isOtherUser = Boolean(
-    username &&
-      username !== "edit" &&
-      (!currentUsername || username.toLowerCase() !== currentUsername.toLowerCase())
+    userId &&
+      userId !== "edit" &&
+      (!currentUserId || String(userId) !== String(currentUserId))
   );
 
   const [activeTab, setActiveTab] = useState("posts");
@@ -134,14 +133,12 @@ export default function Profile() {
     setHasEntered(!enterScreenEnabled);
   }, [enterScreenEnabled]);
 
-  // Keep the current user's profile on the same canonical username URL as
-  // every other public profile, while retaining /profile as a safe fallback
-  // during the short period before auth hydration finishes.
+  // Keep the current user's profile on the stable id-based public URL.
   useEffect(() => {
-    if (!username && currentUsername) {
-      navigate(`/profile/${encodeURIComponent(currentUsername)}`, { replace: true });
+    if (!userId && currentUserId) {
+      navigate(`/profile/${encodeURIComponent(currentUserId)}`, { replace: true });
     }
-  }, [username, currentUsername, navigate]);
+  }, [userId, currentUserId, navigate]);
 
   // วอลเปเปอร์และธีมพื้นหลัง
   const setHeroImage = useHeroThemeStore((state) => state.setHeroImage);
@@ -229,28 +226,17 @@ export default function Profile() {
         setIsLoading(true);
         setUserNotFound(false);
         try {
-          const profileUserId = await profileService.getUserIdByUsername(username);
-          if (!profileUserId) {
-            setUserNotFound(true);
-            return;
-          }
-
-          const profileData = await profileService.getUserProfile(profileUserId);
+          const profileData = await profileService.getUserProfile(userId);
 
           if (!profileData) {
             setUserNotFound(true);
             return;
           }
 
-          const userPosts = await profileService.getUserPosts(profileUserId);
-
-          // Old id-based links remain usable, but are immediately normalized
-          // to the public username URL returned by the profile API.
-          if (profileData.username && profileData.username !== username) {
-            navigate(`/profile/${encodeURIComponent(profileData.username)}`, {
-              replace: true,
-            });
-          }
+          const profileUserId = profileData.id || profileData.user_id || profileData._id;
+          const userPosts = profileUserId
+            ? await profileService.getUserPosts(profileUserId)
+            : [];
 
           setOtherProfile(profileData);
           setIsFollowing(Boolean(profileData.isFollowing));
@@ -299,7 +285,7 @@ export default function Profile() {
       };
       loadMyProfileData();
     }
-  }, [username, isOtherUser, user, navigate]);
+  }, [userId, isOtherUser, user, navigate]);
 
   // ฟังก์ชัน Follow / Unfollow ผู้ใช้อื่น
   const handleToggleFollow = async () => {

@@ -94,7 +94,7 @@ export default function AdminSidebar() {
 
       <div className="admin-sidebar-footer">
         <Link
-          to={`/profile/${encodeURIComponent(user?.username || "")}`}
+          to={`/profile/${encodeURIComponent(user?.user_id || user?.id || "")}`}
           className="flex-1 min-w-0 flex items-center gap-3 hover:opacity-80 transition-opacity"
         >
           <div className="admin-sidebar-avatar">
