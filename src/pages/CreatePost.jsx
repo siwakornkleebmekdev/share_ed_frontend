@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router';
 import { UploadCloud, File, X, GraduationCap, Tag, AlignLeft, BookOpen, PenTool, Save, Image as ImageIcon, Plus, Eye, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
-import ReactQuill from 'react-quill-new';
-import 'react-quill-new/dist/quill.snow.css';
+import ContentEditor from '@/components/posts/ContentEditor';
 import { postService } from '../services/post.service';
 import { categoryService, isValidCategoryUuid } from '../services/category.service';
 import { getDefaultDraftCoverFile } from '../utils/draftCover';
@@ -45,6 +44,7 @@ export default function CreatePost() {
   const [title, setTitle] = useState('');
   const [summary, setSummary] = useState('');
   const [content, setContent] = useState('');
+  const [isContentUploading, setIsContentUploading] = useState(false);
 
   const [categoriesList, setCategoriesList] = useState([]);
   const [categoryId, setCategoryId] = useState('');
@@ -111,6 +111,9 @@ export default function CreatePost() {
       return;
     }
     setCoverImage(file);
+    if (fieldErrors.cover) {
+      setFieldErrors(prev => ({ ...prev, cover: null }));
+    }
   };
 
   const handlePdfUpload = (e) => {
@@ -295,6 +298,10 @@ export default function CreatePost() {
     setFieldErrors({});
     const newErrors = {};
     const isDraft = status === 'DRAFT';
+    if (!isDraft && isContentUploading) {
+      setFieldErrors({ content: 'กรุณารอให้อัปโหลดรูปในรายละเอียดเพิ่มเติมเสร็จก่อนเผยแพร่' });
+      return;
+    }
 
     // Drafts may be saved at any point. Publish validation only runs for ACTIVE posts.
     if (!isDraft) {
@@ -303,6 +310,9 @@ export default function CreatePost() {
       if (!level) newErrors.level = 'กรุณาเลือกระดับชั้น';
       if (!summary.trim()) newErrors.summary = 'กรุณากรอกบทสรุปย่อ';
       if (!categoryId && !categoryName) newErrors.category = 'กรุณาเลือกหมวดหมู่วิชา';
+      if (!content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim()) {
+        newErrors.content = 'กรุณากรอกรายละเอียดเพิ่มเติม';
+      }
 
       if (!coverImage) {
         newErrors.cover = 'กรุณาอัปโหลดรูปภาพหน้าปก';
@@ -412,7 +422,7 @@ export default function CreatePost() {
               </label>
               <p className="text-xs text-slate-400 mb-3">แนะนำอัตราส่วน 16:9 (เช่น 1280×720px) เพื่อให้แสดงผลสวยที่สุด</p>
               {!coverImage ? (
-                <label className="flex flex-col items-center justify-center w-full aspect-video border-2 border-dashed border-slate-300 rounded-2xl hover:border-primary hover:bg-slate-50 cursor-pointer transition-all">
+                <label className={`flex flex-col items-center justify-center w-full aspect-video border-2 border-dashed rounded-2xl hover:border-primary hover:bg-slate-50 cursor-pointer transition-all ${fieldErrors.cover ? 'border-rose-500 bg-rose-50/10' : 'border-slate-300'}`}>
                   <ImageIcon className="h-10 w-10 text-slate-400 mb-3" />
                   <span className="text-sm font-medium text-slate-500">คลิกเพื่ออัปโหลดรูปปก</span>
                   <span className="text-xs text-slate-400 mt-1">อัตราส่วนที่แนะนำ 16:9 (1280×720px) รูปภาพขนาดไม่เกิน 2 Mb</span>
@@ -434,6 +444,9 @@ export default function CreatePost() {
                     <Eye className="h-8 w-8" />
                   </div>
                 </div>
+              )}
+              {fieldErrors.cover && (
+                <p className="mt-2 text-xs font-medium text-rose-500" role="alert">{fieldErrors.cover}</p>
               )}
             </div>
 
@@ -563,22 +576,17 @@ export default function CreatePost() {
                 ตั้งค่าวิชาและแท็ก
               </button>
             </div>
+            {fieldErrors.category && (
+              <p className="mt-2 text-xs font-medium text-rose-500" role="alert">{fieldErrors.category}</p>
+            )}
           </div>
 
           {/* Rich Text Editor */}
           <div>
             <label className="flex items-center gap-2 text-base font-bold text-slate-800 mb-3">
-              <AlignLeft className="h-5 w-5 text-slate-400" /> รายละเอียดเพิ่มเติม
+              <AlignLeft className="h-5 w-5 text-slate-400" /> รายละเอียดเพิ่มเติม <span className="text-rose-500">*</span>
             </label>
-            <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
-              <ReactQuill
-                theme="snow"
-                value={content}
-                onChange={setContent}
-                className="h-48 pb-10"
-                placeholder="อธิบายเพิ่มเติมเกี่ยวกับเนื้อหา เทคนิคการจำ หรือที่มา..."
-              />
-            </div>
+            <ContentEditor value={content} onUploadingChange={setIsContentUploading} error={fieldErrors.content} onChange={(value) => { setContent(value); if (fieldErrors.content && value.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim()) setFieldErrors(prev => ({ ...prev, content: null })); }} />
           </div>
 
           {/* File Uploads (Split left/right) */}

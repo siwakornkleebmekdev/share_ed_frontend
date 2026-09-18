@@ -3,8 +3,7 @@ import { useParams, useNavigate } from 'react-router';
 import { UploadCloud, File, X, GraduationCap, Tag, AlignLeft, BookOpen, PenTool, Save, Image as ImageIcon, Plus, Eye, FileText, ChevronLeft, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
-import ReactQuill from 'react-quill-new';
-import 'react-quill-new/dist/quill.snow.css';
+import ContentEditor from '@/components/posts/ContentEditor';
 import { postService, resolveCategoryName } from '@/services/post.service';
 import { categoryService, isValidCategoryUuid, DEFAULT_SUBJECT_NAMES } from '@/services/category.service';
 import { uploadFileToSupabase } from '@/utils/storage';
@@ -64,6 +63,7 @@ export default function EditPost() {
   const [title, setTitle] = useState('');
   const [summary, setSummary] = useState('');
   const [content, setContent] = useState('');
+  const [isContentUploading, setIsContentUploading] = useState(false);
   const [categoriesList, setCategoriesList] = useState([]);
   const [categoryId, setCategoryId] = useState('');
   const [categoryName, setCategoryName] = useState('');
@@ -476,12 +476,19 @@ export default function EditPost() {
     setFieldErrors({});
     const newErrors = {};
     const isDraft = status === 'DRAFT';
+    if (!isDraft && isContentUploading) {
+      setFieldErrors({ content: 'กรุณารอให้อัปโหลดรูปในรายละเอียดเพิ่มเติมเสร็จก่อนเผยแพร่' });
+      return;
+    }
     if (!isDraft) {
       if (!title.trim()) newErrors.title = 'กรุณากรอกชื่อหัวข้อสรุปความรู้';
       else if (title.length > 100) newErrors.title = 'ชื่อหัวข้อต้องมีความยาวไม่เกิน 100 ตัวอักษร';
       if (!level) newErrors.level = 'กรุณาเลือกระดับชั้น';
       if (!summary.trim()) newErrors.summary = 'กรุณากรอกบทสรุปย่อ';
       if (!categoryId && !categoryName) newErrors.category = 'กรุณาเลือกหมวดหมู่วิชา';
+      if (!content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim()) {
+        newErrors.content = 'กรุณากรอกรายละเอียดเพิ่มเติม';
+      }
 
       if (existingImages.length + images.length === 0) {
         newErrors.media = 'กรุณาแนบรูปภาพประกอบอย่างน้อย 1 รูป';
@@ -796,30 +803,17 @@ export default function EditPost() {
                 ตั้งค่าวิชาและแท็ก
               </button>
             </div>
+            {fieldErrors.category && (
+              <p className="mt-2 text-xs font-medium text-rose-500" role="alert">{fieldErrors.category}</p>
+            )}
           </div>
 
           {/* Rich Text Editor */}
           <div>
             <label className="flex items-center gap-2 text-base font-bold text-slate-800 mb-3">
-              <AlignLeft className="h-5 w-5 text-slate-400" /> รายละเอียดเพิ่มเติม
+              <AlignLeft className="h-5 w-5 text-slate-400" /> รายละเอียดเพิ่มเติม <span className="text-rose-500">*</span>
             </label>
-            <div className="border border-slate-200 rounded-xl overflow-hidden bg-white focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all">
-              <ReactQuill
-                theme="snow"
-                value={content}
-                onChange={setContent}
-                modules={{
-                  toolbar: [
-                    [{ 'header': [1, 2, 3, false] }],
-                    ['bold', 'italic', 'underline', 'strike'],
-                    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                    ['link', 'clean']
-                  ]
-                }}
-                className="h-48 pb-10 border-0"
-                placeholder="อธิบายเพิ่มเติมเกี่ยวกับเนื้อหา เทคนิคการจำ หรือที่มา..."
-              />
-            </div>
+            <ContentEditor value={content} onUploadingChange={setIsContentUploading} error={fieldErrors.content} onChange={(value) => { setContent(value); if (fieldErrors.content && value.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim()) setFieldErrors(prev => ({ ...prev, content: null })); }} />
           </div>
 
           {/* Files (PDF & Images) */}
