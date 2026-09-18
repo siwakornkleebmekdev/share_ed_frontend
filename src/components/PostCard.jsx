@@ -270,7 +270,7 @@ export default function PostCard({ post, viewMode, rank = null, dark = false, on
           <div className={`flex items-center justify-between mt-4 sm:mt-0 pt-4 border-t sm:pt-0 ${dark ? 'border-white/10 sm:border-transparent' : 'border-slate-50 sm:border-transparent'}`}>
             <div
               onClick={handleAuthorClick}
-              className={`flex items-center gap-2 min-w-0 ${authorUsername ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+              className={`flex items-center gap-2 min-w-0 ${authorId ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
             >
               <div className="relative flex-shrink-0 flex items-center justify-center">
                 <div className={`h-7 w-7 rounded-full overflow-hidden flex items-center justify-center font-bold text-xs ${dark ? 'bg-white/10 border border-white/10 text-primary' : 'bg-blue-50 border border-blue-100 text-primary'}`}>
@@ -330,7 +330,7 @@ export default function PostCard({ post, viewMode, rank = null, dark = false, on
         <div className={`flex items-center justify-between pt-4 border-t mt-auto ${dark ? 'border-white/10' : 'border-slate-100'}`}>
           <div
             onClick={handleAuthorClick}
-            className={`flex items-center gap-2 min-w-0 ${authorUsername ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+            className={`flex items-center gap-2 min-w-0 ${authorId ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
           >
             <div className="relative flex-shrink-0 flex items-center justify-center">
               <div className={`h-7 w-7 rounded-full overflow-hidden flex items-center justify-center font-bold text-xs ${dark ? 'bg-white/10 border border-white/10 text-primary' : 'bg-blue-50 border border-blue-100 text-primary'}`}>
