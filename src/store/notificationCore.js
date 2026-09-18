@@ -20,6 +20,17 @@ function findId(sources, keys) {
   return null;
 }
 
+function findString(sources, keys) {
+  for (const source of sources) {
+    if (!source || typeof source !== 'object') continue;
+    for (const key of keys) {
+      const value = source[key];
+      if (typeof value === 'string' && value.trim()) return value.trim();
+    }
+  }
+  return null;
+}
+
 function safeInternalLink(value) {
   if (typeof value !== 'string') return null;
   const link = value.trim();
@@ -43,12 +54,23 @@ export function getNotificationTarget(n, normalizedType) {
     'triggeredById', 'triggered_by_id', 'relatedUserId', 'related_user_id', 'actor', 'sender', 'follower',
     'fromUser', 'from_user', 'userId', 'user_id',
   ]);
+  const actorUsername = findString(sources, [
+    'actorUsername', 'actor_username', 'followerUsername', 'follower_username',
+    'senderUsername', 'sender_username', 'fromUsername', 'from_username', 'username',
+  ]) || findString(
+    sources.flatMap(source => [source.actor, source.sender, source.follower, source.fromUser, source.from_user]),
+    ['username'],
+  );
+  const profileIdentifier = actorUsername || actorId;
   const generatedLink = POST_TYPES.has(type) && postId
     ? `/post/${encodeURIComponent(postId)}`
-    : FOLLOW_TYPES.has(type) && actorId
-      ? `/profile/${encodeURIComponent(actorId)}`
+    : FOLLOW_TYPES.has(type) && profileIdentifier
+      ? `/profile/${encodeURIComponent(profileIdentifier)}`
       : null;
-  return { link: explicitLink || generatedLink, postId, actorId };
+  const link = FOLLOW_TYPES.has(type) && generatedLink
+    ? generatedLink
+    : explicitLink || generatedLink;
+  return { link, postId, actorId };
 }
 
 export function normalize(n) {
@@ -196,4 +218,3 @@ export function createNotificationStore(service, realtime) {
     };
   });
 }
-

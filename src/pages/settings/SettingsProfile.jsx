@@ -156,7 +156,7 @@ export default function SettingsProfile() {
       }
 
       // 3. Notify backend API via /users/equip
-      const selectedMilestone = milestones.find(
+      const selectedMilestone = allMilestones.find(
         (m) =>
           m.id === frameId ||
           m.reward_item_id === frameId ||
