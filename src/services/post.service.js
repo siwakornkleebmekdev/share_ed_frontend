@@ -14,6 +14,54 @@ function extractFileNameFromUrl(url) {
   }
 }
 
+const DIRECT_UPLOAD_CONCURRENCY = 4;
+
+async function mapWithConcurrency(items, concurrency, operation) {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+  async function worker() {
+    while (nextIndex < items.length) {
+      const index = nextIndex++;
+      results[index] = await operation(items[index], index);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, worker));
+  return results;
+}
+
+async function uploadWithSignature(file, config) {
+  if (!config) throw new Error('ไม่พบข้อมูล Signature สำหรับอัปโหลดไฟล์');
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('api_key', config.apiKey);
+  formData.append('signature', config.signature);
+  for (const [key, value] of Object.entries(config.uploadParams || {})) {
+    formData.append(key, String(value));
+  }
+
+  const response = await fetch(config.uploadUrl, { method: 'POST', body: formData });
+  if (!response.ok) {
+    const result = await response.json().catch(() => ({}));
+    throw new Error(result?.error?.message || `อัปโหลดไฟล์ไม่สำเร็จ (${response.status})`);
+  }
+
+  const result = await response.json();
+  const metadata = {
+    public_id: result.public_id,
+    version: result.version,
+    signature: result.signature,
+    secure_url: result.secure_url,
+    resource_type: result.resource_type,
+    format: result.format,
+    bytes: result.bytes,
+  };
+  const required = ['public_id', 'version', 'signature', 'secure_url', 'resource_type', 'bytes'];
+  if (required.some(key => metadata[key] === undefined || metadata[key] === null || metadata[key] === '')) {
+    throw new Error('Cloudinary ส่งข้อมูลยืนยันไฟล์กลับมาไม่ครบ');
+  }
+  return metadata;
+}
+
 export const postService = {
   // Fetch all posts (Active/Published)
   getAllPosts: async (params = {}) => {
@@ -65,32 +113,25 @@ export const postService = {
     }
   },
 
+  getUploadSignatures: async (types) => {
+    const uniqueTypes = [...new Set(types)].filter(Boolean);
+    try {
+      const response = await api.post('/posts/upload-signatures', { types: uniqueTypes });
+      const uploads = response.data?.data?.uploads;
+      if (response.data?.success && uploads) return uploads;
+      throw new Error(response.data?.message || 'ไม่สามารถสร้าง Signature สำหรับอัปโหลดไฟล์ได้');
+    } catch (error) {
+      console.error('Error fetching upload signatures:', error);
+      throw error;
+    }
+  },
+
   // Upload single file directly to Cloudinary CDN using signed credentials
   uploadDirectToCloudinary: async (file, type = 'media') => {
     if (!file) return null;
     try {
       const sigData = await postService.getUploadSignature(type);
-      const { signature, timestamp, apiKey, folder, uploadUrl } = sigData;
-
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('api_key', apiKey);
-      formData.append('timestamp', timestamp);
-      formData.append('signature', signature);
-      formData.append('folder', folder);
-
-      const response = await fetch(uploadUrl, {
-        method: 'POST',
-        body: formData
-      });
-
-      if (!response.ok) {
-        const errJson = await response.json().catch(() => ({}));
-        throw new Error(errJson?.error?.message || `Cloudinary upload failed (status ${response.status})`);
-      }
-
-      const result = await response.json();
-      return result.secure_url || result.url;
+      return (await uploadWithSignature(file, sigData)).secure_url;
     } catch (error) {
       console.error(`Error uploading ${type} to Cloudinary:`, error);
       throw error;
@@ -102,35 +143,40 @@ export const postService = {
     if (!files || files.length === 0) return [];
     try {
       const sigData = await postService.getUploadSignature(type);
-      const { signature, timestamp, apiKey, folder, uploadUrl } = sigData;
-
-      const uploadPromises = Array.from(files).map(async (file) => {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('api_key', apiKey);
-        formData.append('timestamp', timestamp);
-        formData.append('signature', signature);
-        formData.append('folder', folder);
-
-        const response = await fetch(uploadUrl, {
-          method: 'POST',
-          body: formData
-        });
-
-        if (!response.ok) {
-          const errJson = await response.json().catch(() => ({}));
-          throw new Error(errJson?.error?.message || `Cloudinary upload failed (status ${response.status})`);
-        }
-
-        const result = await response.json();
-        return result.secure_url || result.url;
-      });
-
-      return await Promise.all(uploadPromises);
+      const uploaded = await mapWithConcurrency(
+        Array.from(files),
+        DIRECT_UPLOAD_CONCURRENCY,
+        file => uploadWithSignature(file, sigData)
+      );
+      return uploaded.map(result => result.secure_url);
     } catch (error) {
       console.error(`Error uploading multiple ${type} files to Cloudinary:`, error);
       throw error;
     }
+  },
+
+  // One backend request for credentials, then at most four provider uploads at once.
+  uploadPostFilesDirect: async ({ coverImage, pdfFile = null, images = [] }) => {
+    if (!coverImage) throw new Error('กรุณาอัปโหลดรูปภาพหน้าปก');
+    const imageFiles = Array.from(images || []);
+    const types = ['cover'];
+    if (pdfFile) types.push('pdf');
+    if (imageFiles.length > 0) types.push('media');
+
+    const signatures = await postService.getUploadSignatures(types);
+    const tasks = [{ kind: 'cover', file: coverImage }];
+    if (pdfFile) tasks.push({ kind: 'pdf', file: pdfFile });
+    tasks.push(...imageFiles.map(file => ({ kind: 'media', file })));
+
+    const uploaded = await mapWithConcurrency(
+      tasks,
+      DIRECT_UPLOAD_CONCURRENCY,
+      task => uploadWithSignature(task.file, signatures[task.kind])
+    );
+    return {
+      coverUpload: uploaded[0],
+      mediaUploads: uploaded.slice(1),
+    };
   },
 
   // Create a new post (supports both JSON payload and FormData)
