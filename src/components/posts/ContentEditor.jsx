@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import { AlignCenter, AlignLeft, AlignRight, ImagePlus, LoaderCircle, RotateCcw } from 'lucide-react';
@@ -7,6 +7,11 @@ import { postService } from '@/services/post.service';
 const MAX_IMAGES = 15;
 const MAX_SIZE = 10 * 1024 * 1024;
 const imageTypes = ['image/jpeg', 'image/png', 'image/webp'];
+const editorFormats = [
+  'header', 'bold', 'italic', 'underline', 'strike',
+  'color', 'background', 'list', 'indent', 'align',
+  'blockquote', 'link', 'image', 'width',
+];
 const Quill = ReactQuill.Quill;
 const BaseImage = Quill.import('formats/image');
 
@@ -41,7 +46,6 @@ class AlignedImage extends BaseImage {
 Quill.register(AlignedImage, true);
 
 export default function ContentEditor({ value, onChange, error, onUploadingChange }) {
-  const toolbarId = useId().replace(/:/g, '');
   const quillRef = useRef(null);
   const fileRef = useRef(null);
   const [uploads, setUploads] = useState([]);
@@ -49,7 +53,7 @@ export default function ContentEditor({ value, onChange, error, onUploadingChang
   const [selectionRect, setSelectionRect] = useState(null);
   const draggedImageRef = useRef(null);
   const selectedImageRef = useRef(null);
-  const imageCount = (value.match(/<img\b/gi) || []).length;
+  const imageCount = ((value || '').match(/<img\b/gi) || []).length;
 
   const upload = async (file) => {
     if (!imageTypes.includes(file.type) || file.size > MAX_SIZE) {
@@ -80,18 +84,37 @@ export default function ContentEditor({ value, onChange, error, onUploadingChang
   const pickFiles = (files) => Array.from(files || []).forEach(upload);
   const modules = useMemo(() => ({
     toolbar: {
-      container: `#${toolbarId}`,
+      container: [
+        [{ header: [1, 2, 3, false] }],
+        ['bold', 'italic', 'underline', 'strike'],
+        [{ color: [] }, { background: [] }],
+        [{ list: 'ordered' }, { list: 'bullet' }, { indent: '-1' }, { indent: '+1' }],
+        [{ align: [] }],
+        ['blockquote', 'link', 'image'],
+        ['clean'],
+      ],
       handlers: { image: () => fileRef.current?.click() },
     },
-  }), [toolbarId]);
+    history: { delay: 500, maxStack: 100, userOnly: true },
+    clipboard: { matchVisual: false },
+  }), []);
 
   useEffect(() => {
     const quill = quillRef.current?.getEditor();
     if (!quill) return undefined;
     const root = quill.root;
-    const selectImage = (event) => {
-      if (event.target?.tagName !== 'IMG') return;
+    const clearImageSelection = () => {
       root.querySelectorAll('img').forEach(img => img.classList.remove('ring-2', 'ring-primary'));
+      selectedImageRef.current = null;
+      setSelectedImage(null);
+      setSelectionRect(null);
+    };
+    const selectImage = (event) => {
+      root.querySelectorAll('img').forEach(img => img.classList.remove('ring-2', 'ring-primary'));
+      if (event.target?.tagName !== 'IMG') {
+        clearImageSelection();
+        return;
+      }
       event.target.classList.add('ring-2', 'ring-primary');
       event.target.draggable = true;
       selectedImageRef.current = event.target;
@@ -103,10 +126,20 @@ export default function ContentEditor({ value, onChange, error, onUploadingChang
       draggedImageRef.current = event.target;
       event.dataTransfer.effectAllowed = 'move';
     };
+    const clearFromOutsideClick = (event) => {
+      if (root.contains(event.target)) return;
+      if (event.target.closest?.('.content-image-action-button, .content-image-resize-handle')) return;
+      clearImageSelection();
+    };
     root.addEventListener('click', selectImage);
     root.addEventListener('dragstart', dragStart);
+    document.addEventListener('mousedown', clearFromOutsideClick);
     root.querySelectorAll('img').forEach(img => { img.draggable = true; });
-    return () => { root.removeEventListener('click', selectImage); root.removeEventListener('dragstart', dragStart); };
+    return () => {
+      root.removeEventListener('click', selectImage);
+      root.removeEventListener('dragstart', dragStart);
+      document.removeEventListener('mousedown', clearFromOutsideClick);
+    };
   }, [value]);
 
   useEffect(() => {
@@ -173,8 +206,16 @@ export default function ContentEditor({ value, onChange, error, onUploadingChang
     const image = selectedImageRef.current;
     const quill = quillRef.current?.getEditor();
     if (!image || !quill) return;
-    const index = quill.getIndex(Quill.find(image));
-    if (Number.isInteger(index)) quill.formatText(index, 1, 'align', alignment, 'user');
+
+    image.setAttribute('data-align', alignment);
+    image.style.display = 'block';
+    image.style.marginLeft = alignment === 'right' || alignment === 'center' ? 'auto' : '0px';
+    image.style.marginRight = alignment === 'left' || alignment === 'center' ? 'auto' : '0px';
+    image.classList.remove('ring-2', 'ring-primary');
+    const nextValue = quill.root.innerHTML;
+    image.classList.add('ring-2', 'ring-primary');
+    onChange(nextValue);
+
     requestAnimationFrame(() => {
       if (selectedImageRef.current?.isConnected) setSelectionRect(selectedImageRef.current.getBoundingClientRect());
     });
@@ -225,49 +266,16 @@ export default function ContentEditor({ value, onChange, error, onUploadingChang
 
   return <div onDropCapture={handleDrop} onDragOverCapture={(event) => event.preventDefault()} onPaste={(e) => { const files = Array.from(e.clipboardData?.items || []).filter(item => item.type.startsWith('image/')).map(item => item.getAsFile()); if (files.length) { e.preventDefault(); pickFiles(files); } }}>
     <div className={`border rounded-xl overflow-hidden bg-white focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all ${error ? 'border-rose-500' : 'border-slate-200'}`}>
-      <div id={toolbarId} className="ql-toolbar ql-snow flex flex-wrap items-center gap-1 border-0 border-b border-slate-200 bg-slate-50/60">
-        <span className="ql-formats">
-          <select className="ql-header" defaultValue="">
-            <option value="1" />
-            <option value="2" />
-            <option value="3" />
-            <option value="" />
-          </select>
-        </span>
-        <span className="ql-formats">
-          <button type="button" className="ql-bold" />
-          <button type="button" className="ql-italic" />
-          <button type="button" className="ql-underline" />
-          <button type="button" className="ql-strike" />
-        </span>
-        <span className="ql-formats">
-          <button type="button" className="ql-list" value="ordered" />
-          <button type="button" className="ql-list" value="bullet" />
-        </span>
-        <span className="ql-formats">
-          <button type="button" className="ql-blockquote" />
-          <button type="button" className="ql-link" />
-          <button type="button" title="เพิ่มรูปภาพ" className="content-image-toolbar-button" onClick={(event) => { event.preventDefault(); event.stopPropagation(); fileRef.current?.click(); }}>
-            <ImagePlus className="h-4 w-4" />
-          </button>
-          <button type="button" className="ql-clean" />
-        </span>
-        <span className="ql-formats">
-          <button type="button" title="จัดรูปชิดซ้าย" onClick={() => alignSelectedImage('left')} className="content-image-toolbar-button" disabled={!selectedImage}>
-            <AlignLeft className="h-4 w-4" />
-          </button>
-          <button type="button" title="จัดรูปกึ่งกลาง" onClick={() => alignSelectedImage('center')} className="content-image-toolbar-button" disabled={!selectedImage}>
-            <AlignCenter className="h-4 w-4" />
-          </button>
-          <button type="button" title="จัดรูปชิดขวา" onClick={() => alignSelectedImage('right')} className="content-image-toolbar-button" disabled={!selectedImage}>
-            <AlignRight className="h-4 w-4" />
-          </button>
-        </span>
-      </div>
-      <ReactQuill ref={quillRef} theme="snow" value={value} onChange={onChange} modules={modules} className="content-editor min-h-48 border-0" placeholder="อธิบายเพิ่มเติมเกี่ยวกับเนื้อหา เทคนิคการจำ หรือที่มา..." />
+      <ReactQuill ref={quillRef} theme="snow" value={value || ''} onChange={onChange} modules={modules} formats={editorFormats} className="content-editor min-h-48 border-0" placeholder="อธิบายเพิ่มเติมเกี่ยวกับเนื้อหา เทคนิคการจำ หรือที่มา..." />
     </div>
+    {selectedImage && <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
+      <span className="mr-1 font-medium">จัดตำแหน่งรูป:</span>
+      <button type="button" title="จัดรูปชิดซ้าย" onClick={() => alignSelectedImage('left')} className="content-image-action-button"><AlignLeft className="h-4 w-4" /> ซ้าย</button>
+      <button type="button" title="จัดรูปกึ่งกลาง" onClick={() => alignSelectedImage('center')} className="content-image-action-button"><AlignCenter className="h-4 w-4" /> กึ่งกลาง</button>
+      <button type="button" title="จัดรูปชิดขวา" onClick={() => alignSelectedImage('right')} className="content-image-action-button"><AlignRight className="h-4 w-4" /> ขวา</button>
+    </div>}
     <input ref={fileRef} className="hidden" type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => { pickFiles(e.target.files); e.target.value = ''; }} />
-    {selectedImage && selectionRect && <button type="button" aria-label="ลากเพื่อปรับขนาดรูปภาพ" onMouseDown={startResize} className="fixed z-50 h-4 w-4 cursor-se-resize rounded-sm border-2 border-white bg-primary shadow" style={{ left: selectionRect.right - 8, top: selectionRect.bottom - 8 }} />}
+    {selectedImage && selectionRect && <button type="button" aria-label="ลากเพื่อปรับขนาดรูปภาพ" onMouseDown={startResize} className="content-image-resize-handle fixed z-50 h-4 w-4 cursor-se-resize rounded-sm border-2 border-white bg-primary shadow" style={{ left: selectionRect.right - 8, top: selectionRect.bottom - 8 }} />}
     <p className="mt-2 text-xs text-slate-500 flex items-center gap-1"><ImagePlus className="h-3.5 w-3.5" /> เพิ่มรูปจากปุ่มใน toolbar, ลากไฟล์ หรือวางจาก clipboard (JPEG/PNG/WebP, ไม่เกิน 10 MB)</p>
     {uploads.map(item => <div key={item.id} className={`mt-2 text-xs ${item.error ? 'text-rose-500' : 'text-primary'} flex items-center gap-2`}>
       {item.error ? <><span>{item.error}</span><button type="button" className="underline" onClick={() => { setUploads(items => items.filter(x => x.id !== item.id)); upload(item.file); }}><RotateCcw className="inline h-3.5 w-3.5" /> ลองใหม่</button></> : <><LoaderCircle className="h-3.5 w-3.5 animate-spin" /> กำลังอัปโหลด {item.file.name}</>}
