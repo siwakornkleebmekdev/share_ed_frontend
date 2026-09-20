@@ -318,8 +318,8 @@ export default function CreatePost() {
         newErrors.cover = 'กรุณาอัปโหลดรูปภาพหน้าปก';
       }
 
-      if (!images || images.length === 0) {
-        newErrors.media = 'กรุณาแนบรูปภาพประกอบอย่างน้อย 1 รูป';
+      if (!pdfFile && (!images || images.length === 0)) {
+        newErrors.media = 'กรุณาแนบไฟล์ PDF หรือรูปภาพประกอบอย่างน้อย 1 ไฟล์';
       }
     }
 
@@ -351,24 +351,26 @@ export default function CreatePost() {
       if (level === 'มัธยมศึกษาตอนต้น') backendLevel = 'MIDDLE_SCHOOL';
       else if (level === 'มัธยมศึกษาตอนปลาย') backendLevel = 'HIGH_SCHOOL';
 
-      // The database fields are non-nullable, so unfinished drafts receive neutral
-      // placeholders without requiring the user to enter anything.
-      const postPayload = new FormData();
-      postPayload.append('title', title.trim() || 'Untitled draft');
-      postPayload.append('summary', summary.trim());
-      postPayload.append('content', content || '<p></p>');
-      postPayload.append('education_level', backendLevel);
-      postPayload.append('post_status', isDraft ? 'DRAFT' : 'ACTIVE');
-      postPayload.append('tags', JSON.stringify(hashtags));
-      if (validCatId) postPayload.append('category_id', validCatId);
-      if (categoryName) postPayload.append('category', categoryName);
-      if (coverImage) {
-        postPayload.append('cover_image', coverImage);
-      } else if (isDraft) {
-        postPayload.append('cover_image', await getDefaultDraftCoverFile());
-      }
-      if (pdfFile) postPayload.append('media_files', pdfFile);
-      images.forEach((image) => postPayload.append('media_files', image));
+      const coverFile = coverImage || (isDraft ? await getDefaultDraftCoverFile() : null);
+      const { coverUpload, mediaUploads } = await postService.uploadPostFilesDirect({
+        coverImage: coverFile,
+        pdfFile,
+        images
+      });
+
+      // The backend verifies every Cloudinary response signature before saving.
+      const postPayload = {
+        title: title.trim() || 'Untitled draft',
+        summary: summary.trim(),
+        content: content || '<p></p>',
+        education_level: backendLevel,
+        post_status: isDraft ? 'DRAFT' : 'ACTIVE',
+        tags: hashtags,
+        category_id: validCatId,
+        category: categoryName,
+        cover_upload: coverUpload,
+        media_uploads: mediaUploads
+      };
 
       const result = await postService.createPost(postPayload);
       Swal.close();
