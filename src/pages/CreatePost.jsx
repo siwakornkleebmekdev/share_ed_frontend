@@ -9,9 +9,14 @@ import { categoryService, isValidCategoryUuid } from '../services/category.servi
 import { getDefaultDraftCoverFile } from '../utils/draftCover';
 
 const SUGGESTED_TAGS = ['#AI', '#เรียนรู้ไปด้วยกัน', '#เตรียมสอบ', '#TCAS67', '#สรุปย่อ', '#แชร์ความรู้', '#เด็กซิ่ว', '#สรุปชีท'];
+const DIRECT_UPLOAD_ENABLED = import.meta.env.VITE_DIRECT_UPLOAD_ENABLED !== 'false';
 
 export default function CreatePost() {
   const navigate = useNavigate();
+  const submitting = useRef(false);
+  const uploadCache = useRef(null);
+  const draftCover = useRef(null);
+  const idempotencyKey = useRef(null);
   const [coverImage, setCoverImage] = useState(null);
   const [pdfFile, setPdfFile] = useState(null);
   const [images, setImages] = useState([]);
@@ -295,6 +300,7 @@ export default function CreatePost() {
   };
 
   const handleSubmit = async (status = 'ACTIVE') => {
+    if (submitting.current) return;
     setFieldErrors({});
     const newErrors = {};
     const isDraft = status === 'DRAFT';
@@ -328,6 +334,7 @@ export default function CreatePost() {
       return;
     }
 
+    submitting.current = true;
     try {
       Swal.fire({
         allowOutsideClick: false,
@@ -351,31 +358,72 @@ export default function CreatePost() {
       if (level === 'มัธยมศึกษาตอนต้น') backendLevel = 'MIDDLE_SCHOOL';
       else if (level === 'มัธยมศึกษาตอนปลาย') backendLevel = 'HIGH_SCHOOL';
 
-      const coverFile = coverImage || (isDraft ? await getDefaultDraftCoverFile() : null);
-      const { coverUpload, mediaUploads } = await postService.uploadPostFilesDirect({
-        coverImage: coverFile,
-        pdfFile,
-        images
-      });
+      if (!coverImage && isDraft && !draftCover.current) draftCover.current = await getDefaultDraftCoverFile();
+      const coverFile = coverImage || draftCover.current;
+      let postPayload;
+      let directAssets = null;
 
-      // The backend verifies every Cloudinary response signature before saving.
-      const postPayload = {
-        title: title.trim() || 'Untitled draft',
-        summary: summary.trim(),
-        content: content || '<p></p>',
-        education_level: backendLevel,
-        post_status: isDraft ? 'DRAFT' : 'ACTIVE',
-        tags: hashtags,
-        category_id: validCatId,
-        category: categoryName,
-        cover_upload: coverUpload,
-        media_uploads: mediaUploads
-      };
+      if (DIRECT_UPLOAD_ENABLED) {
+        const files = [coverFile, pdfFile, ...images];
+        const cached = uploadCache.current;
+        const sessionIsUsable = cached?.uploads?.uploadSessionExpiresAt
+          && Date.parse(cached.uploads.uploadSessionExpiresAt) > Date.now() + 30000;
+        const sameFiles = cached && sessionIsUsable && cached.files.length === files.length
+          && files.every((file,index)=>file===cached.files[index]);
+        const uploads = sameFiles
+          ? cached.uploads
+          : await postService.uploadPostFilesDirect({coverImage:coverFile,pdfFile,images});
+        uploadCache.current = {files, uploads};
+        const { coverUpload, mediaUploads, uploadSessionId } = uploads;
+        directAssets = [coverUpload, ...mediaUploads];
+        if (!idempotencyKey.current) idempotencyKey.current = crypto.randomUUID();
 
-      const result = await postService.createPost(postPayload);
+        postPayload = {
+          title: title.trim() || 'Untitled draft',
+          summary: summary.trim(),
+          content: content || '<p></p>',
+          education_level: backendLevel,
+          post_status: isDraft ? 'DRAFT' : 'ACTIVE',
+          tags: hashtags,
+          category_id: validCatId,
+          category: categoryName,
+          cover_upload: coverUpload,
+          media_uploads: mediaUploads,
+          upload_session_id: uploadSessionId,
+          idempotency_key: idempotencyKey.current,
+        };
+      } else {
+        postPayload = new FormData();
+        postPayload.append('title', title.trim() || 'Untitled draft');
+        postPayload.append('summary', summary.trim());
+        postPayload.append('content', content || '<p></p>');
+        postPayload.append('education_level', backendLevel);
+        postPayload.append('post_status', isDraft ? 'DRAFT' : 'ACTIVE');
+        postPayload.append('tags', JSON.stringify(hashtags));
+        if (validCatId) postPayload.append('category_id', validCatId);
+        if (categoryName) postPayload.append('category', categoryName);
+        if (coverFile) postPayload.append('cover_image', coverFile);
+        if (pdfFile) postPayload.append('media_files', pdfFile);
+        images.forEach(image => postPayload.append('media_files', image));
+      }
+
+      let result;
+      try {
+        result = await postService.createPost(postPayload);
+      } catch (error) {
+        // A network/5xx error may occur after the database committed. Only clean
+        // up definitive client rejection; never delete possibly attached assets.
+        if (directAssets && error.response?.status >= 400 && error.response.status < 500) {
+          uploadCache.current = null;
+          await postService.cleanupDirectUploads(directAssets);
+        }
+        throw error;
+      }
       Swal.close();
 
       if (result.success) {
+        uploadCache.current = null;
+        idempotencyKey.current = null;
         Swal.fire({
           icon: 'success',
           title: status === 'ACTIVE' ? 'โพสต์สำเร็จ!' : 'บันทึกสำเร็จ!',
@@ -397,6 +445,8 @@ export default function CreatePost() {
         text: errMsg,
         confirmButtonColor: '#3b82f6'
       });
+    } finally {
+      submitting.current = false;
     }
   };
 

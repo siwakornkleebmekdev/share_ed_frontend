@@ -19,17 +19,25 @@ const DIRECT_UPLOAD_CONCURRENCY = 4;
 async function mapWithConcurrency(items, concurrency, operation) {
   const results = new Array(items.length);
   let nextIndex = 0;
+  const controller = new AbortController();
+  let failure;
   async function worker() {
-    while (nextIndex < items.length) {
+    while (!controller.signal.aborted && nextIndex < items.length) {
       const index = nextIndex++;
-      results[index] = await operation(items[index], index);
+      try {
+        results[index] = await operation(items[index], index, controller.signal);
+      } catch (error) {
+        failure ??= error;
+        controller.abort();
+      }
     }
   }
-  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, worker));
+  await Promise.allSettled(Array.from({ length: Math.min(concurrency, items.length) }, worker));
+  if (failure) throw failure;
   return results;
 }
 
-async function uploadWithSignature(file, config) {
+async function uploadWithSignature(file, config, signal) {
   if (!config) throw new Error('ไม่พบข้อมูล Signature สำหรับอัปโหลดไฟล์');
   const formData = new FormData();
   formData.append('file', file);
@@ -39,7 +47,9 @@ async function uploadWithSignature(file, config) {
     formData.append(key, String(value));
   }
 
-  const response = await fetch(config.uploadUrl, { method: 'POST', body: formData });
+  const timeout = AbortSignal.timeout(120000);
+  const uploadSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
+  const response = await fetch(config.uploadUrl, { method: 'POST', body: formData, signal: uploadSignal });
   if (!response.ok) {
     const result = await response.json().catch(() => ({}));
     throw new Error(result?.error?.message || `อัปโหลดไฟล์ไม่สำเร็จ (${response.status})`);
@@ -54,6 +64,8 @@ async function uploadWithSignature(file, config) {
     resource_type: result.resource_type,
     format: result.format,
     bytes: result.bytes,
+    delete_token: result.delete_token,
+    delete_url: config.uploadUrl.replace(/\/(image|raw|auto)\/upload$/, "/delete_by_token"),
   };
   const required = ['public_id', 'version', 'signature', 'secure_url', 'resource_type', 'bytes'];
   if (required.some(key => metadata[key] === undefined || metadata[key] === null || metadata[key] === '')) {
@@ -117,8 +129,8 @@ export const postService = {
     const uniqueTypes = [...new Set(types)].filter(Boolean);
     try {
       const response = await api.post('/posts/upload-signatures', { types: uniqueTypes });
-      const uploads = response.data?.data?.uploads;
-      if (response.data?.success && uploads) return uploads;
+      const data = response.data?.data;
+      if (response.data?.success && data?.uploads && data?.sessionId) return data;
       throw new Error(response.data?.message || 'ไม่สามารถสร้าง Signature สำหรับอัปโหลดไฟล์ได้');
     } catch (error) {
       console.error('Error fetching upload signatures:', error);
@@ -146,7 +158,7 @@ export const postService = {
       const uploaded = await mapWithConcurrency(
         Array.from(files),
         DIRECT_UPLOAD_CONCURRENCY,
-        file => uploadWithSignature(file, sigData)
+        (file, _index, signal) => uploadWithSignature(file, sigData, signal)
       );
       return uploaded.map(result => result.secure_url);
     } catch (error) {
@@ -159,24 +171,58 @@ export const postService = {
   uploadPostFilesDirect: async ({ coverImage, pdfFile = null, images = [] }) => {
     if (!coverImage) throw new Error('กรุณาอัปโหลดรูปภาพหน้าปก');
     const imageFiles = Array.from(images || []);
+    if (imageFiles.length + (pdfFile ? 1 : 0) > 15) throw new Error('แนบไฟล์ได้สูงสุด 15 ไฟล์');
+    const allFiles = [coverImage, ...(pdfFile ? [pdfFile] : []), ...imageFiles];
+    if (new Set(allFiles).size !== allFiles.length) throw new Error('ไม่สามารถแนบไฟล์ซ้ำได้');
+    for (const file of allFiles) {
+      const maxBytes = file === pdfFile ? 20 * 1024 * 1024 : 2 * 1024 * 1024;
+      if (!file.size || file.size > maxBytes) throw new Error('ไฟล์ว่างหรือมีขนาดเกินกำหนด');
+      if (file.type && !(file === pdfFile ? ['application/pdf'] : ['image/jpeg','image/png','image/webp']).includes(file.type)) {
+        throw new Error('ชนิดไฟล์ไม่รองรับ');
+      }
+    }
+    if (allFiles.reduce((total,file)=>total+file.size,0) > 50*1024*1024) throw new Error('ขนาดไฟล์รวมเกิน 50 MB');
     const types = ['cover'];
     if (pdfFile) types.push('pdf');
     if (imageFiles.length > 0) types.push('media');
 
-    const signatures = await postService.getUploadSignatures(types);
+    const { uploads: signatures, sessionId, expiresAt } = await postService.getUploadSignatures(types);
     const tasks = [{ kind: 'cover', file: coverImage }];
     if (pdfFile) tasks.push({ kind: 'pdf', file: pdfFile });
     tasks.push(...imageFiles.map(file => ({ kind: 'media', file })));
 
-    const uploaded = await mapWithConcurrency(
-      tasks,
-      DIRECT_UPLOAD_CONCURRENCY,
-      task => uploadWithSignature(task.file, signatures[task.kind])
-    );
+    const completed = [];
+    let uploaded;
+    try {
+      uploaded = await mapWithConcurrency(tasks, DIRECT_UPLOAD_CONCURRENCY, async (task, _index, signal) => {
+        const asset = await uploadWithSignature(task.file, signatures[task.kind], signal);
+        completed.push(asset);
+        return asset;
+      });
+    } catch (error) {
+      await postService.cleanupDirectUploads(completed);
+      throw error;
+    }
     return {
       coverUpload: uploaded[0],
       mediaUploads: uploaded.slice(1),
+      uploadSessionId: sessionId,
+      uploadSessionExpiresAt: expiresAt,
     };
+  },
+
+  cleanupDirectUploads: async (assets) => {
+    const results = await Promise.allSettled(assets.filter(asset => asset?.delete_token).map(async asset => {
+      const body = new FormData();
+      body.append('token', asset.delete_token);
+      const response = await fetch(asset.delete_url, {
+        method: 'POST', body, signal: AbortSignal.timeout(10000),
+      });
+      if (!response.ok) throw new Error('Temporary upload cleanup failed');
+    }));
+    if (results.some(result => result.status === 'rejected')) {
+      console.warn('Some temporary uploads could not be removed');
+    }
   },
 
   // Create a new post (supports both JSON payload and FormData)
