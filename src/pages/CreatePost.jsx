@@ -111,6 +111,9 @@ export default function CreatePost() {
       return;
     }
     setCoverImage(file);
+    if (fieldErrors.cover) {
+      setFieldErrors(prev => ({ ...prev, cover: null }));
+    }
   };
 
   const handlePdfUpload = (e) => {
@@ -303,15 +306,16 @@ export default function CreatePost() {
       if (!level) newErrors.level = 'กรุณาเลือกระดับชั้น';
       if (!summary.trim()) newErrors.summary = 'กรุณากรอกบทสรุปย่อ';
       if (!categoryId && !categoryName) newErrors.category = 'กรุณาเลือกหมวดหมู่วิชา';
+      if (!content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim()) {
+        newErrors.content = 'กรุณากรอกรายละเอียดเพิ่มเติม';
+      }
 
       if (!coverImage) {
         newErrors.cover = 'กรุณาอัปโหลดรูปภาพหน้าปก';
-        toast.error('กรุณาอัปโหลดรูปภาพหน้าปก');
       }
 
       if (!images || images.length === 0) {
         newErrors.media = 'กรุณาแนบรูปภาพประกอบอย่างน้อย 1 รูป';
-        toast.error('กรุณาแนบรูปภาพประกอบอย่างน้อย 1 รูป');
       }
     }
 
@@ -412,7 +416,7 @@ export default function CreatePost() {
               </label>
               <p className="text-xs text-slate-400 mb-3">แนะนำอัตราส่วน 16:9 (เช่น 1280×720px) เพื่อให้แสดงผลสวยที่สุด</p>
               {!coverImage ? (
-                <label className="flex flex-col items-center justify-center w-full aspect-video border-2 border-dashed border-slate-300 rounded-2xl hover:border-primary hover:bg-slate-50 cursor-pointer transition-all">
+                <label className={`flex flex-col items-center justify-center w-full aspect-video border-2 border-dashed rounded-2xl hover:bg-slate-50 cursor-pointer transition-all ${fieldErrors.cover ? 'border-red-500 hover:border-red-500' : 'border-slate-300 hover:border-primary'}`}>
                   <ImageIcon className="h-10 w-10 text-slate-400 mb-3" />
                   <span className="text-sm font-medium text-slate-500">คลิกเพื่ออัปโหลดรูปปก</span>
                   <span className="text-xs text-slate-400 mt-1">อัตราส่วนที่แนะนำ 16:9 (1280×720px) รูปภาพขนาดไม่เกิน 2 Mb</span>
@@ -434,6 +438,9 @@ export default function CreatePost() {
                     <Eye className="h-8 w-8" />
                   </div>
                 </div>
+              )}
+              {fieldErrors.cover && (
+                <p className="mt-1.5 text-xs text-red-500 font-medium" role="alert">{fieldErrors.cover}</p>
               )}
             </div>
 
@@ -525,7 +532,6 @@ export default function CreatePost() {
             <div
               onClick={() => {
                 setShowModal(true);
-                if (fieldErrors.category) setFieldErrors(prev => ({ ...prev, category: null }));
               }}
               className={`p-5 border border-dashed hover:border-primary rounded-2xl bg-white hover:bg-blue-50/10 cursor-pointer transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${fieldErrors.category ? 'border-red-500 bg-red-50/10' : 'border-slate-200'
                 }`}
@@ -563,22 +569,31 @@ export default function CreatePost() {
                 ตั้งค่าวิชาและแท็ก
               </button>
             </div>
+            {fieldErrors.category && (
+              <p className="mt-1.5 text-xs text-red-500 font-medium" role="alert">{fieldErrors.category}</p>
+            )}
           </div>
 
           {/* Rich Text Editor */}
           <div>
             <label className="flex items-center gap-2 text-base font-bold text-slate-800 mb-3">
-              <AlignLeft className="h-5 w-5 text-slate-400" /> รายละเอียดเพิ่มเติม
+              <AlignLeft className="h-5 w-5 text-slate-400" /> รายละเอียดเพิ่มเติม <span className="text-rose-500">*</span>
             </label>
-            <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
+            <div className={`border rounded-xl overflow-hidden bg-white ${fieldErrors.content ? 'border-red-500' : 'border-slate-200'}`}>
               <ReactQuill
                 theme="snow"
                 value={content}
-                onChange={setContent}
+                onChange={(value) => {
+                  setContent(value);
+                  if (fieldErrors.content) setFieldErrors(prev => ({ ...prev, content: null }));
+                }}
                 className="h-48 pb-10"
                 placeholder="อธิบายเพิ่มเติมเกี่ยวกับเนื้อหา เทคนิคการจำ หรือที่มา..."
               />
             </div>
+            {fieldErrors.content && (
+              <p className="mt-1.5 text-xs text-red-500 font-medium" role="alert">{fieldErrors.content}</p>
+            )}
           </div>
 
           {/* File Uploads (Split left/right) */}
@@ -643,7 +658,12 @@ export default function CreatePost() {
 
                 {/* Upload Button */}
                 <div className="relative group/btn inline-block">
-                  <label className={`w-20 h-20 border-2 border-dashed rounded-xl flex flex-col items-center justify-center transition-all ${images.length >= 15 ? 'border-slate-200 bg-slate-100 cursor-not-allowed opacity-60' : 'border-slate-300 hover:border-primary hover:bg-slate-50 cursor-pointer'}`}>
+                  <label className={`w-20 h-20 border-2 border-dashed rounded-xl flex flex-col items-center justify-center transition-all ${images.length >= 15
+                    ? 'border-slate-200 bg-slate-100 cursor-not-allowed opacity-60'
+                    : fieldErrors.media
+                      ? 'border-red-500 hover:border-red-500 hover:bg-slate-50 cursor-pointer'
+                      : 'border-slate-300 hover:border-primary hover:bg-slate-50 cursor-pointer'
+                    }`}>
                     <Plus className="h-6 w-6 text-slate-400" />
                     <input
                       type="file"
@@ -710,7 +730,10 @@ export default function CreatePost() {
                 <select
                   value={categoryId || categoryName}
                   onChange={(e) => handleCategorySelect(e.target.value)}
-                  className="w-full px-5 py-3.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors bg-white font-medium text-slate-700 text-base cursor-pointer"
+                  className={`w-full px-5 py-3.5 rounded-xl border focus:outline-none transition-colors bg-white font-medium text-slate-700 text-base cursor-pointer ${fieldErrors.category
+                    ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+                    : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
+                    }`}
                 >
                   <option value="" disabled>เลือกหมวดหมู่วิชา</option>
                   {categoriesList.map((cat) => (
@@ -719,6 +742,9 @@ export default function CreatePost() {
                     </option>
                   ))}
                 </select>
+                {fieldErrors.category && (
+                  <p className="mt-1.5 text-xs text-red-500 font-medium" role="alert">{fieldErrors.category}</p>
+                )}
               </div>
 
               {/* Hashtags Input */}
