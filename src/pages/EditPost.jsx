@@ -241,6 +241,9 @@ export default function EditPost() {
     }
     setCoverImage(file);
     setExistingCoverImage(null);
+    if (fieldErrors.cover) {
+      setFieldErrors(prev => ({ ...prev, cover: null }));
+    }
   };
 
   const handlePdfUpload = (e) => {
@@ -489,10 +492,12 @@ export default function EditPost() {
       if (!content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim()) {
         newErrors.content = 'กรุณากรอกรายละเอียดเพิ่มเติม';
       }
+      if (!coverImage && !existingCoverImage) {
+        newErrors.cover = 'กรุณาอัปโหลดรูปภาพหน้าปก';
+      }
 
       if (existingImages.length + images.length === 0) {
         newErrors.media = 'กรุณาแนบรูปภาพประกอบอย่างน้อย 1 รูป';
-        toast.error('กรุณาแนบรูปภาพประกอบอย่างน้อย 1 รูป');
       }
     }
 
@@ -643,7 +648,7 @@ export default function EditPost() {
               </label>
               <p className="text-xs text-slate-400 mb-3">แนะนำอัตราส่วน 16:9 (เช่น 1280×720px) เพื่อให้แสดงผลสวยที่สุด</p>
               {!coverImage && !existingCoverImage ? (
-                <label className="flex flex-col items-center justify-center w-full aspect-video border-2 border-dashed border-slate-300 rounded-2xl hover:border-primary hover:bg-slate-50 cursor-pointer transition-all">
+                <label className={`flex flex-col items-center justify-center w-full aspect-video border-2 border-dashed rounded-2xl hover:bg-slate-50 cursor-pointer transition-all ${fieldErrors.cover ? 'border-red-500 hover:border-red-500' : 'border-slate-300 hover:border-primary'}`}>
                   <ImageIcon className="h-10 w-10 text-slate-400 mb-3" />
                   <span className="text-sm font-medium text-slate-500">คลิกเพื่ออัปโหลดรูปปกใหม่</span>
                   <span className="text-xs text-slate-400 mt-1">อัตราส่วนที่แนะนำ 16:9 (1280×720px) รูปภาพขนาดไม่เกิน 2 MB</span>
@@ -674,6 +679,9 @@ export default function EditPost() {
                     <Eye className="h-8 w-8" />
                   </div>
                 </div>
+              )}
+              {fieldErrors.cover && (
+                <p className="mt-1.5 text-xs text-red-500 font-medium" role="alert">{fieldErrors.cover}</p>
               )}
             </div>
 
@@ -931,7 +939,12 @@ export default function EditPost() {
 
                 {/* Upload Button */}
                 <div className="relative group/btn inline-block">
-                  <label className={`w-20 h-20 border-2 border-dashed rounded-xl flex flex-col items-center justify-center transition-all ${existingImages.length + images.length >= 15 ? 'border-slate-200 bg-slate-100 cursor-not-allowed opacity-60' : 'border-slate-300 hover:border-primary hover:bg-slate-50 cursor-pointer'}`}>
+                  <label className={`w-20 h-20 border-2 border-dashed rounded-xl flex flex-col items-center justify-center transition-all ${existingImages.length + images.length >= 15
+                    ? 'border-slate-200 bg-slate-100 cursor-not-allowed opacity-60'
+                    : fieldErrors.media
+                      ? 'border-red-500 hover:border-red-500 hover:bg-slate-50 cursor-pointer'
+                      : 'border-slate-300 hover:border-primary hover:bg-slate-50 cursor-pointer'
+                    }`}>
                     <Plus className="h-6 w-6 text-slate-400" />
                     <input
                       type="file"
