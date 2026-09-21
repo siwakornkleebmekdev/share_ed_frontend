@@ -27,6 +27,10 @@ export function resolveProfileFrame(profile, milestones = []) {
     frame?.imageUrl ||
     frame?.preview_url ||
     frame?.previewUrl ||
+    frame?.metadata?.image_url ||
+    frame?.metadata?.imageUrl ||
+    frame?.metadata?.preview_url ||
+    frame?.metadata?.previewUrl ||
     frame?.reward_item?.image_url ||
     frame?.reward?.image_url ||
     frame?.reward?.previewUrl ||

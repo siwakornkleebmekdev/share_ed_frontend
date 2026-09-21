@@ -443,7 +443,7 @@ export const profileService = {
       return response.data;
     } catch (error) {
       console.warn(`Backend equip ${type} notice:`, error?.response?.data || error.message);
-      return { success: false, error };
+      throw error;
     }
   },
 

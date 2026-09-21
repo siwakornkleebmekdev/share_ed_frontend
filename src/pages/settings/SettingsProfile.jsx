@@ -137,25 +137,6 @@ export default function SettingsProfile() {
   const handleEquipFrame = async (frameId) => {
     const userId = user?.id || user?.user_id;
     try {
-      // 1. Persist to LocalStorage immediately so refresh retains frame even offline
-      if (frameId) {
-        if (userId) localStorage.setItem(`profile_frame_id_${userId}`, frameId);
-        localStorage.setItem("profile_frame_id", frameId);
-      } else {
-        if (userId) localStorage.removeItem(`profile_frame_id_${userId}`);
-        localStorage.removeItem("profile_frame_id");
-      }
-
-      // 2. Persist to Supabase Auth metadata for permanent cloud persistence across devices/refreshes
-      try {
-        await supabase.auth.updateUser({
-          data: { profile_frame_id: frameId || null },
-        });
-      } catch (sbErr) {
-        console.warn("Supabase updateUser frame notice:", sbErr);
-      }
-
-      // 3. Notify backend API via /users/equip
       const selectedMilestone = allMilestones.find(
         (m) =>
           m.id === frameId ||
@@ -166,24 +147,34 @@ export default function SettingsProfile() {
         selectedMilestone?.reward_item_id ||
         selectedMilestone?.reward?.id ||
         frameId;
+      const persistedFrameId = frameId ? rewardItemId : null;
 
-      try {
-        if (frameId) {
-          await profileService.equipItem(rewardItemId, "FRAME");
-        } else {
-          await profileService.equipItem(null, "FRAME");
-        }
-      } catch (apiErr) {
-        console.warn("Backend equipItem frame notice:", apiErr);
+      // The public profile reads the equipped frame from the backend. Only
+      // update local state after the backend confirms that it was persisted.
+      await profileService.equipItem(persistedFrameId, "FRAME");
+
+      if (persistedFrameId) {
+        if (userId) localStorage.setItem(`profile_frame_id_${userId}`, persistedFrameId);
+        localStorage.setItem("profile_frame_id", persistedFrameId);
+      } else {
+        if (userId) localStorage.removeItem(`profile_frame_id_${userId}`);
+        localStorage.removeItem("profile_frame_id");
       }
 
-      // 4. Update in-memory Zustand store
+      try {
+        await supabase.auth.updateUser({
+          data: { profile_frame_id: persistedFrameId },
+        });
+      } catch (sbErr) {
+        console.warn("Supabase updateUser frame notice:", sbErr);
+      }
+
       login({
         ...user,
-        current_frame_id: frameId || null,
+        current_frame_id: persistedFrameId,
         user_metadata: {
           ...user?.user_metadata,
-          profile_frame_id: frameId || null,
+          profile_frame_id: persistedFrameId,
         },
       });
 
@@ -192,7 +183,7 @@ export default function SettingsProfile() {
       );
     } catch (error) {
       console.error("Error equipping frame:", error);
-      toast.error("เกิดข้อผิดพลาด กรุณาลองใหม่");
+      toast.error(error.response?.data?.message || "ไม่สามารถเปลี่ยนกรอบโปรไฟล์ได้ กรุณาลองใหม่");
     }
   };
 
