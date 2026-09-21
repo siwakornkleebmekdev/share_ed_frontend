@@ -72,35 +72,12 @@ export default function SettingsProfile() {
 
   // Merge live milestones with DEFAULT_FRAMES, honoring local & backend claimed state
   const allMilestones = useMemo(() => {
-    const map = new Map();
-    DEFAULT_FRAMES.forEach((df) => {
-      map.set(df.id, { ...df });
-    });
-    milestones.forEach((m) => {
-      const key = m.id || m.reward_item_id;
-      if (map.has(key)) {
-        map.set(key, { ...map.get(key), ...m });
-      } else {
-        map.set(key, m);
-      }
-    });
-
-    try {
-      const claimedLocal = JSON.parse(localStorage.getItem("claimed_milestones") || "[]");
-      claimedLocal.forEach((claimedId) => {
-        for (const [, v] of map.entries()) {
-          if (
-            v.id === claimedId ||
-            v.reward_item_id === claimedId ||
-            v.reward?.id === claimedId
-          ) {
-            v.status = "CLAIMED";
-          }
-        }
-      });
-    } catch (_) {}
-
-    return Array.from(map.values());
+    if (milestones.length > 0) return milestones;
+    return DEFAULT_FRAMES.map((frame) => ({
+      ...frame,
+      status: "LOCKED",
+      is_template: true,
+    }));
   }, [milestones]);
 
   const frameMilestones = allMilestones.filter((m) => m.reward?.type === "FRAME");
@@ -148,6 +125,10 @@ export default function SettingsProfile() {
         selectedMilestone?.reward?.id ||
         frameId;
       const persistedFrameId = frameId ? rewardItemId : null;
+
+      if (frameId && selectedMilestone?.status !== "CLAIMED") {
+        throw new Error("กรอบนี้ยังไม่ได้ปลดล็อกในบัญชีของคุณ");
+      }
 
       // The public profile reads the equipped frame from the backend. Only
       // update local state after the backend confirms that it was persisted.
