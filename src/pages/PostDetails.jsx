@@ -342,7 +342,11 @@ export default function PostDetails() {
       navigate('/register');
       return;
     }
-    if (!newCommentText.trim() || !post) return;
+    if (!newCommentText.trim()) {
+      toast.error('กรุณากรอกความคิดเห็น');
+      return;
+    }
+    if (!post) return;
 
     try {
       setIsSubmittingComment(true);
@@ -695,8 +699,8 @@ export default function PostDetails() {
                 <div className="flex justify-end mt-2">
                   <button
                     type="submit"
-                    disabled={isSubmittingComment || !newCommentText.trim() || !isAuthenticated}
-                    className={`px-5 py-2.5 rounded-xl font-bold text-white transition-all flex items-center gap-2 text-sm shadow-sm ${(!newCommentText.trim() || !isAuthenticated) ? 'bg-slate-300 cursor-not-allowed' : 'bg-primary hover:bg-blue-600 hover:shadow'}`}
+                    disabled={isSubmittingComment || !isAuthenticated}
+                    className={`px-5 py-2.5 rounded-xl font-bold text-white transition-all flex items-center gap-2 text-sm shadow-sm ${!isAuthenticated ? 'bg-slate-300 cursor-not-allowed' : 'bg-primary hover:bg-blue-600 hover:shadow'}`}
                   >
                     <Send className="h-4 w-4" />
                     {isSubmittingComment ? 'กำลังส่ง...' : 'ส่งความคิดเห็น'}
