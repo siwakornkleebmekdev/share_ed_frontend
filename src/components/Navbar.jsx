@@ -26,6 +26,7 @@ import useAchievementStore from "@/store/achievementStore";
 import { supabase } from "@/utils/supabase";
 import { authService } from "@/services/auth.service";
 import { DEFAULT_FRAMES } from "@/services/profile.service";
+import { resolveProfileFrame } from "@/utils/profileFrame";
 import { getGlassColor, rgbToRgba } from "@/utils/colorUtils";
 import toast from "react-hot-toast";
 
@@ -47,7 +48,7 @@ export default function Navbar() {
   const { notifications, unreadCount, fetchNotifications, markAsRead, markAllAsRead, deleteNotification, error, isLoading, isMutating } =
     useNotificationStore();
   const { isAuthenticated, user, logout } = useAuthStore();
-  const { readyToClaimCount, fetchMilestones } = useAchievementStore();
+  const { milestones, readyToClaimCount, fetchMilestones } = useAchievementStore();
 
   const avatarSrc =
     user?.avatar_url ||
@@ -56,19 +57,10 @@ export default function Navbar() {
     user?.profile_image ||
     user?.user_metadata?.picture;
 
-  const equippedFrameId =
-    user?.user_metadata?.profile_frame_id ||
-    user?.current_frame_id ||
-    user?.profile_frame_id;
-
-  const equippedFrame = equippedFrameId
-    ? DEFAULT_FRAMES.find(
-        (f) =>
-          f.id === equippedFrameId ||
-          f.reward?.id === equippedFrameId ||
-          f.reward_item_id === equippedFrameId
-      )
-    : null;
+  const { previewUrl: equippedFrameUrl } = resolveProfileFrame(user, [
+    ...milestones,
+    ...DEFAULT_FRAMES,
+  ]);
 
   // Relative time formatter
   const formatRelativeTime = (iso) => {
@@ -377,9 +369,9 @@ export default function Navbar() {
                     ) : (
                       <User className="h-4 w-4 sm:h-5 sm:w-5" />
                     )}
-                    {equippedFrame?.reward?.previewUrl && (
+                    {equippedFrameUrl && (
                       <img
-                        src={equippedFrame.reward.previewUrl}
+                        src={equippedFrameUrl}
                         alt="Frame"
                         className="absolute inset-0 w-full h-full pointer-events-none scale-125 z-10"
                       />
@@ -402,9 +394,9 @@ export default function Navbar() {
                               <User className="h-5 w-5" />
                             </div>
                           )}
-                          {equippedFrame?.reward?.previewUrl && (
+                          {equippedFrameUrl && (
                             <img
-                              src={equippedFrame.reward.previewUrl}
+                              src={equippedFrameUrl}
                               alt="Frame"
                               className="absolute inset-0 w-full h-full pointer-events-none scale-125 z-10"
                             />
