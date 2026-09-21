@@ -82,6 +82,7 @@ export default function Profile() {
 
   const [activeTab, setActiveTab] = useState("posts");
   const [otherProfile, setOtherProfile] = useState(null);
+  const [ownProfile, setOwnProfile] = useState(null);
   const [isFollowing, setIsFollowing] = useState(false);
   const [isFollowLoading, setIsFollowLoading] = useState(false);
   const [userNotFound, setUserNotFound] = useState(false);
@@ -262,7 +263,7 @@ export default function Profile() {
           const targetId = user?.user_id || user?.id;
           if (!targetId) return;
 
-          const [fetchedPosts, fetchedDrafts, fetchedBookmarks, ownProfile] =
+          const [fetchedPosts, fetchedDrafts, fetchedBookmarks, fetchedOwnProfile] =
             await Promise.all([
               profileService.getMyPosts(targetId),
               profileService.getDrafts(targetId),
@@ -273,8 +274,9 @@ export default function Profile() {
           setMyPosts(fetchedPosts);
           setDrafts(fetchedDrafts);
           setBookmarks(fetchedBookmarks);
-          if (ownProfile) {
-            setFollowCounts(normalizeFollowCounts(ownProfile));
+          if (fetchedOwnProfile) {
+            setOwnProfile(fetchedOwnProfile);
+            setFollowCounts(normalizeFollowCounts(fetchedOwnProfile));
           }
         } catch (error) {
           toast.error("เกิดข้อผิดพลาดในการโหลดข้อมูลโปรไฟล์");
@@ -377,7 +379,10 @@ export default function Profile() {
     ? null
     : {
         ...user,
+        ...ownProfile,
         profile_frame_id:
+          ownProfile?.current_frame_id ||
+          ownProfile?.profile_frame_id ||
           user?.user_metadata?.profile_frame_id ||
           user?.current_frame_id ||
           (currentUserId
