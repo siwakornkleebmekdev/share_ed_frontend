@@ -51,11 +51,38 @@ function getNestedValue(sources, keys) {
   return null;
 }
 
+function inferActorNameFromText(values) {
+  const patterns = [
+    /^new post from\s+(.+?)(?:[.!]|$)/i,
+    /^(.+?)\s+(?:has\s+)?(?:liked|commented|followed|published|created|shared|posted|bookmarked)\b/i,
+    /^(.+?)\s+(?:ได้)?(?:กดถูกใจ|แสดงความคิดเห็น|เริ่มติดตาม|ติดตาม|เผยแพร่|สร้าง|แชร์|บันทึก)/,
+  ];
+  for (const value of values) {
+    if (typeof value !== 'string') continue;
+    for (const pattern of patterns) {
+      const match = value.trim().match(pattern);
+      const candidate = match?.[1]?.trim().replace(/^['“"]|['”"]$/g, '');
+      if (
+        candidate &&
+        candidate.length <= 80 &&
+        !/^(someone|a user|user|ผู้ใช้|ผู้ใช้คนหนึ่ง)$/i.test(candidate)
+      ) {
+        return candidate;
+      }
+    }
+  }
+  return null;
+}
+
 export function localizeNotificationContent(n, type) {
   const sources = [n, n.data, n.metadata, n.meta, n.payload, n.context, n.target].filter(Boolean);
   const actorSources = [
     ...sources,
-    ...sources.flatMap(source => [source.actor, source.sender, source.follower, source.fromUser, source.from_user]),
+    ...sources.flatMap(source => [
+      source.actor, source.sender, source.follower, source.author, source.owner, source.user,
+      source.fromUser, source.from_user, source.createdBy, source.created_by,
+      source.triggeredBy, source.triggered_by, source.relatedUser, source.related_user,
+    ]),
   ].filter(Boolean);
   const postSources = [
     ...sources,
@@ -63,9 +90,14 @@ export function localizeNotificationContent(n, type) {
   ].filter(Boolean);
   const actorName = getNestedValue(sources, [
     'actorName', 'actor_name', 'senderName', 'sender_name', 'followerName', 'follower_name',
+    'authorName', 'author_name', 'authorUsername', 'author_username',
+    'actorUsername', 'actor_username', 'senderUsername', 'sender_username',
+    'createdByName', 'created_by_name', 'triggeredByName', 'triggered_by_name', 'username',
   ]) || getNestedValue(actorSources.slice(sources.length), [
     'displayName', 'display_name', 'username', 'name',
-  ]);
+  ]) || inferActorNameFromText(
+    sources.flatMap(source => [source.message, source.content, source.title]).filter(Boolean),
+  );
   const postTitle = getNestedValue(sources, [
     'postTitle', 'post_title', 'targetTitle', 'target_title',
   ]) || getNestedValue(postSources.slice(sources.length), ['title']);
@@ -114,7 +146,8 @@ export function getNotificationTarget(n, normalizedType) {
   const actorId = findId(sources, [
     'followerId', 'follower_id', 'actorId', 'actor_id', 'senderId', 'sender_id', 'fromUserId', 'from_user_id',
     'triggeredById', 'triggered_by_id', 'relatedUserId', 'related_user_id', 'actor', 'sender', 'follower',
-    'fromUser', 'from_user', 'userId', 'user_id',
+    'authorId', 'author_id', 'createdById', 'created_by_id', 'fromUser', 'from_user', 'author',
+    'createdBy', 'created_by', 'triggeredBy', 'triggered_by', 'relatedUser', 'related_user', 'userId', 'user_id',
   ]);
   const generatedLink = POST_TYPES.has(type) && postId
     ? `/post/${encodeURIComponent(postId)}`
