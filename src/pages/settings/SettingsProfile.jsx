@@ -72,35 +72,12 @@ export default function SettingsProfile() {
 
   // Merge live milestones with DEFAULT_FRAMES, honoring local & backend claimed state
   const allMilestones = useMemo(() => {
-    const map = new Map();
-    DEFAULT_FRAMES.forEach((df) => {
-      map.set(df.id, { ...df });
-    });
-    milestones.forEach((m) => {
-      const key = m.id || m.reward_item_id;
-      if (map.has(key)) {
-        map.set(key, { ...map.get(key), ...m });
-      } else {
-        map.set(key, m);
-      }
-    });
-
-    try {
-      const claimedLocal = JSON.parse(localStorage.getItem("claimed_milestones") || "[]");
-      claimedLocal.forEach((claimedId) => {
-        for (const [, v] of map.entries()) {
-          if (
-            v.id === claimedId ||
-            v.reward_item_id === claimedId ||
-            v.reward?.id === claimedId
-          ) {
-            v.status = "CLAIMED";
-          }
-        }
-      });
-    } catch (_) {}
-
-    return Array.from(map.values());
+    if (milestones.length > 0) return milestones;
+    return DEFAULT_FRAMES.map((frame) => ({
+      ...frame,
+      status: "LOCKED",
+      is_template: true,
+    }));
   }, [milestones]);
 
   const frameMilestones = allMilestones.filter((m) => m.reward?.type === "FRAME");
@@ -137,25 +114,6 @@ export default function SettingsProfile() {
   const handleEquipFrame = async (frameId) => {
     const userId = user?.id || user?.user_id;
     try {
-      // 1. Persist to LocalStorage immediately so refresh retains frame even offline
-      if (frameId) {
-        if (userId) localStorage.setItem(`profile_frame_id_${userId}`, frameId);
-        localStorage.setItem("profile_frame_id", frameId);
-      } else {
-        if (userId) localStorage.removeItem(`profile_frame_id_${userId}`);
-        localStorage.removeItem("profile_frame_id");
-      }
-
-      // 2. Persist to Supabase Auth metadata for permanent cloud persistence across devices/refreshes
-      try {
-        await supabase.auth.updateUser({
-          data: { profile_frame_id: frameId || null },
-        });
-      } catch (sbErr) {
-        console.warn("Supabase updateUser frame notice:", sbErr);
-      }
-
-      // 3. Notify backend API via /users/equip
       const selectedMilestone = allMilestones.find(
         (m) =>
           m.id === frameId ||
@@ -166,24 +124,38 @@ export default function SettingsProfile() {
         selectedMilestone?.reward_item_id ||
         selectedMilestone?.reward?.id ||
         frameId;
+      const persistedFrameId = frameId ? rewardItemId : null;
 
-      try {
-        if (frameId) {
-          await profileService.equipItem(rewardItemId, "FRAME");
-        } else {
-          await profileService.equipItem(null, "FRAME");
-        }
-      } catch (apiErr) {
-        console.warn("Backend equipItem frame notice:", apiErr);
+      if (frameId && selectedMilestone?.status !== "CLAIMED") {
+        throw new Error("กรอบนี้ยังไม่ได้ปลดล็อกในบัญชีของคุณ");
       }
 
-      // 4. Update in-memory Zustand store
+      // The public profile reads the equipped frame from the backend. Only
+      // update local state after the backend confirms that it was persisted.
+      await profileService.equipItem(persistedFrameId, "FRAME");
+
+      if (persistedFrameId) {
+        if (userId) localStorage.setItem(`profile_frame_id_${userId}`, persistedFrameId);
+        localStorage.setItem("profile_frame_id", persistedFrameId);
+      } else {
+        if (userId) localStorage.removeItem(`profile_frame_id_${userId}`);
+        localStorage.removeItem("profile_frame_id");
+      }
+
+      try {
+        await supabase.auth.updateUser({
+          data: { profile_frame_id: persistedFrameId },
+        });
+      } catch (sbErr) {
+        console.warn("Supabase updateUser frame notice:", sbErr);
+      }
+
       login({
         ...user,
-        current_frame_id: frameId || null,
+        current_frame_id: persistedFrameId,
         user_metadata: {
           ...user?.user_metadata,
-          profile_frame_id: frameId || null,
+          profile_frame_id: persistedFrameId,
         },
       });
 
@@ -192,7 +164,7 @@ export default function SettingsProfile() {
       );
     } catch (error) {
       console.error("Error equipping frame:", error);
-      toast.error("เกิดข้อผิดพลาด กรุณาลองใหม่");
+      toast.error(error.response?.data?.message || "ไม่สามารถเปลี่ยนกรอบโปรไฟล์ได้ กรุณาลองใหม่");
     }
   };
 

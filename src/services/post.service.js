@@ -14,6 +14,66 @@ function extractFileNameFromUrl(url) {
   }
 }
 
+const DIRECT_UPLOAD_CONCURRENCY = 4;
+
+async function mapWithConcurrency(items, concurrency, operation) {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+  const controller = new AbortController();
+  let failure;
+  async function worker() {
+    while (!controller.signal.aborted && nextIndex < items.length) {
+      const index = nextIndex++;
+      try {
+        results[index] = await operation(items[index], index, controller.signal);
+      } catch (error) {
+        failure ??= error;
+        controller.abort();
+      }
+    }
+  }
+  await Promise.allSettled(Array.from({ length: Math.min(concurrency, items.length) }, worker));
+  if (failure) throw failure;
+  return results;
+}
+
+async function uploadWithSignature(file, config, signal) {
+  if (!config) throw new Error('ไม่พบข้อมูล Signature สำหรับอัปโหลดไฟล์');
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('api_key', config.apiKey);
+  formData.append('signature', config.signature);
+  for (const [key, value] of Object.entries(config.uploadParams || {})) {
+    formData.append(key, String(value));
+  }
+
+  const timeout = AbortSignal.timeout(120000);
+  const uploadSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
+  const response = await fetch(config.uploadUrl, { method: 'POST', body: formData, signal: uploadSignal });
+  if (!response.ok) {
+    const result = await response.json().catch(() => ({}));
+    throw new Error(result?.error?.message || `อัปโหลดไฟล์ไม่สำเร็จ (${response.status})`);
+  }
+
+  const result = await response.json();
+  const metadata = {
+    public_id: result.public_id,
+    version: result.version,
+    signature: result.signature,
+    secure_url: result.secure_url,
+    resource_type: result.resource_type,
+    format: result.format,
+    bytes: result.bytes,
+    delete_token: result.delete_token,
+    delete_url: config.uploadUrl.replace(/\/(image|raw|auto)\/upload$/, "/delete_by_token"),
+  };
+  const required = ['public_id', 'version', 'signature', 'secure_url', 'resource_type', 'bytes'];
+  if (required.some(key => metadata[key] === undefined || metadata[key] === null || metadata[key] === '')) {
+    throw new Error('Cloudinary ส่งข้อมูลยืนยันไฟล์กลับมาไม่ครบ');
+  }
+  return metadata;
+}
+
 export const postService = {
   // Fetch all posts (Active/Published)
   getAllPosts: async (params = {}) => {
@@ -65,32 +125,25 @@ export const postService = {
     }
   },
 
+  getUploadSignatures: async (types) => {
+    const uniqueTypes = [...new Set(types)].filter(Boolean);
+    try {
+      const response = await api.post('/posts/upload-signatures', { types: uniqueTypes });
+      const data = response.data?.data;
+      if (response.data?.success && data?.uploads && data?.sessionId) return data;
+      throw new Error(response.data?.message || 'ไม่สามารถสร้าง Signature สำหรับอัปโหลดไฟล์ได้');
+    } catch (error) {
+      console.error('Error fetching upload signatures:', error);
+      throw error;
+    }
+  },
+
   // Upload single file directly to Cloudinary CDN using signed credentials
   uploadDirectToCloudinary: async (file, type = 'media') => {
     if (!file) return null;
     try {
       const sigData = await postService.getUploadSignature(type);
-      const { signature, timestamp, apiKey, folder, uploadUrl } = sigData;
-
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('api_key', apiKey);
-      formData.append('timestamp', timestamp);
-      formData.append('signature', signature);
-      formData.append('folder', folder);
-
-      const response = await fetch(uploadUrl, {
-        method: 'POST',
-        body: formData
-      });
-
-      if (!response.ok) {
-        const errJson = await response.json().catch(() => ({}));
-        throw new Error(errJson?.error?.message || `Cloudinary upload failed (status ${response.status})`);
-      }
-
-      const result = await response.json();
-      return result.secure_url || result.url;
+      return (await uploadWithSignature(file, sigData)).secure_url;
     } catch (error) {
       console.error(`Error uploading ${type} to Cloudinary:`, error);
       throw error;
@@ -102,34 +155,73 @@ export const postService = {
     if (!files || files.length === 0) return [];
     try {
       const sigData = await postService.getUploadSignature(type);
-      const { signature, timestamp, apiKey, folder, uploadUrl } = sigData;
-
-      const uploadPromises = Array.from(files).map(async (file) => {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('api_key', apiKey);
-        formData.append('timestamp', timestamp);
-        formData.append('signature', signature);
-        formData.append('folder', folder);
-
-        const response = await fetch(uploadUrl, {
-          method: 'POST',
-          body: formData
-        });
-
-        if (!response.ok) {
-          const errJson = await response.json().catch(() => ({}));
-          throw new Error(errJson?.error?.message || `Cloudinary upload failed (status ${response.status})`);
-        }
-
-        const result = await response.json();
-        return result.secure_url || result.url;
-      });
-
-      return await Promise.all(uploadPromises);
+      const uploaded = await mapWithConcurrency(
+        Array.from(files),
+        DIRECT_UPLOAD_CONCURRENCY,
+        (file, _index, signal) => uploadWithSignature(file, sigData, signal)
+      );
+      return uploaded.map(result => result.secure_url);
     } catch (error) {
       console.error(`Error uploading multiple ${type} files to Cloudinary:`, error);
       throw error;
+    }
+  },
+
+  // One backend request for credentials, then at most four provider uploads at once.
+  uploadPostFilesDirect: async ({ coverImage, pdfFile = null, images = [] }) => {
+    if (!coverImage) throw new Error('กรุณาอัปโหลดรูปภาพหน้าปก');
+    const imageFiles = Array.from(images || []);
+    if (imageFiles.length + (pdfFile ? 1 : 0) > 15) throw new Error('แนบไฟล์ได้สูงสุด 15 ไฟล์');
+    const allFiles = [coverImage, ...(pdfFile ? [pdfFile] : []), ...imageFiles];
+    if (new Set(allFiles).size !== allFiles.length) throw new Error('ไม่สามารถแนบไฟล์ซ้ำได้');
+    for (const file of allFiles) {
+      const maxBytes = file === pdfFile ? 20 * 1024 * 1024 : 2 * 1024 * 1024;
+      if (!file.size || file.size > maxBytes) throw new Error('ไฟล์ว่างหรือมีขนาดเกินกำหนด');
+      if (file.type && !(file === pdfFile ? ['application/pdf'] : ['image/jpeg','image/png','image/webp']).includes(file.type)) {
+        throw new Error('ชนิดไฟล์ไม่รองรับ');
+      }
+    }
+    if (allFiles.reduce((total,file)=>total+file.size,0) > 50*1024*1024) throw new Error('ขนาดไฟล์รวมเกิน 50 MB');
+    const types = ['cover'];
+    if (pdfFile) types.push('pdf');
+    if (imageFiles.length > 0) types.push('media');
+
+    const { uploads: signatures, sessionId, expiresAt } = await postService.getUploadSignatures(types);
+    const tasks = [{ kind: 'cover', file: coverImage }];
+    if (pdfFile) tasks.push({ kind: 'pdf', file: pdfFile });
+    tasks.push(...imageFiles.map(file => ({ kind: 'media', file })));
+
+    const completed = [];
+    let uploaded;
+    try {
+      uploaded = await mapWithConcurrency(tasks, DIRECT_UPLOAD_CONCURRENCY, async (task, _index, signal) => {
+        const asset = await uploadWithSignature(task.file, signatures[task.kind], signal);
+        completed.push(asset);
+        return asset;
+      });
+    } catch (error) {
+      await postService.cleanupDirectUploads(completed);
+      throw error;
+    }
+    return {
+      coverUpload: uploaded[0],
+      mediaUploads: uploaded.slice(1),
+      uploadSessionId: sessionId,
+      uploadSessionExpiresAt: expiresAt,
+    };
+  },
+
+  cleanupDirectUploads: async (assets) => {
+    const results = await Promise.allSettled(assets.filter(asset => asset?.delete_token).map(async asset => {
+      const body = new FormData();
+      body.append('token', asset.delete_token);
+      const response = await fetch(asset.delete_url, {
+        method: 'POST', body, signal: AbortSignal.timeout(10000),
+      });
+      if (!response.ok) throw new Error('Temporary upload cleanup failed');
+    }));
+    if (results.some(result => result.status === 'rejected')) {
+      console.warn('Some temporary uploads could not be removed');
     }
   },
 

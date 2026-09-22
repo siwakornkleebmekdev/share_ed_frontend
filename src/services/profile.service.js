@@ -10,7 +10,8 @@ export const DEFAULT_FRAMES = [
     achievement_type: "LOGIN_STREAK",
     current: 1,
     target: 1,
-    status: "CLAIMED",
+    // Template records are display-only until the backend confirms ownership.
+    status: "LOCKED",
     reward: {
       id: "m1",
       type: "FRAME",
@@ -316,28 +317,47 @@ export const profileService = {
         backendList = response.data.data.map(mapMilestoneToAchievement);
       }
 
-      // Map keyed by ID/Reward to ensure our designed progressive achievements exist
+      // Keep the designed templates for presentation, but replace a matching
+      // template with the backend record so claims/equips use real UUIDs.
       const map = new Map();
       DEFAULT_FRAMES.forEach((df) => {
-        map.set(df.id, { ...df });
+        map.set(df.id, {
+          ...df,
+          status: "LOCKED",
+          is_template: true,
+          reward: df.reward ? { ...df.reward } : null,
+        });
       });
 
       // Overlay live backend achievements
       backendList.forEach((item) => {
-        const key = item.id || item.reward_item_id;
-        if (map.has(key)) {
-          map.set(key, { ...map.get(key), ...item });
-        } else {
-          map.set(key, item);
-        }
+        const normalizedTitle = item.title?.trim().toLowerCase();
+        const normalizedRewardName = item.reward?.name?.trim().toLowerCase();
+        const templateEntry = Array.from(map.entries()).find(([, candidate]) =>
+          candidate.is_template &&
+          ((normalizedTitle && candidate.title?.trim().toLowerCase() === normalizedTitle) ||
+            (normalizedRewardName && candidate.reward?.name?.trim().toLowerCase() === normalizedRewardName)),
+        );
+        const key = templateEntry?.[0] || item.id || item.reward_item_id;
+        const template = templateEntry?.[1];
+        map.set(key, {
+          ...template,
+          ...item,
+          template_id: template?.id || null,
+          is_template: false,
+          reward: item.reward
+            ? { ...template?.reward, ...item.reward }
+            : template?.reward || null,
+        });
       });
 
-      // Merge user unlocked items from inventory if available
+      // Inventory is the source of truth for items the current user may equip.
       try {
         const invRes = await api.get("/users/me/inventory");
         const invList = invRes.data?.data || [];
         invList.forEach((inv) => {
           if (inv.item && (inv.item.item_type === "FRAME" || inv.item.item_type === "THEME")) {
+            let matched = false;
             for (const [, v] of map.entries()) {
               if (
                 v.id === inv.item.id ||
@@ -345,7 +365,31 @@ export const profileService = {
                 v.reward?.id === inv.item.id
               ) {
                 v.status = "CLAIMED";
+                v.reward_item_id = inv.item.id;
+                if (v.reward) v.reward.id = inv.item.id;
+                matched = true;
               }
+            }
+
+            // An owned reward can exist even when its achievement is no longer
+            // returned. Keep it selectable and retain the backend reward UUID.
+            if (!matched) {
+              map.set(`inventory:${inv.item.id}`, {
+                id: `inventory:${inv.item.id}`,
+                reward_item_id: inv.item.id,
+                title: inv.item.item_name,
+                description: inv.item.metadata?.description || "ของรางวัลที่ปลดล็อกแล้ว",
+                current: 1,
+                target: 1,
+                status: "CLAIMED",
+                reward: {
+                  id: inv.item.id,
+                  type: inv.item.item_type,
+                  name: inv.item.item_name,
+                  previewUrl: inv.item.image_url,
+                },
+                completedAt: inv.unlocked_at,
+              });
             }
           }
         });
@@ -353,73 +397,32 @@ export const profileService = {
         // Inventory fetch is optional
       }
 
-      // Check locally claimed milestones (for instant client-side claim response)
-      try {
-        const claimedLocal = JSON.parse(localStorage.getItem("claimed_milestones") || "[]");
-        claimedLocal.forEach((claimedId) => {
-          for (const [, v] of map.entries()) {
-            if (
-              v.id === claimedId ||
-              v.reward_item_id === claimedId ||
-              v.reward?.id === claimedId
-            ) {
-              v.status = "CLAIMED";
-            }
-          }
-        });
-      } catch (_) {}
-
       return Array.from(map.values());
     } catch (error) {
       console.log("Achievements fetch notice, using default designed achievements:", error);
-      const fallbackList = DEFAULT_FRAMES.map((df) => ({ ...df }));
-      try {
-        const claimedLocal = JSON.parse(localStorage.getItem("claimed_milestones") || "[]");
-        fallbackList.forEach((item) => {
-          if (claimedLocal.includes(item.id) || claimedLocal.includes(item.reward_item_id)) {
-            item.status = "CLAIMED";
-          }
-        });
-      } catch (_) {}
-      return fallbackList;
+      return DEFAULT_FRAMES.map((df) => ({
+        ...df,
+        status: "LOCKED",
+        reward: df.reward ? { ...df.reward } : null,
+      }));
     }
   },
 
   // Claim achievement reward (POST /achievements/:id/claim)
   claimMilestone: async (id) => {
+    let response;
     try {
-      let res;
-      try {
-        res = await api.post(`/achievements/${id}/claim`);
-      } catch (err) {
-        if (err.response?.status === 404) {
-          try {
-            res = await api.post(`/milestones/${id}/claim`);
-          } catch (_) {}
-        }
-      }
-
-      // Always save to localStorage claimed_milestones so frame is unlocked immediately
-      try {
-        const claimedLocal = JSON.parse(localStorage.getItem("claimed_milestones") || "[]");
-        if (!claimedLocal.includes(id)) {
-          claimedLocal.push(id);
-          localStorage.setItem("claimed_milestones", JSON.stringify(claimedLocal));
-        }
-      } catch (_) {}
-
-      return res?.data || { success: true };
-    } catch (err) {
-      // Fallback save to localStorage claimed list
-      try {
-        const claimedLocal = JSON.parse(localStorage.getItem("claimed_milestones") || "[]");
-        if (!claimedLocal.includes(id)) {
-          claimedLocal.push(id);
-          localStorage.setItem("claimed_milestones", JSON.stringify(claimedLocal));
-        }
-      } catch (_) {}
-      return { success: true };
+      response = await api.post(`/achievements/${id}/claim`);
+    } catch (error) {
+      if (error.response?.status !== 404) throw error;
+      response = await api.post(`/milestones/${id}/claim`);
     }
+
+    if (response.data?.success === false) {
+      throw new Error(response.data?.message || "ไม่สามารถรับรางวัลได้");
+    }
+
+    return response.data;
   },
 
   // Get user's unlocked reward items (GET /users/me/inventory)
@@ -443,7 +446,7 @@ export const profileService = {
       return response.data;
     } catch (error) {
       console.warn(`Backend equip ${type} notice:`, error?.response?.data || error.message);
-      return { success: false, error };
+      throw error;
     }
   },
 
@@ -656,6 +659,8 @@ function mapMilestoneToAchievement(m) {
   return {
     id: m.id,
     reward_item_id: rewardItemId,
+    milestone_type: m.milestone_type || m.achievement_type,
+    achievement_type: m.achievement_type || m.milestone_type,
     title: m.title,
     description: m.description,
     current: m.current_progress,

@@ -22,6 +22,7 @@ export default function FrameDecorationModal({ isOpen, onClose, frames = [], cur
         !list.some(
           (f) =>
             f.id === df.id ||
+            f.template_id === df.id ||
             f.reward_item_id === df.id ||
             f.reward?.previewUrl === df.reward?.previewUrl,
         )
@@ -29,20 +30,6 @@ export default function FrameDecorationModal({ isOpen, onClose, frames = [], cur
         list.push(df);
       }
     });
-
-    // Check localStorage claimed milestones
-    try {
-      const claimedLocal = JSON.parse(localStorage.getItem("claimed_milestones") || "[]");
-      list.forEach((f) => {
-        if (
-          claimedLocal.includes(f.id) ||
-          claimedLocal.includes(f.reward_item_id) ||
-          claimedLocal.includes(f.reward?.id)
-        ) {
-          f.status = "CLAIMED";
-        }
-      });
-    } catch (_) {}
 
     return list;
   }, [frames]);
