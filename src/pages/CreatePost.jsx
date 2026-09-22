@@ -325,7 +325,7 @@ export default function CreatePost() {
       }
 
       if (!pdfFile && (!images || images.length === 0)) {
-        newErrors.media = 'กรุณาแนบไฟล์ PDF หรือรูปภาพประกอบอย่างน้อย 1 ไฟล์';
+        newErrors.media = 'กรุณาแนบรูปภาพประกอบอย่างน้อย 1 รูป';
       }
     }
 
@@ -369,11 +369,11 @@ export default function CreatePost() {
         const sessionIsUsable = cached?.uploads?.uploadSessionExpiresAt
           && Date.parse(cached.uploads.uploadSessionExpiresAt) > Date.now() + 30000;
         const sameFiles = cached && sessionIsUsable && cached.files.length === files.length
-          && files.every((file,index)=>file===cached.files[index]);
+          && files.every((file, index) => file === cached.files[index]);
         const uploads = sameFiles
           ? cached.uploads
-          : await postService.uploadPostFilesDirect({coverImage:coverFile,pdfFile,images});
-        uploadCache.current = {files, uploads};
+          : await postService.uploadPostFilesDirect({ coverImage: coverFile, pdfFile, images });
+        uploadCache.current = { files, uploads };
         const { coverUpload, mediaUploads, uploadSessionId } = uploads;
         directAssets = [coverUpload, ...mediaUploads];
         if (!idempotencyKey.current) idempotencyKey.current = crypto.randomUUID();
