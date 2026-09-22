@@ -38,6 +38,15 @@
   object-fit: contain;
 }
 
+/* A left-aligned image intentionally floats so following text can sit beside
+   it. The right margin keeps the text from touching the image. */
+.content-editor .ql-editor img[data-align='left'],
+.post-details-content img[data-align='left'] {
+  display: inline !important;
+  float: left;
+  margin: 0 1rem 0.5rem 0 !important;
+}
+
 /* Let post details grow with text and images instead of forcing an internal
    scroll area with a fixed editor height. */
 .content-editor .ql-container,
