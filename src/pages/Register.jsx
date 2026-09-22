@@ -312,6 +312,15 @@ export default function Register() {
                   placeholder="อย่างน้อย 8 ตัว ใช้เฉพาะอักษรอังกฤษและตัวเลข"
                 />
               </div>
+              <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                <p className="font-medium text-slate-700">เงื่อนไขการตั้งรหัสผ่าน</p>
+                <ul className="mt-1 list-disc space-y-0.5 pl-4">
+                  <li>มีความยาวอย่างน้อย 8 ตัวอักษร</li>
+                  <li>มีตัวอักษรภาษาอังกฤษอย่างน้อย 1 ตัว</li>
+                  <li>มีตัวเลขอย่างน้อย 1 ตัว</li>
+                  <li>ใช้ได้เฉพาะ A-Z, a-z และ 0-9</li>
+                </ul>
+              </div>
               {fieldErrors.password && (
                 <p className="mt-1 text-xs text-red-500 font-medium">{fieldErrors.password}</p>
               )}
