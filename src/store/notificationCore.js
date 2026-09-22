@@ -2,6 +2,19 @@ import { create } from 'zustand';
 
 const POST_TYPES = new Set(['LIKE', 'NEW_LIKE', 'COMMENT', 'NEW_COMMENT', 'NEW_POST', 'BOOKMARK', 'BOOKMARK_REMOVED']);
 const FOLLOW_TYPES = new Set(['FOLLOW', 'NEW_FOLLOWER']);
+const THAI_TEXT = /[\u0E00-\u0E7F]/;
+const THAI_TITLES = {
+  LIKE: 'มีคนถูกใจโพสต์ของคุณ',
+  NEW_LIKE: 'มีคนถูกใจโพสต์ของคุณ',
+  COMMENT: 'ความคิดเห็นใหม่',
+  NEW_COMMENT: 'ความคิดเห็นใหม่',
+  FOLLOW: 'มีคนติดตามคุณ',
+  NEW_FOLLOWER: 'มีคนติดตามคุณ',
+  NEW_POST: 'โพสต์ใหม่จากคนที่คุณติดตาม',
+  SYSTEM: 'การแจ้งเตือนจากระบบ',
+  BOOKMARK: 'มีคนบันทึกโพสต์ของคุณ',
+  BOOKMARK_REMOVED: 'มีคนยกเลิกการบันทึกโพสต์ของคุณ',
+};
 
 function asId(value) {
   if (typeof value === 'string' || typeof value === 'number') return String(value);
@@ -25,6 +38,66 @@ function safeInternalLink(value) {
   const link = value.trim();
   if (/^(post|profile)\//.test(link)) return `/${link}`;
   return /^\/(?!\/)/.test(link) && !/[\\\s]/.test(link) ? link : null;
+}
+
+function getNestedValue(sources, keys) {
+  for (const source of sources) {
+    if (!source || typeof source !== 'object') continue;
+    for (const key of keys) {
+      const value = source[key];
+      if (typeof value === 'string' && value.trim()) return value.trim();
+    }
+  }
+  return null;
+}
+
+export function localizeNotificationContent(n, type) {
+  const sources = [n, n.data, n.metadata, n.meta, n.payload, n.context, n.target].filter(Boolean);
+  const actorSources = [
+    ...sources,
+    ...sources.flatMap(source => [source.actor, source.sender, source.follower, source.fromUser, source.from_user]),
+  ].filter(Boolean);
+  const postSources = [
+    ...sources,
+    ...sources.flatMap(source => [source.post, source.targetPost, source.target_post]),
+  ].filter(Boolean);
+  const actorName = getNestedValue(sources, [
+    'actorName', 'actor_name', 'senderName', 'sender_name', 'followerName', 'follower_name',
+  ]) || getNestedValue(actorSources.slice(sources.length), [
+    'displayName', 'display_name', 'username', 'name',
+  ]);
+  const postTitle = getNestedValue(sources, [
+    'postTitle', 'post_title', 'targetTitle', 'target_title',
+  ]) || getNestedValue(postSources.slice(sources.length), ['title']);
+  const actor = actorName || 'ผู้ใช้คนหนึ่ง';
+  const post = postTitle ? ` “${postTitle}”` : 'ของคุณ';
+
+  const messages = {
+    LIKE: `${actor} ถูกใจโพสต์${post}`,
+    NEW_LIKE: `${actor} ถูกใจโพสต์${post}`,
+    COMMENT: `${actor} แสดงความคิดเห็นในโพสต์${post}`,
+    NEW_COMMENT: `${actor} แสดงความคิดเห็นในโพสต์${post}`,
+    FOLLOW: `${actor} เริ่มติดตามคุณ`,
+    NEW_FOLLOWER: `${actor} เริ่มติดตามคุณ`,
+    NEW_POST: postTitle
+      ? `${actor} เผยแพร่โพสต์ใหม่ “${postTitle}”`
+      : `${actor} เผยแพร่โพสต์ใหม่`,
+    BOOKMARK: `${actor} บันทึกโพสต์${post}`,
+    BOOKMARK_REMOVED: `${actor} ยกเลิกการบันทึกโพสต์${post}`,
+  };
+  const backendMessage = getNestedValue(sources, ['message', 'content']);
+
+  return {
+    title: THAI_TITLES[type] || 'การแจ้งเตือน',
+    message:
+      messages[type] ||
+      (backendMessage && THAI_TEXT.test(backendMessage)
+        ? backendMessage
+        : type === 'SYSTEM'
+          ? 'คุณมีข้อความแจ้งเตือนใหม่จากระบบ'
+          : 'คุณมีการแจ้งเตือนใหม่'),
+    actorName,
+  };
 }
 
 export function getNotificationTarget(n, normalizedType) {
@@ -57,21 +130,15 @@ export function getNotificationTarget(n, normalizedType) {
 export function normalize(n) {
   if (!n || typeof n !== 'object' || (n.id ?? n._id) == null) return null;
   const type = String(n.type || n.notification_type || 'SYSTEM').trim().replace(/[\s-]+/g, '_').toUpperCase();
-  const labels = {
-    LIKE: 'มีคนถูกใจโพสต์ของคุณ', NEW_LIKE: 'มีคนถูกใจโพสต์ของคุณ',
-    COMMENT: 'ความคิดเห็นใหม่', NEW_COMMENT: 'ความคิดเห็นใหม่',
-    FOLLOW: 'มีคนติดตามคุณ', NEW_FOLLOWER: 'มีคนติดตามคุณ',
-    NEW_POST: 'โพสต์ใหม่จากคนที่คุณติดตาม', SYSTEM: 'การแจ้งเตือนจากระบบ',
-    BOOKMARK: 'มีคนบุ๊กมาร์กโพสต์ของคุณ', BOOKMARK_REMOVED: 'มีคนยกเลิกบุ๊กมาร์กโพสต์ของคุณ',
-  };
+  const localized = localizeNotificationContent(n, type);
   const { link, postId, actorId } = getNotificationTarget(n, type);
   const read = n.isRead ?? n.is_read ?? false;
   return {
-    id: String(n.id ?? n._id), type, title: n.title || labels[type] || 'การแจ้งเตือน',
-    message: n.message || n.content || '', isRead: read === true || read === 'true' || read === 1,
+    id: String(n.id ?? n._id), type, title: localized.title,
+    message: localized.message, isRead: read === true || read === 'true' || read === 1,
     link, postId, actorId,
     createdAt: Number.isNaN(Date.parse(n.createdAt || n.created_at)) ? new Date(0).toISOString() : new Date(n.createdAt || n.created_at).toISOString(),
-    actorName: n.actorName || n.actor?.username || null,
+    actorName: localized.actorName,
     actorAvatar: n.actorAvatar || n.actor?.avatarUrl || n.actor?.avatar_url || null,
   };
 }
