@@ -34,9 +34,11 @@ class AlignedImage extends BaseImage {
         return;
       }
       this.domNode.setAttribute('data-align', value);
-      this.domNode.style.display = 'block';
+      this.domNode.style.display = value === 'left' ? 'inline' : 'block';
+      this.domNode.style.cssFloat = value === 'left' ? 'left' : '';
       this.domNode.style.marginLeft = value === 'right' || value === 'center' ? 'auto' : '0px';
-      this.domNode.style.marginRight = value === 'left' || value === 'center' ? 'auto' : '0px';
+      this.domNode.style.marginRight = value === 'left' ? '16px' : (value === 'center' ? 'auto' : '0px');
+      this.domNode.style.marginBottom = value === 'left' ? '8px' : '';
       return;
     }
     super.format(name, value);
@@ -49,6 +51,7 @@ export default function ContentEditor({ value, onChange, error, onUploadingChang
   const quillRef = useRef(null);
   const fileRef = useRef(null);
   const [uploads, setUploads] = useState([]);
+  const [validationError, setValidationError] = useState('');
   const [selectedImage, setSelectedImage] = useState(null);
   const [selectionRect, setSelectionRect] = useState(null);
   const draggedImageRef = useRef(null);
@@ -56,6 +59,17 @@ export default function ContentEditor({ value, onChange, error, onUploadingChang
   const imageCount = ((value || '').match(/<img\b/gi) || []).length;
 
   const upload = async (file) => {
+    // Do not add impossible-to-retry validation failures to the upload list.
+    // Otherwise selecting the same oversized image keeps duplicating errors.
+    if (!imageTypes.includes(file.type) || file.size > MAX_SIZE) {
+      setValidationError('รองรับ JPEG, PNG และ WebP ขนาดไม่เกิน 10 MB กรุณาเลือกรูปที่เล็กลงแล้วลองอีกครั้ง');
+      return;
+    }
+    if (imageCount + uploads.filter(item => !item.error).length >= MAX_IMAGES) {
+      setValidationError('เพิ่มรูปในรายละเอียดได้สูงสุด 15 รูป');
+      return;
+    }
+    setValidationError('');
     if (!imageTypes.includes(file.type) || file.size > MAX_SIZE) {
       setUploads(items => [...items, { id: crypto.randomUUID(), file, error: 'รองรับ JPEG, PNG และ WebP ขนาดไม่เกิน 10 MB' }]);
       return;
@@ -208,9 +222,11 @@ export default function ContentEditor({ value, onChange, error, onUploadingChang
     if (!image || !quill) return;
 
     image.setAttribute('data-align', alignment);
-    image.style.display = 'block';
+    image.style.display = alignment === 'left' ? 'inline' : 'block';
+    image.style.cssFloat = alignment === 'left' ? 'left' : '';
     image.style.marginLeft = alignment === 'right' || alignment === 'center' ? 'auto' : '0px';
-    image.style.marginRight = alignment === 'left' || alignment === 'center' ? 'auto' : '0px';
+    image.style.marginRight = alignment === 'left' ? '16px' : (alignment === 'center' ? 'auto' : '0px');
+    image.style.marginBottom = alignment === 'left' ? '8px' : '';
     image.classList.remove('ring-2', 'ring-primary');
     const nextValue = quill.root.innerHTML;
     image.classList.add('ring-2', 'ring-primary');
@@ -277,6 +293,7 @@ export default function ContentEditor({ value, onChange, error, onUploadingChang
     <input ref={fileRef} className="hidden" type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => { pickFiles(e.target.files); e.target.value = ''; }} />
     {selectedImage && selectionRect && <button type="button" aria-label="ลากเพื่อปรับขนาดรูปภาพ" onMouseDown={startResize} className="content-image-resize-handle fixed z-50 h-4 w-4 cursor-se-resize rounded-sm border-2 border-white bg-primary shadow" style={{ left: selectionRect.right - 8, top: selectionRect.bottom - 8 }} />}
     <p className="mt-2 text-xs text-slate-500 flex items-center gap-1"><ImagePlus className="h-3.5 w-3.5" /> เพิ่มรูปจากปุ่มใน toolbar, ลากไฟล์ หรือวางจาก clipboard (JPEG/PNG/WebP, ไม่เกิน 10 MB)</p>
+    {validationError && <p className="mt-2 text-xs font-medium text-rose-500" role="alert">{validationError}</p>}
     {uploads.map(item => <div key={item.id} className={`mt-2 text-xs ${item.error ? 'text-rose-500' : 'text-primary'} flex items-center gap-2`}>
       {item.error ? <><span>{item.error}</span><button type="button" className="underline" onClick={() => { setUploads(items => items.filter(x => x.id !== item.id)); upload(item.file); }}><RotateCcw className="inline h-3.5 w-3.5" /> ลองใหม่</button></> : <><LoaderCircle className="h-3.5 w-3.5 animate-spin" /> กำลังอัปโหลด {item.file.name}</>}
     </div>)}
