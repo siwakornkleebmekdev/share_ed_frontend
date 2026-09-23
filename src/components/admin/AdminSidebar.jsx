@@ -7,21 +7,25 @@ import {
   Undo2,
   LogOut,
   ShieldCheck,
+  ShieldAlert,
 } from "lucide-react";
+import { useEffect } from "react";
 import toast from "react-hot-toast";
 import useAuthStore from "@/store/authStore";
 import { authService } from "@/services/auth.service";
+import useReportStore from "@/store/reportStore";
 
 const NAV_GROUPS = [
   {
     label: "ภาพรวม",
-    items: [{ to: "/admin", label: "แดชบอร์ด", icon: LayoutDashboard, end: true }],
+    items: [{ to: "/admin", label: "แดชบอร์ด", icon: LayoutDashboard, end: true, roles: ["ADMIN"] }],
   },
   {
     label: "จัดการ",
     items: [
-      { to: "/admin/users", label: "จัดการผู้ใช้งาน", icon: Users },
-      { to: "/admin/achievements", label: "จัดการความสำเร็จ", icon: Award },
+      { to: "/admin/posts", label: "Post Console", icon: ShieldAlert, roles: ["ADMIN", "MODERATOR"], showReportCount: true },
+      { to: "/admin/users", label: "จัดการผู้ใช้งาน", icon: Users, roles: ["ADMIN"] },
+      { to: "/admin/achievements", label: "จัดการความสำเร็จ", icon: Award, roles: ["ADMIN"] },
     ],
   },
 ];
@@ -29,6 +33,15 @@ const NAV_GROUPS = [
 export default function AdminSidebar() {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
+  const { pendingCount, fetchReports, startRealtime, stopRealtime } = useReportStore();
+  const role = String(user?.role || "").toUpperCase();
+  const reportCount = pendingCount();
+
+  useEffect(() => {
+    startRealtime();
+    fetchReports({ force: true }).catch(() => {});
+    return () => stopRealtime();
+  }, [fetchReports, startRealtime, stopRealtime]);
 
   const handleLogout = async () => {
     try {
@@ -59,11 +72,14 @@ export default function AdminSidebar() {
       </div>
 
       <nav className="admin-sidebar-nav">
-        {NAV_GROUPS.map((group) => (
+        {NAV_GROUPS.map((group) => {
+          const visibleItems = group.items.filter((item) => item.roles.includes(role));
+          if (visibleItems.length === 0) return null;
+          return (
           <div key={group.label}>
             <p className="admin-sidebar-group-label">{group.label}</p>
             <div className="space-y-1">
-              {group.items.map((item) => {
+              {visibleItems.map((item) => {
                 const Icon = item.icon;
                 return (
                   <NavLink
@@ -73,13 +89,19 @@ export default function AdminSidebar() {
                     className={navLinkClass}
                   >
                     <Icon className="h-4 w-4 shrink-0" />
-                    {item.label}
+                    <span className="flex-1">{item.label}</span>
+                    {item.showReportCount && (
+                      <span className={`inline-flex min-w-6 items-center justify-center rounded-full px-1.5 py-0.5 text-xs font-extrabold ${reportCount > 0 ? "bg-rose-500 text-white" : "bg-slate-100 text-slate-500"}`}>
+                        {reportCount}
+                      </span>
+                    )}
                   </NavLink>
                 );
               })}
             </div>
           </div>
-        ))}
+          );
+        })}
 
         <div>
           <p className="admin-sidebar-group-label">ระบบ</p>
@@ -113,7 +135,7 @@ export default function AdminSidebar() {
               {displayName}
             </p>
             <p className="text-xs text-slate-400 truncate flex items-center gap-1">
-              <ShieldCheck className="h-3 w-3" /> ผู้ดูแลระบบ
+              <ShieldCheck className="h-3 w-3" /> {role === "ADMIN" ? "ผู้ดูแลระบบ" : "ผู้ตรวจสอบ"}
             </p>
           </div>
         </Link>

@@ -8,6 +8,9 @@ let realtimeCleanup = () => {};
 
 const isPendingPost = (post) =>
   String(post?.post_status || post?.postStatus || "").toUpperCase() !== "DELETED";
+const isConsolePost = (post) =>
+  String(post?.post_status || post?.postStatus || "").toUpperCase() === "DELETED"
+  || (post?._count?.reports ?? post?.reports?.length ?? 0) >= 10;
 
 const useReportStore = create((set, get) => ({
   reports: [],
@@ -29,7 +32,7 @@ const useReportStore = create((set, get) => ({
     set({ isLoading: true, error: null });
     reportsFlight = moderationService.getReportedPosts()
       .then((reports) => {
-        const nextReports = Array.isArray(reports) ? reports : [];
+        const nextReports = Array.isArray(reports) ? reports.filter(isConsolePost) : [];
         set({ reports: nextReports, isLoading: false, lastFetchedAt: Date.now() });
         return nextReports;
       })
@@ -92,6 +95,7 @@ const useReportStore = create((set, get) => ({
         get().fetchReports({ force: true }).catch(() => {});
         return;
       }
+      if (!isConsolePost(incomingPost)) return;
 
       set((state) => {
         const exists = state.reports.some((post) => String(post.id) === String(incomingPost.id));
@@ -107,6 +111,10 @@ const useReportStore = create((set, get) => ({
       const postId = payload.postId || payload.post_id;
       const action = String(payload.action || "").toUpperCase();
       if (!postId) return;
+      if (action === "SOFT_DELETE" && !get().reports.some((post) => String(post.id) === String(postId))) {
+        get().fetchReports({ force: true }).catch(() => {});
+        return;
+      }
       set((state) => ({
         reports: action === "SUSPEND"
           ? state.reports.map((post) =>
