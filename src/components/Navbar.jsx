@@ -164,9 +164,24 @@ export default function Navbar() {
         return <Bookmark className="h-4 w-4 text-amber-500" />;
       case "SYSTEM":
         return <Info className="h-4 w-4 text-indigo-500" />;
+      case "POST_SUSPENDED":
+      case "POST_REPORTED":
+        return <ShieldAlert className="h-4 w-4 text-rose-500" />;
+      case "POST_RESTORED":
+        return <FileText className="h-4 w-4 text-emerald-500" />;
+      case "POST_REMOVED":
+        return <FileText className="h-4 w-4 text-slate-500" />;
       default:
         return <Bell className="h-4 w-4 text-slate-500" />;
     }
+  };
+
+  const getNotificationActionLabel = (type) => {
+    if (type === "POST_SUSPENDED") return "ดูโพสต์ที่ถูกระงับ →";
+    if (type === "POST_RESTORED") return "ดูโพสต์ที่คืนสถานะ →";
+    if (type === "POST_REMOVED") return "ดูโพสต์ที่ถูกลบ →";
+    if (type === "POST_REPORTED") return "ดูโพสต์ที่ถูกรายงาน →";
+    return "ดูรายละเอียด →";
   };
 
   return (
@@ -313,6 +328,11 @@ export default function Navbar() {
                                   <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
                                     {notif.message}
                                   </p>
+                                  {notif.link && (
+                                    <span className="mt-1 inline-flex text-[11px] font-bold text-primary group-hover:text-blue-700">
+                                      {getNotificationActionLabel(notif.type)}
+                                    </span>
+                                  )}
                                   <p className="text-[10px] text-slate-400 mt-0.5">
                                     {formatRelativeTime(notif.createdAt)}
                                   </p>
