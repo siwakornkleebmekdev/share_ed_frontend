@@ -51,7 +51,7 @@ export default function Navbar() {
     useNotificationStore();
   const { isAuthenticated, user, logout } = useAuthStore();
   const { milestones, readyToClaimCount, fetchMilestones } = useAchievementStore();
-  const { pendingCount, fetchReports, clear: clearReports } = useReportStore();
+  const { pendingCount, fetchReports, startRealtime, stopRealtime, clear: clearReports } = useReportStore();
   const isReviewer = ["ADMIN", "MODERATOR"].includes(String(user?.role || "").toUpperCase());
   const pendingReportCount = pendingCount();
 
@@ -103,23 +103,26 @@ export default function Navbar() {
 
   useEffect(() => {
     if (!isReviewer) {
+      stopRealtime();
       clearReports();
       return undefined;
     }
 
     const refreshReports = () => fetchReports({ force: true }).catch(() => {});
+    startRealtime();
     refreshReports();
-    const intervalId = window.setInterval(refreshReports, 30_000);
+    const intervalId = window.setInterval(refreshReports, 60_000);
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") refreshReports();
     };
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
+      stopRealtime();
       window.clearInterval(intervalId);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [clearReports, fetchReports, isReviewer]);
+  }, [clearReports, fetchReports, isReviewer, startRealtime, stopRealtime]);
 
   useEffect(() => {
     const handleScroll = () => {
