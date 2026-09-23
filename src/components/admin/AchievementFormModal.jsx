@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { X, Search, Check, Sparkles, Gift, Trash2 } from "lucide-react";
+import { X, Search, Check, Gift, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import Swal from "sweetalert2";
 import {
@@ -9,7 +9,7 @@ import {
   MILESTONE_TYPE_ALIASES,
   getMilestoneTypeInfo,
 } from "@/services/achievement.service";
-import { getValidImageUrl } from "@/utils/imageUtils";
+import { getValidImageUrl, convertSvgToPngFile } from "@/utils/imageUtils";
 
 const REWARD_MODES = { NONE: "NONE", EXISTING: "EXISTING", NEW: "NEW" };
 
@@ -41,8 +41,8 @@ export default function AchievementFormModal({ isOpen, onClose, initialData, onC
   useEffect(() => {
     if (!isOpen) return;
 
-    setTitle(initialData?.title || "");
-    setDescription(initialData?.description || "");
+    setTitle(initialData?.title ? String(initialData.title).slice(0, 100) : "");
+    setDescription(initialData?.description ? String(initialData.description).slice(0, 200) : "");
     setTargetValue(initialData?.target_value !== undefined ? String(initialData.target_value) : "");
 
     const rawType = initialData?.milestone_type || initialData?.achievement_type || "FOLLOWERS_COUNT";
@@ -100,20 +100,22 @@ export default function AchievementFormModal({ isOpen, onClose, initialData, onC
   const targetValueNum = Number(targetValue);
   const isValid =
     title.trim() &&
+    title.length <= 100 &&
     description.trim() &&
+    description.length <= 200 &&
     targetValue !== "" &&
     Number.isInteger(targetValueNum) &&
     targetValueNum > 0 &&
     effectiveMilestoneType &&
     (rewardMode !== REWARD_MODES.EXISTING || rewardItemId) &&
-    (rewardMode !== REWARD_MODES.NEW || itemName.trim());
+    (rewardMode !== REWARD_MODES.NEW || (itemName.trim() && imageFile));
 
   const handleSubmit = () => {
     if (!isValid) return;
 
     const payload = {
-      title: title.trim(),
-      description: description.trim(),
+      title: title.trim().slice(0, 100),
+      description: description.trim().slice(0, 200),
       target_value: targetValueNum,
       milestone_type: effectiveMilestoneType,
       achievement_type: effectiveMilestoneType,
@@ -196,21 +198,33 @@ export default function AchievementFormModal({ isOpen, onClose, initialData, onC
 
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-slate-600 mb-2">ชื่อภารกิจ</label>
+            <label className="flex items-center justify-between text-sm font-semibold text-slate-600 mb-2">
+              <span>ชื่อภารกิจ</span>
+              <span className={`text-xs font-semibold ${title.length >= 100 ? "text-rose-500" : "text-slate-400"}`}>
+                {title.length}/100 ตัวอักษร
+              </span>
+            </label>
             <input
               type="text"
+              maxLength={100}
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => setTitle(e.target.value.slice(0, 100))}
               className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary text-slate-800 font-medium"
               placeholder="เช่น นักเรียนดีเด่น"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-slate-600 mb-2">คำอธิบาย</label>
+            <label className="flex items-center justify-between text-sm font-semibold text-slate-600 mb-2">
+              <span>คำอธิบาย</span>
+              <span className={`text-xs font-semibold ${description.length >= 200 ? "text-rose-500" : "text-slate-400"}`}>
+                {description.length}/200 ตัวอักษร
+              </span>
+            </label>
             <textarea
+              maxLength={200}
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => setDescription(e.target.value.slice(0, 200))}
               rows={2}
               className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary text-slate-800 font-medium resize-none"
               placeholder="เงื่อนไขการปลดล็อกภารกิจนี้"
@@ -586,14 +600,35 @@ export default function AchievementFormModal({ isOpen, onClose, initialData, onC
                   ) : (
                     <input
                       type="file"
-                      accept="image/*"
-                      onChange={(e) => {
+                      accept="image/png, image/jpeg, image/webp, image/gif, image/svg+xml, .svg"
+                      onChange={async (e) => {
                         const file = e.target.files?.[0] || null;
-                        setImageFile(file);
-                        if (file) {
-                          setNewImagePreview(URL.createObjectURL(file));
-                        } else {
+                        if (!file) {
+                          setImageFile(null);
                           setNewImagePreview(null);
+                          return;
+                        }
+
+                        const isSvg =
+                          file.type === "image/svg+xml" ||
+                          file.name.toLowerCase().endsWith(".svg");
+
+                        if (isSvg) {
+                          try {
+                            const converted = await convertSvgToPngFile(file, 512, 512);
+                            setImageFile(converted);
+                            setNewImagePreview(URL.createObjectURL(converted));
+                            toast.success("แปลงไฟล์ SVG เป็นภาพโปร่งใสเรียบร้อย พร้อมใช้งาน!", {
+                              icon: "✨",
+                            });
+                          } catch (err) {
+                            console.warn("SVG instant conversion fallback:", err);
+                            setImageFile(file);
+                            setNewImagePreview(URL.createObjectURL(file));
+                          }
+                        } else {
+                          setImageFile(file);
+                          setNewImagePreview(URL.createObjectURL(file));
                         }
                       }}
                       className="w-full text-sm text-slate-600 file:mr-3 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:bg-primary/10 file:text-primary file:font-bold hover:file:bg-primary/20 transition-all cursor-pointer"
@@ -603,7 +638,7 @@ export default function AchievementFormModal({ isOpen, onClose, initialData, onC
 
                 {itemType === "FRAME" && (
                   <p className="text-[11px] text-primary/80 bg-primary/5 p-2.5 rounded-xl font-medium border border-primary/10">
-                    💡 เคล็ดลับ: รองรับไฟล์ภาพ <strong>.gif</strong>, <strong>.svg</strong>, <strong>.png</strong> หรือ <strong>.webp</strong> ที่มีพื้นหลังโปร่งใส (Transparent) สัดส่วน 1:1
+                    💡 <strong>รองรับไฟล์ภาพ:</strong> <strong>.svg</strong>, <strong>.png</strong>, <strong>.webp</strong> หรือ <strong>.gif</strong> ที่มีพื้นหลังโปร่งใส (Transparent) สัดส่วน 1:1 (ไฟล์ SVG จะถูกแปลงเป็นภาพโปร่งใสอัตโนมัติเพื่อให้เซิร์ฟเวอร์บันทึกได้)
                   </p>
                 )}
                 <label className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl p-4 cursor-pointer">

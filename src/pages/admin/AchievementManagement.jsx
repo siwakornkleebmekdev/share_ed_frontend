@@ -88,9 +88,16 @@ export default function AchievementManagement() {
       }
       await fetchAchievements();
     } catch (error) {
-      toast.error(
-        error?.response?.data?.message || "ไม่สามารถบันทึกความสำเร็จได้",
-      );
+      console.error("Error saving achievement:", error?.response?.data || error);
+      const errorMsg =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        (Array.isArray(error?.response?.data?.errors)
+          ? error.response.data.errors.map((e) => e.message || e).join(", ")
+          : null) ||
+        error?.message ||
+        "ไม่สามารถบันทึกความสำเร็จได้";
+      toast.error(errorMsg);
     }
   };
 
