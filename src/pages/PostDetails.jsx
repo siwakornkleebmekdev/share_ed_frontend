@@ -703,7 +703,7 @@ export default function PostDetails() {
 
                     <a
                       href={post.pdf.url}
-                      download
+                      download={post.pdf.name || 'เอกสารประกอบการเรียน.pdf'}
                       target="_blank"
                       rel="noreferrer"
                       className="flex-1 sm:flex-none px-4 py-2.5 bg-primary text-white rounded-xl font-bold shadow-sm hover:bg-blue-600 transition-all flex items-center justify-center gap-2 text-sm"
