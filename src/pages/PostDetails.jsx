@@ -212,6 +212,7 @@ export default function PostDetails() {
     postAuthorId &&
     String(currentUserId) === String(postAuthorId)
   );
+  const isSuspendedPost = String(post?.postStatus || post?.post_status).toUpperCase() === 'UNACTIVED';
 
   const authorUsername = isAuthor
     ? (user?.username || authorProfile?.username || post?.author?.username || 'ผู้ใช้งาน')
@@ -526,6 +527,12 @@ export default function PostDetails() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+
+      {isSuspendedPost && isAuthor && (
+        <div role="status" className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm font-semibold text-amber-800">
+          โพสต์นี้ถูกระงับอยู่ คุณยังดูเนื้อหาได้ แต่ผู้ใช้อื่นจะเปิดโพสต์นี้ไม่ได้
+        </div>
+      )}
 
       {/* Header Actions */}
       <div className="flex items-center justify-between mb-6">

@@ -185,7 +185,7 @@ export default function CreatePost() {
     }
 
     if (hasOversized) {
-      toast.error('รูปภาพบางรูปมีขนาดเกิน 2 MB');
+      toast.error('รูปภาพประกอบต้องมีขนาดไม่เกิน 2 MB');
     }
 
     setImages(newImages);
