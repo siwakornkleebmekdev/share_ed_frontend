@@ -1,25 +1,23 @@
 import { useState, useEffect, useMemo } from "react";
-import { Search, Pencil, Trash2, Plus, Gift, Zap, Loader2, Sparkles } from "lucide-react";
+import { Search, Pencil, Trash2, Plus, Gift } from "lucide-react";
 import toast from "react-hot-toast";
 import Swal from "sweetalert2";
 import {
   achievementService,
   getMilestoneTypeInfo,
-  getMilestoneTypeLabel,
+  MILESTONE_TYPES,
 } from "@/services/achievement.service";
 import AchievementFormModal from "@/components/admin/AchievementFormModal";
-import RewardManagementModal from "@/components/admin/RewardManagementModal";
+import useAchievementStore from "@/store/achievementStore";
 import { getValidImageUrl } from "@/utils/imageUtils";
 
 export default function AchievementManagement() {
   const [achievements, setAchievements] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSyncing, setIsSyncing] = useState(false);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [busyId, setBusyId] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isRewardModalOpen, setIsRewardModalOpen] = useState(false);
   const [editingAchievement, setEditingAchievement] = useState(null);
 
   const fetchAchievements = async () => {
@@ -39,20 +37,6 @@ export default function AchievementManagement() {
   useEffect(() => {
     fetchAchievements();
   }, []);
-
-  const unsyncedCount = useMemo(() => {
-    return achievements.filter((a) => a.is_default_template).length;
-  }, [achievements]);
-
-  const availableTypes = useMemo(() => {
-    return Array.from(
-      new Set(
-        achievements
-          .map((a) => a.milestone_type || a.achievement_type)
-          .filter(Boolean),
-      ),
-    );
-  }, [achievements]);
 
   const filteredAchievements = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -86,7 +70,9 @@ export default function AchievementManagement() {
         await achievementService.createAchievement(payload);
         toast.success("เพิ่มความสำเร็จสำเร็จ");
       }
+      useAchievementStore.getState().invalidateMilestones();
       await fetchAchievements();
+      return true;
     } catch (error) {
       console.error("Error saving achievement:", error?.response?.data || error);
       const errorMsg =
@@ -98,64 +84,14 @@ export default function AchievementManagement() {
         error?.message ||
         "ไม่สามารถบันทึกความสำเร็จได้";
       toast.error(errorMsg);
-    }
-  };
-
-  const handleSyncDefaultAchievements = async () => {
-    const unsyncedItems = achievements.filter((a) => a.is_default_template);
-    if (unsyncedItems.length === 0) {
-      toast.success("ภารกิจทั้งหมดอยู่ในระบบเรียบร้อยแล้ว");
-      return;
-    }
-
-    const confirmResult = await Swal.fire({
-      title: "ซิงค์ภารกิจเริ่มต้นสู่ระบบ?",
-      html: `
-        <div class="text-left text-sm text-slate-600 space-y-2">
-          <p>ระบบจะนำเข้าภารกิจเริ่มต้นจำนวน <b>${unsyncedItems.length}</b> รายการ เข้าสู่ฐานข้อมูลจริงของ Backend</p>
-          <p class="text-xs text-slate-400">กรอบรูป SVG ทั้งหมดจะถูกลงทะเบียนในระบบโดยอัตโนมัติ ทำให้สมาชิกสามารถทำภารกิจและปลดล็อกกรอบได้จริง</p>
-        </div>
-      `,
-      icon: "question",
-      showCancelButton: true,
-      confirmButtonColor: "#2563eb",
-      cancelButtonColor: "#64748b",
-      confirmButtonText: "⚡ ยืนยันซิงค์ข้อมูล",
-      cancelButtonText: "ยกเลิก",
-    });
-
-    if (!confirmResult.isConfirmed) return;
-
-    setIsSyncing(true);
-    const loadingToast = toast.loading(`กำลังซิงค์ภารกิจ ${unsyncedItems.length} รายการเข้าสู่ระบบ...`);
-
-    try {
-      const result = await achievementService.syncDefaultAchievementsToBackend();
-      toast.dismiss(loadingToast);
-
-      if (result.count > 0) {
-        toast.success(`ซิงค์ภารกิจเริ่มต้น ${result.count} รายการเข้าสู่ระบบเรียบร้อยแล้ว!`, {
-          duration: 4000,
-        });
-      } else {
-        toast.info("ภารกิจทั้งหมดอยู่ในระบบเรียบร้อยแล้ว");
-      }
-      await fetchAchievements();
-    } catch (error) {
-      toast.dismiss(loadingToast);
-      toast.error(error?.response?.data?.message || error?.message || "เกิดข้อผิดพลาดในการซิงค์ข้อมูล");
-    } finally {
-      setIsSyncing(false);
+      return false;
     }
   };
 
   const handleDelete = async (achievement) => {
-    const isTemplate = !!achievement.is_default_template;
     const result = await Swal.fire({
       title: "ลบความสำเร็จนี้?",
-      text: isTemplate
-        ? `นำแม่แบบ "${achievement.title}" ออกจากรายการแสดงผล`
-        : `"${achievement.title}" จะถูกลบออกจากระบบจริง`,
+      text: `"${achievement.title}" จะถูกลบออกจากระบบจริง`,
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#ef4444",
@@ -169,6 +105,7 @@ export default function AchievementManagement() {
     try {
       await achievementService.deleteAchievement(achievement.id);
       toast.success("ลบความสำเร็จสำเร็จ");
+      useAchievementStore.getState().invalidateMilestones();
       await fetchAchievements();
     } catch (error) {
       // Backend blocks deletion when users already have progress on this
@@ -191,29 +128,6 @@ export default function AchievementManagement() {
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
-          {unsyncedCount > 0 && (
-            <button
-              type="button"
-              disabled={isSyncing}
-              onClick={handleSyncDefaultAchievements}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-amber-800 bg-amber-50 border border-amber-300 hover:bg-amber-100 shadow-sm transition-all"
-              title="นำเข้าภารกิจเริ่มต้นทั้งหมดสู่ฐานข้อมูล Backend"
-            >
-              {isSyncing ? (
-                <Loader2 className="h-4 w-4 animate-spin text-amber-600" />
-              ) : (
-                <Zap className="h-4 w-4 text-amber-600 fill-amber-500" />
-              )}
-              <span>ซิงค์ภารกิจเริ่มต้นสู่ระบบ ({unsyncedCount})</span>
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => setIsRewardModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 shadow-sm transition-colors"
-          >
-            <Gift className="h-4 w-4 text-primary" /> จัดการของรางวัล
-          </button>
           <button
             type="button"
             onClick={openCreateModal}
@@ -241,9 +155,9 @@ export default function AchievementManagement() {
           className="admin-select"
         >
           <option value="ALL">ทุกประเภทภารกิจ</option>
-          {availableTypes.map((type) => (
-            <option key={type} value={type}>
-              {getMilestoneTypeLabel(type)}
+          {MILESTONE_TYPES.map((type) => (
+            <option key={type.key} value={type.key}>
+              {type.label}
             </option>
           ))}
         </select>
@@ -284,21 +198,6 @@ export default function AchievementManagement() {
                       <td>
                         <div className="flex items-center gap-2">
                           <p className="font-bold text-slate-800">{a.title}</p>
-                          {a.is_default_template ? (
-                            <span
-                              className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 shrink-0"
-                              title="ภารกิจแม่แบบเริ่มต้น (คลิกแก้ไขเพื่อบันทึกจริง หรือกดปุ่มซิงค์ด้านบน)"
-                            >
-                              แม่แบบเริ่มต้น
-                            </span>
-                          ) : (
-                            <span
-                              className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0"
-                              title="บันทึกอยู่ในฐานข้อมูลระบบแล้ว"
-                            >
-                              ในระบบ
-                            </span>
-                          )}
                         </div>
                         <p className="text-xs text-slate-400 line-clamp-1">{a.description}</p>
                       </td>
@@ -412,11 +311,6 @@ export default function AchievementManagement() {
         onConfirm={handleModalConfirm}
       />
 
-      <RewardManagementModal
-        isOpen={isRewardModalOpen}
-        onClose={() => setIsRewardModalOpen(false)}
-        onRewardDeleted={() => fetchAchievements()}
-      />
     </div>
   );
 }

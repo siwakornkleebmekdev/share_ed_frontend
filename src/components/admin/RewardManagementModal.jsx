@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { X, Search, Trash2, Gift, Sparkles } from "lucide-react";
+import { X, Search, Trash2, Gift, Plus } from "lucide-react";
 import toast from "react-hot-toast";
 import Swal from "sweetalert2";
 import { achievementService } from "@/services/achievement.service";
@@ -10,6 +10,17 @@ export default function RewardManagementModal({ isOpen, onClose, onRewardDeleted
   const [isLoading, setIsLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [busyId, setBusyId] = useState(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newType, setNewType] = useState("FRAME");
+  const [newDescription, setNewDescription] = useState("");
+  const [newImageFile, setNewImageFile] = useState(null);
+  const [newImagePreview, setNewImagePreview] = useState(null);
+
+  useEffect(() => () => {
+    if (newImagePreview) URL.revokeObjectURL(newImagePreview);
+  }, [newImagePreview]);
 
   const loadRewards = async () => {
     setIsLoading(true);
@@ -18,6 +29,7 @@ export default function RewardManagementModal({ isOpen, onClose, onRewardDeleted
       setRewards(items);
     } catch (error) {
       console.error("Error loading rewards:", error);
+      setRewards([]);
       toast.error("ไม่สามารถโหลดรายการของรางวัลได้");
     } finally {
       setIsLoading(false);
@@ -73,6 +85,32 @@ export default function RewardManagementModal({ isOpen, onClose, onRewardDeleted
     }
   };
 
+  const handleCreate = async (event) => {
+    event.preventDefault();
+    if (!newName.trim() || !newImageFile || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const created = await achievementService.createRewardItem({
+        item_name: newName,
+        item_type: newType,
+        description: newDescription,
+        imageFile: newImageFile,
+      });
+      if (!created?.id) throw new Error("Backend ไม่ส่งรหัสของรางวัลกลับมา");
+      await loadRewards();
+      setNewName("");
+      setNewDescription("");
+      setNewImageFile(null);
+      setNewImagePreview(null);
+      setIsCreating(false);
+      toast.success("เพิ่มของรางวัลสำเร็จ");
+    } catch (error) {
+      toast.error(error?.response?.data?.message || error.message || "ไม่สามารถเพิ่มของรางวัลได้");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -97,13 +135,30 @@ export default function RewardManagementModal({ isOpen, onClose, onRewardDeleted
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => setIsCreating((value) => !value)} className="flex items-center gap-1 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-white hover:bg-blue-600"><Plus className="h-4 w-4" /> เพิ่มของรางวัล</button>
+            <button type="button" onClick={onClose} aria-label="ปิด" className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors"><X className="h-5 w-5" /></button>
+          </div>
         </div>
+
+        {isCreating && (
+          <form onSubmit={handleCreate} className="grid gap-3 border-b border-slate-100 bg-slate-50 p-5 sm:grid-cols-2">
+            <label className="text-xs font-semibold text-slate-700">ชื่อของรางวัล
+              <input required maxLength={100} value={newName} onChange={(e) => setNewName(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-2.5 text-sm" />
+            </label>
+            <label className="text-xs font-semibold text-slate-700">ประเภท
+              <select value={newType} onChange={(e) => setNewType(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-2.5 text-sm"><option value="FRAME">กรอบโปรไฟล์</option><option value="THEME">ธีม</option></select>
+            </label>
+            <label className="text-xs font-semibold text-slate-700 sm:col-span-2">คำอธิบาย
+              <input value={newDescription} onChange={(e) => setNewDescription(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-2.5 text-sm" />
+            </label>
+            <label className="text-xs font-semibold text-slate-700 sm:col-span-2">ไฟล์ภาพ PNG/APNG, GIF หรือ WebP
+              <input required type="file" accept="image/png,image/apng,image/gif,image/webp,.png,.apng,.gif,.webp" onChange={(e) => { const file = e.target.files?.[0] || null; setNewImageFile(file); setNewImagePreview(file ? URL.createObjectURL(file) : null); }} className="mt-1 block w-full text-sm" />
+            </label>
+            {newImagePreview && <img src={newImagePreview} alt="ตัวอย่างของรางวัลใหม่" className="h-16 w-16 rounded-full object-contain" />}
+            <button type="submit" disabled={isSubmitting || !newName.trim() || !newImageFile} className="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50 sm:col-span-2">{isSubmitting ? "กำลังเพิ่ม..." : "บันทึกของรางวัล"}</button>
+          </form>
+        )}
 
         {/* Search Bar */}
         <div className="p-6 pb-3 border-b border-slate-100/60 bg-slate-50/50 shrink-0">

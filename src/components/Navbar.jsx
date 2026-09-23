@@ -27,8 +27,8 @@ import useHeroThemeStore from "@/store/heroThemeStore";
 import useAchievementStore from "@/store/achievementStore";
 import { supabase } from "@/utils/supabase";
 import { authService } from "@/services/auth.service";
-import { DEFAULT_FRAMES } from "@/services/profile.service";
 import { resolveProfileFrame } from "@/utils/profileFrame";
+import AvatarWithFrame from "@/components/profile/AvatarWithFrame";
 import { getGlassColor, rgbToRgba } from "@/utils/colorUtils";
 import toast from "react-hot-toast";
 
@@ -59,10 +59,7 @@ export default function Navbar() {
     user?.profile_image ||
     user?.user_metadata?.picture;
 
-  const { previewUrl: equippedFrameUrl } = resolveProfileFrame(user, [
-    ...milestones,
-    ...DEFAULT_FRAMES,
-  ]);
+  const { previewUrl: equippedFrameUrl } = resolveProfileFrame(user, milestones);
 
   // Relative time formatter
   const formatRelativeTime = (iso) => {
@@ -384,50 +381,14 @@ export default function Navbar() {
                     }`}
                     title="เมนูผู้ใช้"
                   >
-                    {avatarSrc ? (
-                      <div className="w-full h-full rounded-full overflow-hidden flex items-center justify-center">
-                        <img
-                          src={avatarSrc}
-                          alt="Profile"
-                          className="w-full h-full rounded-full object-cover"
-                        />
-                      </div>
-                    ) : (
-                      <User className="h-4 w-4 sm:h-5 sm:w-5" />
-                    )}
-                    {equippedFrameUrl && (
-                      <img
-                        src={equippedFrameUrl}
-                        alt="Frame"
-                        className="absolute inset-0 w-full h-full pointer-events-none scale-125 z-10"
-                      />
-                    )}
+                    <AvatarWithFrame avatarSrc={avatarSrc} frameSrc={equippedFrameUrl} avatarAlt="Profile" sizeClass="h-full w-full" avatarFallback={<User className="h-4 w-4 sm:h-5 sm:w-5" />} />
                   </button>
 
                   {/* Profile Dropdown */}
                   {showProfileMenu && (
                     <div className="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
                       <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
-                        <div className="relative w-10 h-10 rounded-full flex-shrink-0">
-                          {avatarSrc ? (
-                            <img
-                              src={avatarSrc}
-                              alt="Profile"
-                              className="w-full h-full rounded-full object-cover border border-slate-200"
-                            />
-                          ) : (
-                            <div className="w-full h-full rounded-full bg-slate-200 flex items-center justify-center text-slate-500">
-                              <User className="h-5 w-5" />
-                            </div>
-                          )}
-                          {equippedFrameUrl && (
-                            <img
-                              src={equippedFrameUrl}
-                              alt="Frame"
-                              className="absolute inset-0 w-full h-full pointer-events-none scale-125 z-10"
-                            />
-                          )}
-                        </div>
+                        <AvatarWithFrame avatarSrc={avatarSrc} frameSrc={equippedFrameUrl} avatarAlt="Profile" sizeClass="h-10 w-10" avatarFallback={<div className="flex h-full w-full items-center justify-center bg-slate-200 text-slate-500"><User className="h-5 w-5" /></div>} />
                         <div className="min-w-0 flex-1">
                           <p className="font-bold text-slate-800 truncate text-sm">
                             {user?.display_name ||

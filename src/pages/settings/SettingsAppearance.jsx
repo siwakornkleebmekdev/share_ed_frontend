@@ -17,7 +17,7 @@ export default function SettingsAppearance() {
     const meta = user.user_metadata || {};
     // Full theme_settings is loaded (not just the fields edited here) since
     // saving resubmits the whole object — a partial object would wipe out
-    // avatarShape, which is edited on the Profile settings page instead.
+    // The avatar shape is fixed to a circle on profile surfaces.
     setThemeSettings({ ...DEFAULT_THEME, ...(meta.theme_settings || {}) });
   }, [user]);
 

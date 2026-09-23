@@ -29,9 +29,9 @@ import useAchievementStore from "@/store/achievementStore";
 import {
   profileService,
   normalizeFollowCounts,
-  DEFAULT_FRAMES,
 } from "@/services/profile.service";
 import { resolveProfileFrame } from "@/utils/profileFrame";
+import AvatarWithFrame from "@/components/profile/AvatarWithFrame";
 import { getPlatformConfig } from "@/pages/settings/widgetConstants";
 import { getGlassColor, rgbToRgba } from "@/utils/colorUtils";
 
@@ -44,13 +44,6 @@ const ACHIEVEMENT_STATUS_META = {
     label: "ได้รับรางวัลแล้ว",
     badgeClass: "bg-emerald-100 text-emerald-700",
   },
-};
-
-const AVATAR_SHAPE_CLASS = {
-  square: "rounded-none",
-  soft: "rounded-2xl",
-  rounded: "rounded-3xl",
-  circle: "rounded-full",
 };
 
 const getEducationLevelLabel = (level) => {
@@ -114,9 +107,6 @@ export default function Profile() {
   const theme = isOtherUser
     ? otherProfile?.current_theme?.settings || {}
     : user?.user_metadata?.theme_settings || {};
-
-  const avatarShapeClass =
-    AVATAR_SHAPE_CLASS[theme.avatarShape] || AVATAR_SHAPE_CLASS.circle;
 
   const enterScreenEnabled = !isOtherUser && !!user?.user_metadata?.enter_screen_enabled;
   const [hasEntered, setHasEntered] = useState(!enterScreenEnabled);
@@ -203,18 +193,7 @@ export default function Profile() {
     fetchMilestones();
   }, [fetchMilestones]);
 
-  const allMilestones = [
-    ...DEFAULT_FRAMES,
-    ...milestones.filter(
-      (m) =>
-        !DEFAULT_FRAMES.some(
-          (df) =>
-            df.id === m.id ||
-            df.reward_item_id === m.reward_item_id ||
-            df.reward?.previewUrl === m.reward?.previewUrl,
-        ),
-    ),
-  ];
+  const allMilestones = milestones;
 
   const completedAchievements = allMilestones.filter(
     (m) => m.status !== "LOCKED",
@@ -380,19 +359,12 @@ export default function Profile() {
     : {
         ...user,
         ...ownProfile,
-        profile_frame_id:
-          ownProfile?.current_frame_id ||
-          ownProfile?.profile_frame_id ||
-          user?.user_metadata?.profile_frame_id ||
-          user?.current_frame_id ||
-          (currentUserId
-            ? localStorage.getItem(`profile_frame_id_${currentUserId}`)
-            : null) ||
-          localStorage.getItem("profile_frame_id") ||
-          null,
+        current_frame_id: user && 'current_frame_id' in user ? user.current_frame_id : ownProfile?.current_frame_id ?? null,
+        current_frame: user?.current_frame_id == null ? null : (user?.current_frame || ownProfile?.current_frame),
+        profile_frame_id: user && 'profile_frame_id' in user ? user.profile_frame_id : ownProfile?.profile_frame_id ?? null,
+        user_metadata: user?.user_metadata,
       };
   const {
-    frameId: equippedFrameId,
     previewUrl: framePreviewUrl,
   } = resolveProfileFrame(
     isOtherUser ? otherProfile : ownProfileWithCachedFrame,
@@ -513,28 +485,7 @@ export default function Profile() {
           )}
           <div className="flex flex-col sm:flex-row gap-8 items-start sm:items-end">
             <div className="relative">
-              <div
-                className={`h-32 w-32 sm:h-40 sm:w-40 border-4 overflow-hidden shadow-2xl relative ${avatarBorderClass} ${avatarShapeClass}`}
-              >
-                <img
-                  src={displayAvatar}
-                  alt="Avatar"
-                  className="w-full h-full object-cover"
-                />
-
-                {/* แสดงกรอบรูปโปรไฟล์ */}
-                {framePreviewUrl ? (
-                  <img
-                    src={framePreviewUrl}
-                    alt="Frame"
-                    className="absolute inset-0 w-full h-full object-cover pointer-events-none z-10"
-                  />
-                ) : equippedFrameId ? (
-                  <div
-                    className={`absolute inset-0 border-4 border-amber-400 mix-blend-overlay pointer-events-none ${avatarShapeClass}`}
-                  ></div>
-                ) : null}
-              </div>
+              <AvatarWithFrame avatarSrc={displayAvatar} frameSrc={framePreviewUrl} avatarAlt="Avatar" sizeClass="h-32 w-32 sm:h-40 sm:w-40" className={`border-4 shadow-2xl ${avatarBorderClass}`} />
             </div>
 
             <div className="flex-1 pb-2">

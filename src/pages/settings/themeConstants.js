@@ -1,11 +1,4 @@
-// Shared profile-theme option lists, used by SettingsProfile (avatar shape),
-// SettingsAppearance (card layout/style/color/corner/font), and ProfilePreview.
-export const AVATAR_SHAPES = [
-  { id: 'square', label: 'สี่เหลี่ยม', className: 'rounded-none' },
-  { id: 'soft', label: 'มนละมุน', className: 'rounded-2xl' },
-  { id: 'rounded', label: 'ขอบมน', className: 'rounded-3xl' },
-  { id: 'circle', label: 'วงกลม', className: 'rounded-full' },
-];
+// Shared profile-theme options. Profile avatars always use a circle.
 
 export const CARD_LAYOUTS = [
   { id: 'floating', label: 'Floating', description: 'Avatar ลอยอยู่กลาง' },
