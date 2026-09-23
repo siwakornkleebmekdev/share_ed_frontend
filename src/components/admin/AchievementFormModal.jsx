@@ -11,19 +11,19 @@ import {
 } from "@/services/achievement.service";
 import { getValidImageUrl, convertSvgToPngFile } from "@/utils/imageUtils";
 
-const REWARD_MODES = { NONE: "NONE", EXISTING: "EXISTING", NEW: "NEW" };
+const REWARD_MODES = { EXISTING: "EXISTING", NEW: "NEW" };
 
 // Modal เพิ่ม/แก้ไขความสำเร็จ (milestone) — โครงสร้างเดียวกับ WidgetModal.jsx
 // (มี overlay, ปิดได้ด้วยการคลิก backdrop, พักข้อมูลไว้ใน local state)
 // ใช้ modal เดียวทำได้ทั้งเพิ่ม (initialData: null) และแก้ไข (initialData: ข้อมูลความสำเร็จ)
 export default function AchievementFormModal({ isOpen, onClose, initialData, onConfirm }) {
+  const isEdit = !!initialData;
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [targetValue, setTargetValue] = useState("");
   const [selectedTypeKey, setSelectedTypeKey] = useState("FOLLOWERS_COUNT");
-  const [customType, setCustomType] = useState("");
 
-  const [rewardMode, setRewardMode] = useState(REWARD_MODES.NONE);
+  const [rewardMode, setRewardMode] = useState(REWARD_MODES.EXISTING);
   const [rewardItems, setRewardItems] = useState([]);
   const [rewardItemId, setRewardItemId] = useState("");
   const [rewardSearch, setRewardSearch] = useState("");
@@ -35,9 +35,6 @@ export default function AchievementFormModal({ isOpen, onClose, initialData, onC
   const [imageFile, setImageFile] = useState(null);
   const [newImagePreview, setNewImagePreview] = useState(null);
 
-  const isEdit = !!initialData;
-  const hadExistingReward = !!(initialData?.reward_item_id || initialData?.reward_item);
-
   useEffect(() => {
     if (!isOpen) return;
 
@@ -47,16 +44,14 @@ export default function AchievementFormModal({ isOpen, onClose, initialData, onC
 
     const rawType = initialData?.milestone_type || initialData?.achievement_type || "FOLLOWERS_COUNT";
     const resolved = MILESTONE_TYPE_ALIASES[rawType] || rawType;
-    if (MILESTONE_TYPE_MAP[resolved]) {
+    if (MILESTONE_TYPES.some((t) => t.key === resolved)) {
       setSelectedTypeKey(resolved);
-      setCustomType("");
     } else {
-      setSelectedTypeKey("CUSTOM");
-      setCustomType(rawType);
+      setSelectedTypeKey(MILESTONE_TYPES[0]?.key || "FOLLOWERS_COUNT");
     }
 
     const existingRewardId = initialData?.reward_item_id || initialData?.reward_item?.id || "";
-    setRewardMode(existingRewardId ? REWARD_MODES.EXISTING : REWARD_MODES.NONE);
+    setRewardMode(REWARD_MODES.EXISTING);
     setRewardItemId(existingRewardId);
 
     setItemName("");
@@ -77,7 +72,7 @@ export default function AchievementFormModal({ isOpen, onClose, initialData, onC
     });
   }, [isOpen, initialData]);
 
-  const effectiveMilestoneType = selectedTypeKey === "CUSTOM" ? customType.trim() : selectedTypeKey;
+  const effectiveMilestoneType = selectedTypeKey;
   const currentTypeInfo = getMilestoneTypeInfo(effectiveMilestoneType);
 
   const selectedReward = useMemo(() => {
@@ -256,12 +251,7 @@ export default function AchievementFormModal({ isOpen, onClose, initialData, onC
               </label>
               <select
                 value={selectedTypeKey}
-                onChange={(e) => {
-                  setSelectedTypeKey(e.target.value);
-                  if (e.target.value !== "CUSTOM") {
-                    setCustomType("");
-                  }
-                }}
+                onChange={(e) => setSelectedTypeKey(e.target.value)}
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary text-slate-800 font-semibold cursor-pointer"
               >
                 {MILESTONE_TYPES.map((t) => (
@@ -269,25 +259,9 @@ export default function AchievementFormModal({ isOpen, onClose, initialData, onC
                     {t.label}
                   </option>
                 ))}
-                <option value="CUSTOM">⚙️ กำหนดประเภทเอง (Custom Type)</option>
               </select>
             </div>
           </div>
-
-          {selectedTypeKey === "CUSTOM" && (
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
-              <label className="block text-xs font-semibold text-slate-600 mb-1.5">
-                ระบุรหัสประเภทภารกิจ (ภาษาอังกฤษ เช่น SHARE_COUNT, QUIZ_PASSED)
-              </label>
-              <input
-                type="text"
-                value={customType}
-                onChange={(e) => setCustomType(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm text-slate-800 font-medium focus:outline-none focus:border-primary"
-                placeholder="เช่น SHARE_COUNT"
-              />
-            </div>
-          )}
 
           {/* กล่องอธิบายเงื่อนไขภารกิจให้เข้าใจง่าย */}
           <div className="p-3.5 bg-blue-50/80 border border-blue-100 rounded-xl flex items-start gap-2.5 text-xs text-blue-950 leading-relaxed">
@@ -307,24 +281,25 @@ export default function AchievementFormModal({ isOpen, onClose, initialData, onC
           </div>
 
           <div className="pt-2 border-t border-slate-100">
-            <label className="block text-sm font-semibold text-slate-600 mb-2">รางวัล</label>
+            <label className="block text-sm font-semibold text-slate-600 mb-2">
+              ของรางวัล <span className="text-red-500">*</span>
+            </label>
             <div className="flex gap-2 mb-3">
-              <button type="button" className={modeButtonClass(REWARD_MODES.NONE)} onClick={() => setRewardMode(REWARD_MODES.NONE)}>
-                ไม่มีรางวัล
-              </button>
-              <button type="button" className={modeButtonClass(REWARD_MODES.EXISTING)} onClick={() => setRewardMode(REWARD_MODES.EXISTING)}>
+              <button
+                type="button"
+                className={modeButtonClass(REWARD_MODES.EXISTING)}
+                onClick={() => setRewardMode(REWARD_MODES.EXISTING)}
+              >
                 เลือกที่มีอยู่
               </button>
-              <button type="button" className={modeButtonClass(REWARD_MODES.NEW)} onClick={() => setRewardMode(REWARD_MODES.NEW)}>
+              <button
+                type="button"
+                className={modeButtonClass(REWARD_MODES.NEW)}
+                onClick={() => setRewardMode(REWARD_MODES.NEW)}
+              >
                 สร้างใหม่
               </button>
             </div>
-
-            {isEdit && hadExistingReward && rewardMode === REWARD_MODES.NONE && (
-              <p className="text-xs text-amber-600 bg-amber-50 rounded-lg p-2.5 mb-3">
-                หมายเหตุ: ระบบยังไม่รองรับการลบรางวัลที่ผูกไว้แล้วออกผ่านฟอร์มนี้ (สามารถเปลี่ยนเป็นรางวัลอื่นได้)
-              </p>
-            )}
 
             {rewardMode === REWARD_MODES.EXISTING && (
               <div className="space-y-3">

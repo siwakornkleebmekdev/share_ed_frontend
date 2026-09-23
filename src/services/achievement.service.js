@@ -2,7 +2,7 @@ import api from "../utils/api";
 import { DEFAULT_FRAMES } from "./profile.service";
 import { convertSvgToPngFile, convertSvgUrlToPngFile } from "../utils/imageUtils";
 
-// Configuration and Thai metadata for milestone/achievement types
+// Configuration and Thai metadata for active milestone/achievement types
 export const MILESTONE_TYPES = [
   {
     key: "FOLLOWERS_COUNT",
@@ -31,7 +31,19 @@ export const MILESTONE_TYPES = [
     placeholder: "เช่น 5",
     color: "bg-emerald-50 text-emerald-700 border-emerald-200",
   },
-  {
+];
+
+export const MILESTONE_TYPE_ALIASES = {
+  POSTS_COUNT: "POSTS_CREATED",
+  LIKES_RECEIVED: "POST_LIKES",
+};
+
+export const MILESTONE_TYPE_MAP = {
+  ...MILESTONE_TYPES.reduce((acc, curr) => {
+    acc[curr.key] = curr;
+    return acc;
+  }, {}),
+  COMMENTS_CREATED: {
     key: "COMMENTS_CREATED",
     label: "💬 จำนวนความคิดเห็น (Comments)",
     shortLabel: "ความคิดเห็น",
@@ -40,7 +52,7 @@ export const MILESTONE_TYPES = [
     placeholder: "เช่น 10",
     color: "bg-purple-50 text-purple-700 border-purple-200",
   },
-  {
+  LOGIN_STREAK: {
     key: "LOGIN_STREAK",
     label: "🔥 เข้าสู่ระบบต่อเนื่อง (Login Streak)",
     shortLabel: "ล็อกอินต่อเนื่อง",
@@ -49,17 +61,7 @@ export const MILESTONE_TYPES = [
     placeholder: "เช่น 7",
     color: "bg-amber-50 text-amber-700 border-amber-200",
   },
-];
-
-export const MILESTONE_TYPE_ALIASES = {
-  POSTS_COUNT: "POSTS_CREATED",
-  LIKES_RECEIVED: "POST_LIKES",
 };
-
-export const MILESTONE_TYPE_MAP = MILESTONE_TYPES.reduce((acc, curr) => {
-  acc[curr.key] = curr;
-  return acc;
-}, {});
 
 export function getMilestoneTypeInfo(typeKey) {
   if (!typeKey) return null;
