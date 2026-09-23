@@ -470,16 +470,14 @@ export default function Navbar() {
                             แบบร่างของฉัน
                           </Link>
                         )}
-                        {["ADMIN", "MODERATOR"].includes(String(user?.role || "").toUpperCase()) && (
-                          <Link
-                            to="/admin/posts"
-                            onClick={() => setShowProfileMenu(false)}
-                            className="flex items-center gap-3 w-full p-2 text-left text-sm font-medium text-slate-700 hover:bg-sky-50 hover:text-sky-700 rounded-xl transition-colors"
-                          >
-                            <RotateCcw className="h-4 w-4" />
-                            กู้คืนโพสต์
-                          </Link>
-                        )}
+                        <Link
+                          to="/recover-posts"
+                          onClick={() => setShowProfileMenu(false)}
+                          className="flex items-center gap-3 w-full p-2 text-left text-sm font-medium text-slate-700 hover:bg-sky-50 hover:text-sky-700 rounded-xl transition-colors"
+                        >
+                          <RotateCcw className="h-4 w-4" />
+                          กู้คืนโพสต์
+                        </Link>
                         <Link
                           to="/settings/profile"
                           onClick={() => setShowProfileMenu(false)}

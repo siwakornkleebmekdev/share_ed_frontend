@@ -259,6 +259,16 @@ export const postService = {
     }
   },
 
+  getRecoverablePosts: async () => {
+    const response = await api.get('/posts/user/recoverable');
+    return response.data?.data || [];
+  },
+
+  restoreOwnPost: async (id) => {
+    const response = await api.post(`/posts/${encodeURIComponent(id)}/restore`);
+    return response.data;
+  },
+
   reportPost: async (id, reason) => {
     const response = await api.post('/reports', {
       post_id: id,
