@@ -1,5 +1,6 @@
 import api from "../utils/api";
 import { DEFAULT_FRAMES } from "./profile.service";
+import { convertSvgToPngFile, convertSvgUrlToPngFile } from "../utils/imageUtils";
 
 // Configuration and Thai metadata for milestone/achievement types
 export const MILESTONE_TYPES = [
@@ -127,7 +128,48 @@ function buildAchievementFormData(payload) {
 }
 
 async function resolvePayloadReward(payload) {
-  if (!payload || !payload.reward_item_id) {
+  if (!payload) {
+    return payload;
+  }
+
+  // 1. If user specified a new reward inline (name + optional file/type)
+  if (payload.item_name && !payload.reward_item_id) {
+    try {
+      let fileToUpload = payload.imageFile;
+      if (fileToUpload) {
+        // Auto convert SVG to high-res transparent PNG for backend compatibility
+        fileToUpload = await convertSvgToPngFile(fileToUpload);
+      }
+
+      const rewardForm = new FormData();
+      rewardForm.append("item_name", payload.item_name);
+      rewardForm.append("item_type", payload.item_type || "FRAME");
+      if (payload.item_description) {
+        rewardForm.append("description", payload.item_description);
+      }
+      rewardForm.append("is_active", "true");
+      if (fileToUpload) {
+        rewardForm.append("image", fileToUpload);
+      }
+      const createRes = await api.post("/admin/rewards", rewardForm);
+      const newReward = createRes.data?.data || createRes.data;
+      if (newReward?.id) {
+        rewardItemCache.set(newReward.id, newReward);
+        const updated = { ...payload, reward_item_id: newReward.id };
+        delete updated.imageFile;
+        delete updated.item_name;
+        delete updated.item_type;
+        delete updated.item_description;
+        return updated;
+      }
+    } catch (err) {
+      console.error("Creating reward failed with details:", err?.response?.data || err);
+      const msg = err?.response?.data?.message || err?.response?.data?.error || err.message;
+      throw new Error(`ไม่สามารถสร้างของรางวัล "${payload.item_name}" ได้: ${msg}`);
+    }
+  }
+
+  if (!payload.reward_item_id) {
     return payload;
   }
 
@@ -169,17 +211,29 @@ async function resolvePayloadReward(payload) {
     }
     rewardForm.append("is_active", "true");
 
-    // Fetch the SVG file from public folder as a Blob to attach to FormData
-    if (localItem.image_url && localItem.image_url.startsWith("/")) {
-      try {
-        const fileRes = await fetch(localItem.image_url);
-        const blob = await fileRes.blob();
-        const svgFile = new File([blob], `${localItem.item_name}.svg`, {
-          type: "image/svg+xml",
-        });
-        rewardForm.append("image", svgFile);
-      } catch (fetchErr) {
-        console.warn("Could not fetch SVG blob for reward upload:", fetchErr);
+    // Convert template SVG to transparent PNG for backend upload compatibility
+    if (localItem.image_url) {
+      let imageFile = null;
+      if (localItem.image_url.startsWith("/")) {
+        imageFile = await convertSvgUrlToPngFile(
+          localItem.image_url,
+          `${localItem.item_name}.png`
+        );
+      }
+      if (imageFile) {
+        rewardForm.append("image", imageFile);
+      } else if (localItem.image_url.startsWith("/")) {
+        try {
+          const fileRes = await fetch(localItem.image_url);
+          const blob = await fileRes.blob();
+          const svgFile = new File([blob], `${localItem.item_name}.svg`, {
+            type: "image/svg+xml",
+          });
+          const pngFile = await convertSvgToPngFile(svgFile);
+          rewardForm.append("image", pngFile);
+        } catch (fetchErr) {
+          console.warn("Could not fetch SVG blob for reward upload:", fetchErr);
+        }
       }
     }
 
@@ -190,27 +244,9 @@ async function resolvePayloadReward(payload) {
       return { ...payload, reward_item_id: newReward.id };
     }
   } catch (createErr) {
-    console.warn(
-      "Auto-creating backend reward via /admin/rewards failed, falling back to inline payload:",
-      createErr
-    );
-    // Fallback: pass inline parameters to achievement endpoint so it creates the reward inline
-    const cloned = { ...payload };
-    delete cloned.reward_item_id;
-    cloned.item_name = localItem.item_name;
-    cloned.item_type = localItem.item_type || "FRAME";
-    cloned.item_description = localItem.item_description;
-    cloned.is_active = true;
-    if (localItem.image_url && localItem.image_url.startsWith("/")) {
-      try {
-        const fileRes = await fetch(localItem.image_url);
-        const blob = await fileRes.blob();
-        cloned.imageFile = new File([blob], `${localItem.item_name}.svg`, {
-          type: "image/svg+xml",
-        });
-      } catch (_) {}
-    }
-    return cloned;
+    console.error("Auto-creating backend reward failed:", createErr?.response?.data || createErr);
+    const msg = createErr?.response?.data?.message || createErr?.response?.data?.error || createErr.message;
+    throw new Error(`ไม่สามารถลงทะเบียนกรอบ "${localItem.item_name}" สู่ระบบได้: ${msg}`);
   }
 
   return payload;
@@ -298,9 +334,40 @@ export const achievementService = {
   createAchievement: async (payload) => {
     try {
       const resolvedPayload = await resolvePayloadReward(payload);
-      const formData = buildAchievementFormData(resolvedPayload);
-      const response = await api.post("/admin/achievements", formData);
-      return response.data?.data || response.data;
+      const type =
+        resolvedPayload.achievement_type || resolvedPayload.milestone_type || "POSTS_COUNT";
+
+      const jsonPayload = {
+        title: resolvedPayload.title,
+        description: resolvedPayload.description,
+        target_value: Number(resolvedPayload.target_value),
+        milestone_type: type,
+        achievement_type: type,
+      };
+
+      if (resolvedPayload.reward_item_id) {
+        jsonPayload.reward_item_id = resolvedPayload.reward_item_id;
+      }
+
+      try {
+        const response = await api.post("/admin/achievements", jsonPayload);
+        return response.data?.data || response.data;
+      } catch (jsonErr) {
+        if (
+          jsonErr.response?.status === 400 ||
+          jsonErr.response?.status === 415 ||
+          jsonErr.response?.status === 422
+        ) {
+          try {
+            const formData = buildAchievementFormData(resolvedPayload);
+            const formRes = await api.post("/admin/achievements", formData);
+            return formRes.data?.data || formRes.data;
+          } catch (_) {
+            throw jsonErr;
+          }
+        }
+        throw jsonErr;
+      }
     } catch (error) {
       console.error("Error creating achievement:", error);
       throw error;
@@ -315,14 +382,41 @@ export const achievementService = {
         return await achievementService.createAchievement(resolvedPayload);
       }
 
-      const formData = buildAchievementFormData(resolvedPayload);
+      const type =
+        resolvedPayload.achievement_type || resolvedPayload.milestone_type || "POSTS_COUNT";
+
+      const jsonPayload = {
+        title: resolvedPayload.title,
+        description: resolvedPayload.description,
+        target_value: Number(resolvedPayload.target_value),
+        milestone_type: type,
+        achievement_type: type,
+      };
+
+      if (resolvedPayload.reward_item_id) {
+        jsonPayload.reward_item_id = resolvedPayload.reward_item_id;
+      }
+
       try {
-        const response = await api.put(`/admin/achievements/${id}`, formData);
+        const response = await api.put(`/admin/achievements/${id}`, jsonPayload);
         return response.data?.data || response.data;
       } catch (err) {
         if (err.response?.status === 404) {
           // If backend returned 404, fallback to creating it in the database
           return await achievementService.createAchievement(resolvedPayload);
+        }
+        if (
+          err.response?.status === 400 ||
+          err.response?.status === 415 ||
+          err.response?.status === 422
+        ) {
+          try {
+            const formData = buildAchievementFormData(resolvedPayload);
+            const formRes = await api.put(`/admin/achievements/${id}`, formData);
+            return formRes.data?.data || formRes.data;
+          } catch (_) {
+            throw err;
+          }
         }
         throw err;
       }

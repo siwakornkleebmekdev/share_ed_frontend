@@ -927,30 +927,30 @@ export default function Profile() {
                           className={`backdrop-blur-xl rounded-3xl border shadow-lg shadow-black/10 p-5 flex flex-col gap-3 ${emptyCardClass}`}
                         >
                           <div className="flex items-center justify-between gap-3">
-                            <div
-                              className={`h-12 w-12 rounded-full overflow-hidden border-2 shrink-0 ${m.status === "CLAIMED" ? "border-emerald-400" : "border-amber-400"}`}
-                            >
-                              {hasImage ? (
-                                <img
-                                  src={m.reward.previewUrl}
-                                  alt={m.reward.name}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <div className="relative w-full h-full">
+                            <div className="relative h-14 w-14 flex items-center justify-center shrink-0">
+                              <div
+                                className={`h-11 w-11 rounded-full overflow-hidden border-2 shrink-0 ${m.status === "CLAIMED" ? "border-emerald-400" : "border-amber-400"}`}
+                              >
+                                {hasImage ? (
+                                  <img
+                                    src={m.reward.previewUrl}
+                                    alt={m.reward.name}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
                                   <img
                                     src={displayAvatar}
                                     alt=""
                                     className="w-full h-full object-cover"
                                   />
-                                  {m.reward?.type === "FRAME" && m.reward.previewUrl && (
-                                    <img
-                                      src={m.reward.previewUrl}
-                                      alt={m.reward.name}
-                                      className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-                                    />
-                                  )}
-                                </div>
+                                )}
+                              </div>
+                              {m.reward?.type === "FRAME" && m.reward.previewUrl && (
+                                <img
+                                  src={m.reward.previewUrl}
+                                  alt={m.reward.name}
+                                  className="absolute -inset-1 w-[calc(100%+8px)] h-[calc(100%+8px)] pointer-events-none object-contain drop-shadow-sm z-10 scale-110"
+                                />
                               )}
                             </div>
                             <span
