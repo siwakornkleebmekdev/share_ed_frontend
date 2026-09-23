@@ -15,6 +15,14 @@ THEMES = {
     "stormborn": ("exec-6883e633-aff8-46c8-9bce-893d2f3946c8.png", (223, 75, 239), 1.25, 1.08),
 }
 
+SAFE_ALPHA = Image.new("L", (288, 288), 0)
+safe_pixels = SAFE_ALPHA.load()
+for safe_y in range(288):
+    for safe_x in range(288):
+        safe_radius = hypot(safe_x - 144, safe_y - 144)
+        if 118 <= safe_radius <= 140:
+            safe_pixels[safe_x, safe_y] = 255
+
 
 def make_variants(source, scale):
     base = Image.open(source).convert("RGBA").resize((288, 288), Image.Resampling.LANCZOS)
@@ -88,7 +96,9 @@ def animate_theme(name, source_name, color, lifetime, scale):
                         draw.ellipse((x - 1.5, y - 1.5, x + 1.5, y + 1.5), fill=(*color, alpha))
 
         frame = Image.alpha_composite(frame, glow.filter(ImageFilter.GaussianBlur(3)))
-        frames.append(Image.alpha_composite(frame, details))
+        finished = Image.alpha_composite(frame, details)
+        finished.putalpha(Image.composite(finished.getchannel("A"), Image.new("L", (288, 288)), SAFE_ALPHA))
+        frames.append(finished)
 
     output = OUTPUT_DIR / f"avatar-decoration-{name}.apng"
     frames[0].save(

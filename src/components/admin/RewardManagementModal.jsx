@@ -153,7 +153,7 @@ export default function RewardManagementModal({ isOpen, onClose, onRewardDeleted
               <input value={newDescription} onChange={(e) => setNewDescription(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-2.5 text-sm" />
             </label>
             <label className="text-xs font-semibold text-slate-700 sm:col-span-2">ไฟล์ภาพ PNG/APNG, GIF หรือ WebP
-              <input required type="file" accept="image/png,image/gif,image/webp,.png,.gif,.webp" onChange={(e) => { const file = e.target.files?.[0] || null; setNewImageFile(file); setNewImagePreview(file ? URL.createObjectURL(file) : null); }} className="mt-1 block w-full text-sm" />
+              <input required type="file" accept="image/png,image/apng,image/gif,image/webp,.png,.apng,.gif,.webp" onChange={(e) => { const file = e.target.files?.[0] || null; setNewImageFile(file); setNewImagePreview(file ? URL.createObjectURL(file) : null); }} className="mt-1 block w-full text-sm" />
             </label>
             {newImagePreview && <img src={newImagePreview} alt="ตัวอย่างของรางวัลใหม่" className="h-16 w-16 rounded-full object-contain" />}
             <button type="submit" disabled={isSubmitting || !newName.trim() || !newImageFile} className="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50 sm:col-span-2">{isSubmitting ? "กำลังเพิ่ม..." : "บันทึกของรางวัล"}</button>
