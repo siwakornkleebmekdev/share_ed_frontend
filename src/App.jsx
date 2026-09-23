@@ -30,6 +30,7 @@ const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const UserManagement = lazy(() => import("./pages/admin/UserManagement"));
 const UserDetails = lazy(() => import("./pages/admin/UserDetails"));
 const AchievementManagement = lazy(() => import("./pages/admin/AchievementManagement"));
+const ReportConsole = lazy(() => import("./pages/moderator/ReportConsole"));
 
 const RouteLoader = () => (
   <div className="min-h-[50vh] flex flex-col items-center justify-center gap-3 bg-background">
@@ -150,6 +151,16 @@ const AdminRoute = ({ children }) => {
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (user?.role !== "ADMIN") return <Navigate to="/home" replace />;
+  return children;
+};
+
+const ReviewerRoute = ({ children }) => {
+  const { isAuthenticated, isInitializing, isRoleLoading, user } = useAuthStore();
+  const role = String(user?.role || "").toUpperCase();
+
+  if (isInitializing || (isAuthenticated && isRoleLoading)) return <RouteLoader />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!["ADMIN", "MODERATOR"].includes(role)) return <Navigate to="/home" replace />;
   return children;
 };
 
@@ -454,6 +465,14 @@ function App() {
               <ProtectedRoute>
                 <Achievements />
               </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/report-console"
+            element={
+              <ReviewerRoute>
+                <ReportConsole />
+              </ReviewerRoute>
             }
           />
         </Route>
