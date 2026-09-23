@@ -66,6 +66,7 @@ async function uploadWithSignature(file, config, signal) {
     bytes: result.bytes,
     delete_token: result.delete_token,
     delete_url: config.uploadUrl.replace(/\/(image|raw|auto)\/upload$/, "/delete_by_token"),
+    original_name: file.name,
   };
   const required = ['public_id', 'version', 'signature', 'secure_url', 'resource_type', 'bytes'];
   if (required.some(key => metadata[key] === undefined || metadata[key] === null || metadata[key] === '')) {
@@ -558,7 +559,7 @@ export function formatSinglePostData(post) {
     current_frame_id: authorFrameId,
     pdf: pdfMedia ? {
       id: pdfMedia.id,
-      name: extractFileNameFromUrl(pdfMedia.media_url),
+      name: pdfMedia.original_name || extractFileNameFromUrl(pdfMedia.media_url),
       url: pdfMedia.media_url,
       size: 'PDF'
     } : null,

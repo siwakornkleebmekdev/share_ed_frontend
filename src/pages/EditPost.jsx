@@ -181,7 +181,7 @@ export default function EditPost() {
         if (pdfMedia) {
           setExistingPdf({
             id: pdfMedia.id,
-            name: (() => {
+            name: pdfMedia.original_name || (() => {
               try {
                 const decoded = decodeURIComponent(pdfMedia.media_url);
                 const segments = decoded.split('/');
