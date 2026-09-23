@@ -43,6 +43,11 @@ export default function Achievements() {
 
   useEffect(() => {
     fetchMilestones({ force: true });
+    const handleAchievementEvent = () => {
+      fetchMilestones({ force: true });
+    };
+    window.addEventListener('achievement_completed', handleAchievementEvent);
+    return () => window.removeEventListener('achievement_completed', handleAchievementEvent);
   }, [fetchMilestones]);
 
   const handleClaim = async (id) => {
