@@ -58,7 +58,18 @@ const useReportStore = create((set, get) => ({
                 ? { ...post, post_status: "UNACTIVED" }
                 : post,
             )
-          : state.reports.filter((post) => String(post.id) !== String(postId)),
+          : action === "SOFT_DELETE"
+            ? state.reports.map((post) =>
+                String(post.id) === String(postId)
+                  ? {
+                      ...post,
+                      post_status: "DELETED",
+                      updated_at: new Date().toISOString(),
+                      recoverable_until: result.recoverableUntil,
+                    }
+                  : post,
+              )
+            : state.reports.filter((post) => String(post.id) !== String(postId)),
         isReviewing: false,
         lastFetchedAt: Date.now(),
       }));
@@ -103,7 +114,18 @@ const useReportStore = create((set, get) => ({
                 ? { ...post, post_status: "UNACTIVED" }
                 : post,
             )
-          : state.reports.filter((post) => String(post.id) !== String(postId)),
+          : action === "SOFT_DELETE"
+            ? state.reports.map((post) =>
+                String(post.id) === String(postId)
+                  ? {
+                      ...post,
+                      post_status: "DELETED",
+                      updated_at: new Date().toISOString(),
+                      recoverable_until: payload.recoverableUntil || payload.recoverable_until,
+                    }
+                  : post,
+              )
+            : state.reports.filter((post) => String(post.id) !== String(postId)),
         lastFetchedAt: Date.now(),
       }));
     });

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, CheckCircle2, Clock3, Eye, FileWarning, Search, ShieldAlert, Trash2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock3, Eye, FileWarning, RotateCcw, Search, ShieldAlert, Trash2 } from "lucide-react";
 import { Link } from "react-router";
 import Swal from "sweetalert2";
 import toast from "react-hot-toast";
@@ -9,6 +9,7 @@ import { sanitizePostContent } from "@/utils/sanitizePostContent";
 const STATUS_LABELS = {
   ACTIVE: "ยังเผยแพร่อยู่",
   UNACTIVED: "ถูกระงับชั่วคราว",
+  DELETED: "เพิ่งลบ — เรียกคืนได้",
 };
 
 const getReportCount = (post) =>
@@ -22,19 +23,48 @@ const formatDate = (value) => {
   });
 };
 
+const getRecoveryDeadline = (post) => {
+  const explicit = Date.parse(post.recoverable_until || post.recoverableUntil || "");
+  if (Number.isFinite(explicit)) return explicit;
+  const deletedAt = Date.parse(post.updated_at || post.updatedAt || "");
+  return Number.isFinite(deletedAt) ? deletedAt + 5 * 60 * 1000 : 0;
+};
+
+const formatCountdown = (milliseconds) => {
+  const seconds = Math.max(0, Math.ceil(milliseconds / 1000));
+  const minutesPart = Math.floor(seconds / 60);
+  const secondsPart = String(seconds % 60).padStart(2, "0");
+  return `${minutesPart}:${secondsPart}`;
+};
+
 export default function ReportConsole() {
-  const { pendingReports, fetchReports, reviewPost, isLoading, isReviewing, error } = useReportStore();
+  const { reports, fetchReports, reviewPost, isLoading, isReviewing, error } = useReportStore();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
     fetchReports({ force: true }).catch(() => {});
   }, [fetchReports]);
 
-  const reports = pendingReports();
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const visibleReports = reports.filter((post) => {
+    const status = String(post.post_status || post.postStatus || "ACTIVE").toUpperCase();
+    return status !== "DELETED" || getRecoveryDeadline(post) > now;
+  });
+  const pendingPosts = visibleReports.filter((post) =>
+    String(post.post_status || post.postStatus || "ACTIVE").toUpperCase() !== "DELETED",
+  );
+  const recentlyDeletedPosts = visibleReports.filter((post) =>
+    String(post.post_status || post.postStatus || "").toUpperCase() === "DELETED",
+  );
   const filteredReports = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return reports.filter((post) => {
+    return visibleReports.filter((post) => {
       const status = String(post.post_status || post.postStatus || "ACTIVE").toUpperCase();
       const matchesStatus = statusFilter === "ALL" || status === statusFilter;
       const matchesSearch = !query || [post.title, post.author?.username, post.author?.email]
@@ -42,17 +72,21 @@ export default function ReportConsole() {
         .some((value) => String(value).toLowerCase().includes(query));
       return matchesStatus && matchesSearch;
     });
-  }, [reports, search, statusFilter]);
+  }, [visibleReports, search, statusFilter]);
 
-  const totalReports = reports.reduce((sum, post) => sum + getReportCount(post), 0);
+  const totalReports = pendingPosts.reduce((sum, post) => sum + getReportCount(post), 0);
 
   const handleAction = async (post, action) => {
+    const currentStatus = String(post.post_status || post.postStatus || "ACTIVE").toUpperCase();
+    const isDeletedRestore = action === "RESTORE" && currentStatus === "DELETED";
     const actionCopy = {
       RESTORE: {
-        title: "ยืนยันว่าโพสต์นี้ปลอดภัย?",
-        text: "รายงานทั้งหมดของโพสต์นี้จะถูกล้างและโพสต์จะกลับมาเผยแพร่",
-        confirm: "คืนสถานะโพสต์",
-        success: "คืนสถานะโพสต์แล้ว",
+        title: isDeletedRestore ? "เรียกคืนโพสต์ที่เพิ่งลบ?" : "ยืนยันว่าโพสต์นี้ปลอดภัย?",
+        text: isDeletedRestore
+          ? "โพสต์จะกลับมาเผยแพร่อีกครั้ง การเรียกคืนทำได้ภายใน 5 นาทีหลังลบเท่านั้น"
+          : "รายงานทั้งหมดของโพสต์นี้จะถูกล้างและโพสต์จะกลับมาเผยแพร่",
+        confirm: isDeletedRestore ? "เรียกคืนโพสต์" : "คืนสถานะโพสต์",
+        success: isDeletedRestore ? "เรียกคืนโพสต์แล้ว" : "คืนสถานะโพสต์แล้ว",
         color: "#16a34a",
       },
       SUSPEND: {
@@ -102,14 +136,18 @@ export default function ReportConsole() {
             <h1 className="text-2xl font-extrabold sm:text-3xl">ตรวจสอบโพสต์ที่ถูกรายงาน</h1>
             <p className="mt-2 text-sm text-slate-300">ตรวจเหตุผลและจัดการโพสต์ที่อาจละเมิดกฎของชุมชน</p>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <div className="rounded-2xl bg-white/10 px-5 py-4 text-center backdrop-blur">
-              <p className="text-3xl font-extrabold text-rose-300">{reports.length}</p>
+              <p className="text-3xl font-extrabold text-rose-300">{pendingPosts.length}</p>
               <p className="mt-1 text-xs font-medium text-slate-300">โพสต์รอตรวจสอบ</p>
             </div>
             <div className="rounded-2xl bg-white/10 px-5 py-4 text-center backdrop-blur">
               <p className="text-3xl font-extrabold text-amber-300">{totalReports}</p>
               <p className="mt-1 text-xs font-medium text-slate-300">รายงานทั้งหมด</p>
+            </div>
+            <div className="rounded-2xl bg-white/10 px-5 py-4 text-center backdrop-blur">
+              <p className="text-3xl font-extrabold text-sky-300">{recentlyDeletedPosts.length}</p>
+              <p className="mt-1 text-xs font-medium text-slate-300">รอเรียกคืน</p>
             </div>
           </div>
         </div>
@@ -133,6 +171,7 @@ export default function ReportConsole() {
           <option value="ALL">ทุกสถานะ</option>
           <option value="ACTIVE">ยังเผยแพร่อยู่</option>
           <option value="UNACTIVED">ถูกระงับชั่วคราว</option>
+          <option value="DELETED">เพิ่งลบและเรียกคืนได้</option>
         </select>
       </section>
 
@@ -142,7 +181,7 @@ export default function ReportConsole() {
         </div>
       )}
 
-      {isLoading && reports.length === 0 ? (
+      {isLoading && visibleReports.length === 0 ? (
         <div className="flex min-h-64 items-center justify-center rounded-3xl border border-slate-200 bg-white">
           <div className="text-center text-slate-500">
             <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -152,8 +191,8 @@ export default function ReportConsole() {
       ) : filteredReports.length === 0 ? (
         <div className="flex min-h-64 flex-col items-center justify-center rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
           <CheckCircle2 className="mb-4 h-14 w-14 text-emerald-500" />
-          <h2 className="text-xl font-extrabold text-slate-800">ไม่มีโพสต์รอตรวจสอบ</h2>
-          <p className="mt-2 text-sm text-slate-500">รายการที่ถูกรายงานใหม่จะปรากฏที่หน้านี้</p>
+          <h2 className="text-xl font-extrabold text-slate-800">ไม่มีรายการใน Report Console</h2>
+          <p className="mt-2 text-sm text-slate-500">โพสต์ที่ถูกรายงานหรือเพิ่งลบจะปรากฏที่หน้านี้</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -161,9 +200,15 @@ export default function ReportConsole() {
             const status = String(post.post_status || post.postStatus || "ACTIVE").toUpperCase();
             const reasons = [...new Set((post.reports || []).map((report) => report.reason).filter(Boolean))];
             const coverImage = post.cover_image || post.coverImage || post.cover_image_url;
+            const recoveryRemaining = getRecoveryDeadline(post) - now;
+            const statusClass = status === "ACTIVE"
+              ? "bg-emerald-50 text-emerald-700"
+              : status === "DELETED"
+                ? "bg-sky-50 text-sky-700"
+                : "bg-amber-50 text-amber-700";
 
             return (
-              <article key={post.id} className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md">
+              <article key={post.id} className={`overflow-hidden rounded-3xl bg-white shadow-sm transition hover:shadow-md ${status === "DELETED" ? "border-2 border-sky-200" : "border border-slate-200"}`}>
                 <div className="flex flex-col lg:flex-row">
                   <div className="h-48 bg-slate-100 lg:h-auto lg:w-64">
                     {coverImage ? (
@@ -182,9 +227,14 @@ export default function ReportConsole() {
                           <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-600">
                             <AlertTriangle className="h-3.5 w-3.5" /> {getReportCount(post)} รายงาน
                           </span>
-                          <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${status === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
+                          <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusClass}`}>
                             {STATUS_LABELS[status] || status}
                           </span>
+                          {status === "DELETED" && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-sky-600 px-2.5 py-1 text-xs font-extrabold text-white">
+                              <Clock3 className="h-3.5 w-3.5" /> เหลือ {formatCountdown(recoveryRemaining)}
+                            </span>
+                          )}
                         </div>
                         <h2 className="truncate text-xl font-extrabold text-slate-900">{post.title || "โพสต์ไม่มีชื่อ"}</h2>
                         <p className="mt-1 text-sm text-slate-500">
@@ -230,6 +280,17 @@ export default function ReportConsole() {
                     )}
 
                     <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
+                      {status === "DELETED" ? (
+                        <button
+                          type="button"
+                          onClick={() => handleAction(post, "RESTORE")}
+                          disabled={isReviewing || recoveryRemaining <= 0}
+                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <RotateCcw className="h-4 w-4" /> เรียกคืนโพสต์ ({formatCountdown(recoveryRemaining)})
+                        </button>
+                      ) : (
+                        <>
                       {status === "ACTIVE" && (
                         <button
                           type="button"
@@ -256,6 +317,8 @@ export default function ReportConsole() {
                       >
                         <Trash2 className="h-4 w-4" /> ลบโพสต์
                       </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
