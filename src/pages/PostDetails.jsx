@@ -347,7 +347,7 @@ export default function PostDetails() {
   const handleDelete = async () => {
     const result = await Swal.fire({
       title: `คุณต้องการลบโพสต์ "${post?.title}" ใช่หรือไม่?`,
-      text: 'การดำเนินการนี้จะทำการลบโพสต์แบบ Soft Delete (ซ่อนโพสต์ชั่วคราว)',
+      text: 'โพสต์จะถูกซ่อน และคุณสามารถกู้คืนได้ภายใน 5 นาทีหลังลบ',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#ef4444',
@@ -373,10 +373,10 @@ export default function PostDetails() {
           await Swal.fire({
             icon: 'success',
             title: 'ลบสำเร็จ!',
-            text: 'โพสต์ของคุณถูกลบเรียบร้อยแล้ว',
+            text: 'โพสต์ถูกลบแล้ว คุณสามารถกู้คืนได้ภายใน 5 นาที',
             confirmButtonColor: '#3b82f6'
           });
-          navigate('/explore');
+          navigate('/recover-posts');
         } else {
           throw new Error(response?.message || 'เกิดข้อผิดพลาดในการลบโพสต์');
         }

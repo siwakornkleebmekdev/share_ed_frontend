@@ -22,6 +22,7 @@ const Profile = lazy(() => import("./pages/Profile"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const Achievements = lazy(() => import("./pages/Achievements"));
 const PostDetails = lazy(() => import("./pages/PostDetails"));
+const RecoverPosts = lazy(() => import("./pages/RecoverPosts"));
 const SettingsProfile = lazy(() => import("./pages/settings/SettingsProfile"));
 const SettingsAppearance = lazy(() => import("./pages/settings/SettingsAppearance"));
 const SettingsWidgets = lazy(() => import("./pages/settings/SettingsWidgets"));
@@ -461,6 +462,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Notifications />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/recover-posts"
+            element={
+              <ProtectedRoute>
+                <RecoverPosts />
               </ProtectedRoute>
             }
           />
