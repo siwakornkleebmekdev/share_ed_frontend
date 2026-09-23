@@ -37,7 +37,7 @@ const formatCountdown = (milliseconds) => {
   return `${minutesPart}:${secondsPart}`;
 };
 
-export default function ReportConsole() {
+export default function PostConsole() {
   const { reports, fetchReports, reviewPost, isLoading, isReviewing, error } = useReportStore();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -131,10 +131,10 @@ export default function ReportConsole() {
         <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-rose-500/15 px-3 py-1 text-sm font-bold text-rose-300">
-              <ShieldAlert className="h-4 w-4" /> Report Console
+              <ShieldAlert className="h-4 w-4" /> Post Console
             </div>
-            <h1 className="text-2xl font-extrabold sm:text-3xl">ตรวจสอบโพสต์ที่ถูกรายงาน</h1>
-            <p className="mt-2 text-sm text-slate-300">ตรวจเหตุผลและจัดการโพสต์ที่อาจละเมิดกฎของชุมชน</p>
+            <h1 className="text-2xl font-extrabold sm:text-3xl">จัดการสถานะโพสต์</h1>
+            <p className="mt-2 text-sm text-slate-300">ตรวจโพสต์ที่ได้รับรายงานครบ 10 ครั้ง และเรียกคืนโพสต์ที่เพิ่งลบภายใน 5 นาที</p>
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div className="rounded-2xl bg-white/10 px-5 py-4 text-center backdrop-blur">
@@ -191,8 +191,8 @@ export default function ReportConsole() {
       ) : filteredReports.length === 0 ? (
         <div className="flex min-h-64 flex-col items-center justify-center rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
           <CheckCircle2 className="mb-4 h-14 w-14 text-emerald-500" />
-          <h2 className="text-xl font-extrabold text-slate-800">ไม่มีรายการใน Report Console</h2>
-          <p className="mt-2 text-sm text-slate-500">โพสต์ที่ถูกรายงานหรือเพิ่งลบจะปรากฏที่หน้านี้</p>
+          <h2 className="text-xl font-extrabold text-slate-800">ไม่มีรายการใน Post Console</h2>
+          <p className="mt-2 text-sm text-slate-500">โพสต์จะปรากฏเมื่อมีรายงานครบ 10 ครั้งหรือเพิ่งถูกลบ</p>
         </div>
       ) : (
         <div className="space-y-4">

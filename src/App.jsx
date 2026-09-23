@@ -30,7 +30,7 @@ const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const UserManagement = lazy(() => import("./pages/admin/UserManagement"));
 const UserDetails = lazy(() => import("./pages/admin/UserDetails"));
 const AchievementManagement = lazy(() => import("./pages/admin/AchievementManagement"));
-const ReportConsole = lazy(() => import("./pages/moderator/ReportConsole"));
+const PostConsole = lazy(() => import("./pages/admin/PostConsole"));
 
 const RouteLoader = () => (
   <div className="min-h-[50vh] flex flex-col items-center justify-center gap-3 bg-background">
@@ -162,6 +162,11 @@ const ReviewerRoute = ({ children }) => {
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (!["ADMIN", "MODERATOR"].includes(role)) return <Navigate to="/home" replace />;
   return children;
+};
+
+const AdminIndex = () => {
+  const role = String(useAuthStore((state) => state.user?.role) || "").toUpperCase();
+  return role === "ADMIN" ? <AdminDashboard /> : <Navigate to="/admin/posts" replace />;
 };
 
 function App() {
@@ -471,7 +476,7 @@ function App() {
             path="/report-console"
             element={
               <ReviewerRoute>
-                <ReportConsole />
+                <Navigate to="/admin/posts" replace />
               </ReviewerRoute>
             }
           />
@@ -494,15 +499,16 @@ function App() {
         <Route
           path="/admin"
           element={
-            <AdminRoute>
+            <ReviewerRoute>
               <AdminLayout />
-            </AdminRoute>
+            </ReviewerRoute>
           }
         >
-          <Route index element={<AdminDashboard />} />
-          <Route path="users" element={<UserManagement />} />
-          <Route path="users/:id" element={<UserDetails />} />
-          <Route path="achievements" element={<AchievementManagement />} />
+          <Route index element={<AdminIndex />} />
+          <Route path="users" element={<AdminRoute><UserManagement /></AdminRoute>} />
+          <Route path="users/:id" element={<AdminRoute><UserDetails /></AdminRoute>} />
+          <Route path="achievements" element={<AdminRoute><AchievementManagement /></AdminRoute>} />
+          <Route path="posts" element={<PostConsole />} />
         </Route>
       </Routes>
       </Suspense>

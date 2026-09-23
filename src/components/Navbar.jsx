@@ -479,12 +479,12 @@ export default function Navbar() {
                         </Link>
                         {isReviewer && (
                           <Link
-                            to="/report-console"
+                            to="/admin/posts"
                             onClick={() => setShowProfileMenu(false)}
                             className="flex items-center gap-3 w-full p-2 text-left text-sm font-medium text-slate-700 hover:bg-rose-50 hover:text-rose-600 rounded-xl transition-colors"
                           >
                             <ShieldAlert className="h-4 w-4" />
-                            <span className="flex-1">Report Console</span>
+                            <span className="flex-1">Post Console</span>
                             <span
                               className={`inline-flex min-w-6 items-center justify-center rounded-full px-1.5 py-0.5 text-xs font-extrabold ${pendingReportCount > 0 ? "bg-rose-500 text-white" : "bg-slate-100 text-slate-500"}`}
                               aria-label={`${pendingReportCount} โพสต์รอตรวจสอบ`}
