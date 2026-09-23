@@ -258,6 +258,14 @@ export const postService = {
     }
   },
 
+  reportPost: async (id, reason) => {
+    const response = await api.post('/reports', {
+      post_id: id,
+      reason,
+    });
+    return response.data;
+  },
+
   // Like / Unlike a post
   likePost: async (id) => {
     try {
