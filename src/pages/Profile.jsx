@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import PostCard from "@/components/PostCard";
+import FollowListModal from "@/components/profile/FollowListModal";
 
 import useAuthStore from "@/store/authStore";
 import useHeroThemeStore from "@/store/heroThemeStore";
@@ -88,6 +89,13 @@ export default function Profile() {
     followersCount: 0,
     followingCount: 0,
   });
+  const [isFollowModalOpen, setIsFollowModalOpen] = useState(false);
+  const [followModalTab, setFollowModalTab] = useState("followers");
+
+  const openFollowModal = (tab = "followers") => {
+    setFollowModalTab(tab);
+    setIsFollowModalOpen(true);
+  };
 
   const handleBookmarkChange = (postId, isBookmarked) => {
     setMyPosts((posts) =>
@@ -513,22 +521,32 @@ export default function Profile() {
                     โพสต์
                   </span>
                 </div>
-                <div className="flex items-baseline gap-2">
-                  <span className={`text-xl font-extrabold ${headingClass}`}>
+                <button
+                  type="button"
+                  onClick={() => openFollowModal("followers")}
+                  className="flex items-baseline gap-2 group cursor-pointer hover:opacity-80 transition-all text-left focus:outline-none"
+                  title="ดูรายชื่อผู้ติดตาม"
+                >
+                  <span className={`text-xl font-extrabold ${headingClass} group-hover:text-primary transition-colors`}>
                     {followCounts.followersCount}
                   </span>
-                  <span className={`text-sm font-medium ${mutedTextClass}`}>
+                  <span className={`text-sm font-medium ${mutedTextClass} group-hover:text-primary transition-colors group-hover:underline underline-offset-4`}>
                     ผู้ติดตาม
                   </span>
-                </div>
-                <div className="flex items-baseline gap-2">
-                  <span className={`text-xl font-extrabold ${headingClass}`}>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openFollowModal("following")}
+                  className="flex items-baseline gap-2 group cursor-pointer hover:opacity-80 transition-all text-left focus:outline-none"
+                  title="ดูรายชื่อกำลังติดตาม"
+                >
+                  <span className={`text-xl font-extrabold ${headingClass} group-hover:text-primary transition-colors`}>
                     {followCounts.followingCount}
                   </span>
-                  <span className={`text-sm font-medium ${mutedTextClass}`}>
+                  <span className={`text-sm font-medium ${mutedTextClass} group-hover:text-primary transition-colors group-hover:underline underline-offset-4`}>
                     กำลังติดตาม
                   </span>
-                </div>
+                </button>
               </div>
 
               <div
@@ -959,6 +977,17 @@ export default function Profile() {
           )}
         </div>
       </div>
+
+      {/* Follow List Modal (Followers & Following) */}
+      <FollowListModal
+        isOpen={isFollowModalOpen}
+        onClose={() => setIsFollowModalOpen(false)}
+        userId={isOtherUser ? userId : (user?.user_id || user?.id)}
+        initialTab={followModalTab}
+        followersCount={followCounts.followersCount}
+        followingCount={followCounts.followingCount}
+        profileUsername={displayName}
+      />
     </div>
   );
 }

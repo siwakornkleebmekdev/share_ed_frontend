@@ -267,6 +267,28 @@ export const profileService = {
       throw error;
     }
   },
+
+  // Fetch Followers of a user (GET /follow/:userId/followers)
+  getFollowers: async (userId) => {
+    try {
+      const response = await api.get(`/follow/${encodeURIComponent(userId)}/followers`);
+      return response.data?.data || [];
+    } catch (error) {
+      console.error(`Error fetching followers for ${userId}:`, error);
+      return [];
+    }
+  },
+
+  // Fetch Following of a user (GET /follow/:userId/following)
+  getFollowing: async (userId) => {
+    try {
+      const response = await api.get(`/follow/${encodeURIComponent(userId)}/following`);
+      return response.data?.data || [];
+    } catch (error) {
+      console.error(`Error fetching following for ${userId}:`, error);
+      return [];
+    }
+  },
 };
 
 // แปลงโครงสร้างข้อมูล Milestone/Achievement จาก Backend ให้เป็นรูปแบบมาตรฐานสำหรับหน้า UI (Achievements.jsx และ Store)
