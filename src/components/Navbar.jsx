@@ -24,7 +24,6 @@ import useNotificationStore from "@/store/notificationStore";
 import useAuthStore from "@/store/authStore";
 import useHeroThemeStore from "@/store/heroThemeStore";
 import useAchievementStore from "@/store/achievementStore";
-import useReportStore from "@/store/reportStore";
 import { supabase } from "@/utils/supabase";
 import { authService } from "@/services/auth.service";
 import { DEFAULT_FRAMES } from "@/services/profile.service";
@@ -51,9 +50,6 @@ export default function Navbar() {
     useNotificationStore();
   const { isAuthenticated, user, logout } = useAuthStore();
   const { milestones, readyToClaimCount, fetchMilestones } = useAchievementStore();
-  const { pendingCount, fetchReports, startRealtime, stopRealtime, clear: clearReports } = useReportStore();
-  const isReviewer = ["ADMIN", "MODERATOR"].includes(String(user?.role || "").toUpperCase());
-  const pendingReportCount = pendingCount();
 
   const avatarSrc =
     user?.avatar_url ||
@@ -100,29 +96,6 @@ export default function Navbar() {
 
     }
   }, [isAuthenticated, fetchNotifications, fetchMilestones]);
-
-  useEffect(() => {
-    if (!isReviewer) {
-      stopRealtime();
-      clearReports();
-      return undefined;
-    }
-
-    const refreshReports = () => fetchReports({ force: true }).catch(() => {});
-    startRealtime();
-    refreshReports();
-    const intervalId = window.setInterval(refreshReports, 60_000);
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") refreshReports();
-    };
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
-      stopRealtime();
-      window.clearInterval(intervalId);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, [clearReports, fetchReports, isReviewer, startRealtime, stopRealtime]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -477,22 +450,6 @@ export default function Navbar() {
                           <User className="h-4 w-4" />
                           โปรไฟล์ของฉัน
                         </Link>
-                        {isReviewer && (
-                          <Link
-                            to="/admin/posts"
-                            onClick={() => setShowProfileMenu(false)}
-                            className="flex items-center gap-3 w-full p-2 text-left text-sm font-medium text-slate-700 hover:bg-rose-50 hover:text-rose-600 rounded-xl transition-colors"
-                          >
-                            <ShieldAlert className="h-4 w-4" />
-                            <span className="flex-1">Post Console</span>
-                            <span
-                              className={`inline-flex min-w-6 items-center justify-center rounded-full px-1.5 py-0.5 text-xs font-extrabold ${pendingReportCount > 0 ? "bg-rose-500 text-white" : "bg-slate-100 text-slate-500"}`}
-                              aria-label={`${pendingReportCount} โพสต์รอตรวจสอบ`}
-                            >
-                              {pendingReportCount}
-                            </span>
-                          </Link>
-                        )}
                         {user?.role === "ADMIN" ? (
                           <Link
                             to="/admin"

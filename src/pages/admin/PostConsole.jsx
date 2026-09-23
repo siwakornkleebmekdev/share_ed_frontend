@@ -37,7 +37,7 @@ const formatCountdown = (milliseconds) => {
   return `${minutesPart}:${secondsPart}`;
 };
 
-export default function PostConsole() {
+export default function PostConsole({ view = "posts" }) {
   const { reports, fetchReports, reviewPost, isLoading, isReviewing, error } = useReportStore();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -52,16 +52,18 @@ export default function PostConsole() {
     return () => window.clearInterval(timer);
   }, []);
 
-  const visibleReports = reports.filter((post) => {
+  const recoverableReports = reports.filter((post) => {
     const status = String(post.post_status || post.postStatus || "ACTIVE").toUpperCase();
     return status !== "DELETED" || getRecoveryDeadline(post) > now;
   });
-  const pendingPosts = visibleReports.filter((post) =>
+  const pendingPosts = recoverableReports.filter((post) =>
     String(post.post_status || post.postStatus || "ACTIVE").toUpperCase() !== "DELETED",
   );
-  const recentlyDeletedPosts = visibleReports.filter((post) =>
+  const recentlyDeletedPosts = recoverableReports.filter((post) =>
     String(post.post_status || post.postStatus || "").toUpperCase() === "DELETED",
   );
+  const isReportView = view === "reports";
+  const visibleReports = isReportView ? pendingPosts : recentlyDeletedPosts;
   const filteredReports = useMemo(() => {
     const query = search.trim().toLowerCase();
     return visibleReports.filter((post) => {
@@ -131,12 +133,17 @@ export default function PostConsole() {
         <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-rose-500/15 px-3 py-1 text-sm font-bold text-rose-300">
-              <ShieldAlert className="h-4 w-4" /> Post Console
+              {isReportView ? <ShieldAlert className="h-4 w-4" /> : <FileWarning className="h-4 w-4" />}
+              {isReportView ? " Report Console" : " Post Management"}
             </div>
-            <h1 className="text-2xl font-extrabold sm:text-3xl">จัดการสถานะโพสต์</h1>
-            <p className="mt-2 text-sm text-slate-300">ตรวจโพสต์ที่ได้รับรายงานครบ 10 ครั้ง และเรียกคืนโพสต์ที่เพิ่งลบภายใน 5 นาที</p>
+            <h1 className="text-2xl font-extrabold sm:text-3xl">{isReportView ? "จัดการรีพอร์ต" : "จัดการโพสต์"}</h1>
+            <p className="mt-2 text-sm text-slate-300">
+              {isReportView ? "ตรวจสอบโพสต์ที่ได้รับรายงานครบ 10 ครั้ง" : "เรียกคืนโพสต์ที่เพิ่งลบภายใน 5 นาที"}
+            </p>
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className={`grid gap-3 ${isReportView ? "grid-cols-2" : "grid-cols-1"}`}>
+            {isReportView ? (
+              <>
             <div className="rounded-2xl bg-white/10 px-5 py-4 text-center backdrop-blur">
               <p className="text-3xl font-extrabold text-rose-300">{pendingPosts.length}</p>
               <p className="mt-1 text-xs font-medium text-slate-300">โพสต์รอตรวจสอบ</p>
@@ -145,10 +152,13 @@ export default function PostConsole() {
               <p className="text-3xl font-extrabold text-amber-300">{totalReports}</p>
               <p className="mt-1 text-xs font-medium text-slate-300">รายงานทั้งหมด</p>
             </div>
+              </>
+            ) : (
             <div className="rounded-2xl bg-white/10 px-5 py-4 text-center backdrop-blur">
               <p className="text-3xl font-extrabold text-sky-300">{recentlyDeletedPosts.length}</p>
               <p className="mt-1 text-xs font-medium text-slate-300">รอเรียกคืน</p>
             </div>
+            )}
           </div>
         </div>
       </section>
@@ -163,7 +173,7 @@ export default function PostConsole() {
             className="w-full rounded-xl border border-slate-200 py-2.5 pl-10 pr-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
           />
         </label>
-        <select
+        {isReportView && <select
           value={statusFilter}
           onChange={(event) => setStatusFilter(event.target.value)}
           className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 outline-none focus:border-primary"
@@ -171,8 +181,7 @@ export default function PostConsole() {
           <option value="ALL">ทุกสถานะ</option>
           <option value="ACTIVE">ยังเผยแพร่อยู่</option>
           <option value="UNACTIVED">ถูกระงับชั่วคราว</option>
-          <option value="DELETED">เพิ่งลบและเรียกคืนได้</option>
-        </select>
+        </select>}
       </section>
 
       {error && (
@@ -191,8 +200,12 @@ export default function PostConsole() {
       ) : filteredReports.length === 0 ? (
         <div className="flex min-h-64 flex-col items-center justify-center rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
           <CheckCircle2 className="mb-4 h-14 w-14 text-emerald-500" />
-          <h2 className="text-xl font-extrabold text-slate-800">ไม่มีรายการใน Post Console</h2>
-          <p className="mt-2 text-sm text-slate-500">โพสต์จะปรากฏเมื่อมีรายงานครบ 10 ครั้งหรือเพิ่งถูกลบ</p>
+          <h2 className="text-xl font-extrabold text-slate-800">
+            {isReportView ? "ไม่มีรีพอร์ตที่รอตรวจสอบ" : "ไม่มีโพสต์ที่รอเรียกคืน"}
+          </h2>
+          <p className="mt-2 text-sm text-slate-500">
+            {isReportView ? "โพสต์จะปรากฏเมื่อได้รับรายงานครบ 10 ครั้ง" : "โพสต์ที่เพิ่งถูกลบจะปรากฏที่นี่เป็นเวลา 5 นาที"}
+          </p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -224,9 +237,9 @@ export default function PostConsole() {
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0">
                         <div className="mb-2 flex flex-wrap items-center gap-2">
-                          <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-600">
+                          {isReportView && <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-600">
                             <AlertTriangle className="h-3.5 w-3.5" /> {getReportCount(post)} รายงาน
-                          </span>
+                          </span>}
                           <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusClass}`}>
                             {STATUS_LABELS[status] || status}
                           </span>
@@ -251,7 +264,7 @@ export default function PostConsole() {
                       )}
                     </div>
 
-                    <div className="mt-5 grid gap-4 border-y border-slate-100 py-4 md:grid-cols-2">
+                    {isReportView && <div className="mt-5 grid gap-4 border-y border-slate-100 py-4 md:grid-cols-2">
                       <div>
                         <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">เหตุผลที่ถูกรายงาน</p>
                         <div className="flex flex-wrap gap-2">
@@ -267,7 +280,7 @@ export default function PostConsole() {
                           {formatDate(post.reports?.[post.reports.length - 1]?.created_at || post.updated_at)}
                         </p>
                       </div>
-                    </div>
+                    </div>}
 
                     {post.content && (
                       <details className="mt-4 rounded-xl bg-slate-50 px-4 py-3">

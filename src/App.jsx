@@ -166,7 +166,7 @@ const ReviewerRoute = ({ children }) => {
 
 const AdminIndex = () => {
   const role = String(useAuthStore((state) => state.user?.role) || "").toUpperCase();
-  return role === "ADMIN" ? <AdminDashboard /> : <Navigate to="/admin/posts" replace />;
+  return role === "ADMIN" ? <AdminDashboard /> : <Navigate to="/admin/reports" replace />;
 };
 
 function App() {
@@ -476,7 +476,7 @@ function App() {
             path="/report-console"
             element={
               <ReviewerRoute>
-                <Navigate to="/admin/posts" replace />
+                <Navigate to="/admin/reports" replace />
               </ReviewerRoute>
             }
           />
@@ -508,7 +508,8 @@ function App() {
           <Route path="users" element={<AdminRoute><UserManagement /></AdminRoute>} />
           <Route path="users/:id" element={<AdminRoute><UserDetails /></AdminRoute>} />
           <Route path="achievements" element={<AdminRoute><AchievementManagement /></AdminRoute>} />
-          <Route path="posts" element={<PostConsole />} />
+          <Route path="posts" element={<PostConsole view="posts" />} />
+          <Route path="reports" element={<PostConsole view="reports" />} />
         </Route>
       </Routes>
       </Suspense>
