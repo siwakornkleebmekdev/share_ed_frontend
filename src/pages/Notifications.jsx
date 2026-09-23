@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import {
   Bell, Heart, MessageSquare, Info, Check, Trash2, ArrowLeft,
-  Bookmark, UserPlus, Newspaper, X, ShieldAlert, RotateCcw,
+  Bookmark, UserPlus, Newspaper, X, ShieldAlert, RotateCcw, Trophy,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import useNotificationStore from '@/store/notificationStore';
@@ -54,6 +54,7 @@ export default function Notifications() {
       case 'POST_REPORTED': return <ShieldAlert className={`${cls} text-rose-500`} />;
       case 'POST_RESTORED': return <RotateCcw className={`${cls} text-emerald-500`} />;
       case 'POST_REMOVED': return <Trash2 className={`${cls} text-slate-500`} />;
+      case 'ACHIEVEMENT_COMPLETED': return <Trophy className={`${cls} text-amber-500`} />;
       case 'SYSTEM':   return <Info className={`${cls} text-indigo-500`} />;
       default:         return <Bell className={`${cls} text-slate-500`} />;
     }
@@ -74,6 +75,7 @@ export default function Notifications() {
       POST_REPORTED: 'bg-rose-50',
       POST_RESTORED: 'bg-emerald-50',
       POST_REMOVED: 'bg-slate-100',
+      ACHIEVEMENT_COMPLETED: 'bg-amber-50',
       SYSTEM: 'bg-indigo-50',
     };
     return map[type] || 'bg-slate-50';
@@ -84,6 +86,7 @@ export default function Notifications() {
     if (type === 'POST_RESTORED') return 'ดูโพสต์ที่คืนสถานะ →';
     if (type === 'POST_REMOVED') return 'ดูโพสต์ที่ถูกลบ →';
     if (type === 'POST_REPORTED') return 'ดูโพสต์ที่ถูกรายงาน →';
+    if (type === 'ACHIEVEMENT_COMPLETED') return 'ดูความสำเร็จและรับรางวัล →';
     return 'ดูรายละเอียด →';
   };
 

@@ -89,11 +89,18 @@ export default function Navbar() {
 
   useEffect(() => {
     if (isAuthenticated) {
-
       fetchMilestones();
-
     }
   }, [isAuthenticated, fetchNotifications, fetchMilestones]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const handleAchievementEvent = () => {
+      fetchMilestones(true);
+    };
+    window.addEventListener("achievement_completed", handleAchievementEvent);
+    return () => window.removeEventListener("achievement_completed", handleAchievementEvent);
+  }, [isAuthenticated, fetchMilestones]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -142,6 +149,8 @@ export default function Navbar() {
         return <FileText className="h-4 w-4 text-emerald-500" />;
       case "POST_REMOVED":
         return <FileText className="h-4 w-4 text-slate-500" />;
+      case "ACHIEVEMENT_COMPLETED":
+        return <Trophy className="h-4 w-4 text-amber-500" />;
       default:
         return <Bell className="h-4 w-4 text-slate-500" />;
     }
@@ -152,6 +161,7 @@ export default function Navbar() {
     if (type === "POST_RESTORED") return "ดูโพสต์ที่คืนสถานะ →";
     if (type === "POST_REMOVED") return "ดูโพสต์ที่ถูกลบ →";
     if (type === "POST_REPORTED") return "ดูโพสต์ที่ถูกรายงาน →";
+    if (type === "ACHIEVEMENT_COMPLETED") return "ดูความสำเร็จและรับรางวัล →";
     return "ดูรายละเอียด →";
   };
 

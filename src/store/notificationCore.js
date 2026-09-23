@@ -18,6 +18,7 @@ const THAI_TITLES = {
   POST_RESTORED: 'โพสต์ของคุณได้รับการคืนสถานะ',
   POST_REMOVED: 'โพสต์ของคุณถูกลบ',
   POST_REPORTED: 'มีโพสต์ถูกรายงาน',
+  ACHIEVEMENT_COMPLETED: 'ปลดล็อกความสำเร็จใหม่!',
 };
 
 function asId(value) {
@@ -92,6 +93,10 @@ export function localizeNotificationContent(n, type) {
     ...sources,
     ...sources.flatMap(source => [source.post, source.targetPost, source.target_post]),
   ].filter(Boolean);
+  const achievementSources = [
+    ...sources,
+    ...sources.flatMap(source => [source.achievement, source.milestone, source.reward, source.reward_item, source.rewardItem]),
+  ].filter(Boolean);
   const actorName = getNestedValue(sources, [
     'actorName', 'actor_name', 'senderName', 'sender_name', 'followerName', 'follower_name',
     'authorName', 'author_name', 'authorUsername', 'author_username',
@@ -105,6 +110,11 @@ export function localizeNotificationContent(n, type) {
   const postTitle = getNestedValue(sources, [
     'postTitle', 'post_title', 'targetTitle', 'target_title',
   ]) || getNestedValue(postSources.slice(sources.length), ['title']);
+  const achievementTitle = getNestedValue(sources, [
+    'achievementTitle', 'achievement_title', 'milestoneTitle', 'milestone_title',
+    'achievementName', 'achievement_name', 'milestoneName', 'milestone_name',
+    'rewardName', 'reward_name', 'itemName', 'item_name',
+  ]) || getNestedValue(achievementSources.slice(sources.length), ['title', 'name', 'item_name']);
   const actor = actorName || 'ผู้ใช้คนหนึ่ง';
   const post = postTitle ? ` “${postTitle}”` : 'ของคุณ';
 
@@ -120,6 +130,11 @@ export function localizeNotificationContent(n, type) {
       : `${actor} เผยแพร่โพสต์ใหม่`,
     BOOKMARK: `${actor} บันทึกโพสต์${post}`,
     BOOKMARK_REMOVED: `${actor} ยกเลิกการบันทึกโพสต์${post}`,
+    ACHIEVEMENT_COMPLETED: (backendMessage && THAI_TEXT.test(backendMessage))
+      ? backendMessage
+      : (achievementTitle
+        ? `คุณปลดล็อกความสำเร็จ “${achievementTitle}” เรียบร้อยแล้ว เข้าไปรับรางวัลได้เลย`
+        : 'คุณปลดล็อกความสำเร็จใหม่เรียบร้อยแล้ว เข้าไปรับรางวัลได้เลย'),
   };
   const backendMessage = getNestedValue(sources, ['message', 'content']);
 
@@ -131,7 +146,9 @@ export function localizeNotificationContent(n, type) {
         ? backendMessage
         : type === 'SYSTEM'
           ? 'คุณมีข้อความแจ้งเตือนใหม่จากระบบ'
-          : 'คุณมีการแจ้งเตือนใหม่'),
+          : type === 'ACHIEVEMENT_COMPLETED'
+            ? 'คุณปลดล็อกความสำเร็จใหม่เรียบร้อยแล้ว เข้าไปรับรางวัลได้เลย'
+            : 'คุณมีการแจ้งเตือนใหม่'),
     actorName,
   };
 }
@@ -157,7 +174,9 @@ export function getNotificationTarget(n, normalizedType) {
     ? `/post/${encodeURIComponent(postId)}`
     : FOLLOW_TYPES.has(type) && actorId
       ? `/profile/${encodeURIComponent(actorId)}`
-      : null;
+      : type === 'ACHIEVEMENT_COMPLETED'
+        ? '/achievements'
+        : null;
   const link = FOLLOW_TYPES.has(type) && generatedLink
     ? generatedLink
     : explicitLink || generatedLink;
@@ -232,8 +251,17 @@ export function createNotificationStore(service, realtime) {
         const refresh = () => { if (session === epoch) get().fetchNotifications(); };
         const receive = payload => { if (session === epoch) get().addNotification(payload?.data ?? payload); };
         const remove = payload => { if (session === epoch) get().removeNotification(payload?.data ?? payload); };
+        const receiveAchievement = payload => {
+          if (session === epoch) {
+            get().fetchNotifications();
+            globalThis.window?.dispatchEvent(new CustomEvent('achievement_completed', { detail: payload?.data ?? payload }));
+          }
+        };
         socket.on('new_notification', receive);
         socket.on('notification_removed', remove);
+        socket.on('achievement_completed', receiveAchievement);
+        socket.on('achievement_unlocked', receiveAchievement);
+        socket.on('milestone_completed', receiveAchievement);
         socket.on('connect', refresh);
         const timer = setInterval(refresh, 60000);
         globalThis.window?.addEventListener('online', refresh);
@@ -242,6 +270,9 @@ export function createNotificationStore(service, realtime) {
           clearInterval(timer);
           socket.off('new_notification', receive);
           socket.off('notification_removed', remove);
+          socket.off('achievement_completed', receiveAchievement);
+          socket.off('achievement_unlocked', receiveAchievement);
+          socket.off('milestone_completed', receiveAchievement);
           socket.off('connect', refresh);
           globalThis.window?.removeEventListener('online', refresh);
           globalThis.window?.removeEventListener('focus', refresh);
@@ -299,6 +330,9 @@ export function createNotificationStore(service, realtime) {
           const existing = state.notifications.find(item => item.id === n.id);
           return { notifications: sorted([...state.notifications.filter(item => item.id !== n.id), { ...n, isRead: n.isRead || existing?.isRead || false }]) };
         });
+        if (n.type === 'ACHIEVEMENT_COMPLETED') {
+          globalThis.window?.dispatchEvent(new CustomEvent('achievement_completed', { detail: n }));
+        }
       },
     };
   });

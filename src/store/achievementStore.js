@@ -24,7 +24,8 @@ const useAchievementStore = create((set, get) => ({
     set({ lastFetchedAt: 0 });
   },
 
-  fetchMilestones: async ({ force = false } = {}) => {
+  fetchMilestones: async (options = false) => {
+    const force = typeof options === 'boolean' ? options : Boolean(options?.force);
     const auth = useAuthStore.getState();
     const userId = auth.user?.id || auth.user?.user_id || null;
     if (!auth.isAuthenticated || !userId) {
