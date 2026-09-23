@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router';
 import { FileText, Download, Heart, Share2, Tag, ChevronLeft, ChevronRight, Calendar, Eye, EyeOff, Bookmark, X, Edit3, Trash2, Send, MessageSquare, AlignLeft, ImageIcon, Flag } from 'lucide-react';
 import { postService } from '@/services/post.service';
-import { profileService, DEFAULT_FRAMES } from '@/services/profile.service';
+import { profileService } from '@/services/profile.service';
 import useAuthStore from '@/store/authStore';
 import useAchievementStore from '@/store/achievementStore';
 import toast from 'react-hot-toast';
@@ -10,6 +10,7 @@ import Swal from 'sweetalert2';
 import { supabase } from '@/utils/supabase';
 import { sanitizePostContent } from '@/utils/sanitizePostContent';
 import { resolveProfileFrame } from '@/utils/profileFrame';
+import AvatarWithFrame from '@/components/profile/AvatarWithFrame';
 
 const COMMENTS_PER_PAGE = 5;
 const REPORT_REASONS = [
@@ -230,18 +231,18 @@ export default function PostDetails() {
     ...post?.author,
     ...(isAuthor ? user : {}),
     ...authorProfile,
-    current_frame_id: authorProfile?.current_frame_id
-      || (isAuthor ? user?.current_frame_id || user?.user_metadata?.profile_frame_id : null)
+    profile_frame_id: isAuthor && user && 'current_frame_id' in user ? user.current_frame_id : authorProfile?.profile_frame_id,
+    user_metadata: isAuthor ? user?.user_metadata : authorProfile?.user_metadata,
+    current_frame_id: (isAuthor && user && 'current_frame_id' in user) ? user.current_frame_id : authorProfile?.current_frame_id
       || post?.author_frame_id
       || post?.authorFrameId
       || post?.author?.current_frame_id,
-    current_frame: authorProfile?.current_frame
-      || (isAuthor ? user?.current_frame : null)
+    current_frame: (isAuthor && user && 'current_frame_id' in user) ? user.current_frame : authorProfile?.current_frame
       || post?.authorFrame
       || post?.author_frame
       || post?.author?.current_frame,
   };
-  const authorFrame = resolveProfileFrame(authorFrameProfile, [...milestones, ...DEFAULT_FRAMES]);
+  const authorFrame = resolveProfileFrame(authorFrameProfile, milestones);
   const authorFrameUrl = authorFrame?.previewUrl;
 
   const handleOpenReport = () => {
@@ -592,25 +593,7 @@ export default function PostDetails() {
             <div className="flex flex-wrap items-center justify-between gap-4 py-4 border-y border-slate-100">
               <div className="flex items-center gap-3">
                 <Link to={postAuthorId ? `/profile/${encodeURIComponent(postAuthorId)}` : '#'} className="relative h-14 w-14 shrink-0 block group cursor-pointer" aria-label={`ดูโปรไฟล์ของ ${authorUsername}`}>
-                  <div className="absolute inset-1 z-0 rounded-full overflow-hidden border-2 border-white shadow-sm bg-slate-100 flex items-center justify-center">
-                    <img
-                      src={authorAvatar}
-                      alt={authorUsername}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(authorUsername || 'User')}&background=1e293b&color=38bdf8`;
-                      }}
-                    />
-                  </div>
-                  {authorFrameUrl && (
-                    <img
-                      src={authorFrameUrl}
-                      alt=""
-                      aria-hidden="true"
-                      className="absolute inset-0 z-10 h-full w-full object-contain pointer-events-none"
-                    />
-                  )}
+                  <AvatarWithFrame avatarSrc={authorAvatar} frameSrc={authorFrameUrl} avatarAlt={authorUsername} sizeClass="h-14 w-14" className="bg-slate-100" onAvatarError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(authorUsername || 'User')}&background=1e293b&color=38bdf8`; }} />
                 </Link>
                 <div>
                   <Link to={postAuthorId ? `/profile/${encodeURIComponent(postAuthorId)}` : '#'} className="font-bold text-slate-900 hover:text-primary transition-colors block">

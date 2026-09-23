@@ -14,10 +14,17 @@ const useAchievementStore = create((set, get) => ({
   ownerId: null,
   lastFetchedAt: 0,
 
-  // Computed count of rewards waiting to be claimed
+  // คำนวณจำนวนรางวัลความสำเร็จที่พร้อมกดรับ (READY_TO_CLAIM)
   readyToClaimCount: () => get().milestones.filter(m => m.status === 'READY_TO_CLAIM').length,
 
-  fetchMilestones: async () => {
+  invalidateMilestones: () => {
+    milestonesRequestId++;
+    milestonesFlight = null;
+    milestonesFlightOwner = null;
+    set({ lastFetchedAt: 0 });
+  },
+
+  fetchMilestones: async ({ force = false } = {}) => {
     const auth = useAuthStore.getState();
     const userId = auth.user?.id || auth.user?.user_id || null;
     if (!auth.isAuthenticated || !userId) {
@@ -30,13 +37,14 @@ const useAchievementStore = create((set, get) => ({
 
     const state = get();
     if (
+      !force &&
       state.ownerId === userId &&
       state.milestones.length > 0 &&
       Date.now() - state.lastFetchedAt < CACHE_TTL_MS
     ) {
       return state.milestones;
     }
-    if (milestonesFlight && milestonesFlightOwner === userId) return milestonesFlight;
+    if (!force && milestonesFlight && milestonesFlightOwner === userId) return milestonesFlight;
 
     set({ isLoading: true, error: null });
     const requestId = ++milestonesRequestId;
@@ -68,9 +76,11 @@ const useAchievementStore = create((set, get) => ({
     return milestonesFlight;
   },
 
-  // Claims via the real POST /milestones/:id/claim endpoint, then flips the
-  // local copy to CLAIMED on success. Throws on failure so the caller can
-  // show the backend's actual error message (e.g. already claimed).
+  // กดรับรางวัลผ่าน API จริง (POST /milestones/:id/claim หรือ /achievements/:id/claim)
+  // เมื่อสำเร็จจะอัปเดตสถานะใน store เป็น CLAIMED ทันที
+  // หากเกิดข้อผิดพลาดจะ throw error เพื่อให้หน้า UI แสดงข้อความแจ้งเตือนจากหลังบ้าน
+
+
   claimReward: async (id) => {
     await profileService.claimMilestone(id);
     set((state) => ({

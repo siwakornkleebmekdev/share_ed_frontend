@@ -15,10 +15,10 @@ import toast from 'react-hot-toast';
 import useAchievementStore from '@/store/achievementStore';
 import useAuthStore from '@/store/authStore';
 import { supabase } from '@/utils/supabase';
-import api from '@/utils/api';
+import { profileService } from '@/services/profile.service';
 
 export default function Achievements() {
-  const { milestones, isLoading, fetchMilestones, claimReward } = useAchievementStore();
+  const { milestones, isLoading, error, fetchMilestones, claimReward } = useAchievementStore();
   const { user } = useAuthStore();
   const [filterTab, setFilterTab] = useState('ALL'); // 'ALL' | 'READY' | 'CLAIMED' | 'LOCKED'
   const [claimingId, setClaimingId] = useState(null);
@@ -34,14 +34,15 @@ export default function Achievements() {
 
   const currentUserId = user?.id || user?.user_id;
   const currentEquippedFrameId =
-    user?.user_metadata?.profile_frame_id ||
     user?.current_frame_id ||
+    user?.profile_frame_id ||
+    user?.user_metadata?.profile_frame_id ||
     (currentUserId ? localStorage.getItem(`profile_frame_id_${currentUserId}`) : null) ||
     localStorage.getItem('profile_frame_id') ||
     null;
 
   useEffect(() => {
-    fetchMilestones();
+    fetchMilestones({ force: true });
   }, [fetchMilestones]);
 
   const handleClaim = async (id) => {
@@ -59,50 +60,41 @@ export default function Achievements() {
   };
 
   const handleEquipFrame = async (milestone) => {
-    const frameId = milestone.reward_item_id || milestone.id;
+    const frameId = milestone.reward_item_id || milestone.reward_item?.id || milestone.reward?.id;
+    if (milestone.status !== 'CLAIMED' || !frameId) return;
     const userId = user?.id || user?.user_id;
     setEquippingId(frameId);
-
+    const previousFrameId = user?.current_frame_id || user?.profile_frame_id || user?.user_metadata?.profile_frame_id || null;
+    const previousFrame = user?.current_frame || null;
+    const applyLocally = (id, frame) => {
+      if (id) {
+        if (userId) localStorage.setItem(`profile_frame_id_${userId}`, id);
+        localStorage.setItem('profile_frame_id', id);
+      } else {
+        if (userId) localStorage.removeItem(`profile_frame_id_${userId}`);
+        localStorage.removeItem('profile_frame_id');
+      }
+      useAuthStore.getState().login({ ...user, current_frame_id: id, profile_frame_id: id, current_frame: frame,
+        user_metadata: { ...user?.user_metadata, profile_frame_id: id } });
+    };
     try {
-      // 1. LocalStorage
-      if (userId) {
-        localStorage.setItem(`profile_frame_id_${userId}`, frameId);
+      applyLocally(frameId, milestone.reward_item || milestone.reward);
+      const toastId = toast.success(`✨ เปลี่ยนไปใช้ "${milestone.reward.name}" เรียบร้อย!`);
+      const [authResult, equipResult] = await Promise.allSettled([
+        supabase.auth.updateUser({ data: { profile_frame_id: frameId } }),
+        profileService.equipItem(frameId, 'FRAME'),
+      ]);
+      if (equipResult.status === 'rejected' || equipResult.value?.success === false) {
+        toast.dismiss(toastId);
+        applyLocally(previousFrameId, previousFrame);
+        try {
+          const restore = await supabase.auth.updateUser({ data: { profile_frame_id: previousFrameId } });
+          if (restore.error) console.warn('Unable to restore frame metadata:', restore.error);
+        } catch (restoreError) { console.warn('Unable to restore frame metadata:', restoreError); }
+        toast.error('ไม่สามารถบันทึกกรอบได้ ระบบคืนค่ากรอบเดิมแล้ว');
+      } else if (authResult.status === 'rejected' || authResult.value?.error) {
+        console.warn('Unable to sync frame metadata:', authResult.status === 'rejected' ? authResult.reason : authResult.value.error);
       }
-      localStorage.setItem('profile_frame_id', frameId);
-
-      // 2. Supabase user metadata
-      try {
-        await supabase.auth.updateUser({
-          data: { profile_frame_id: frameId },
-        });
-      } catch (sbErr) {
-        console.warn('Supabase updateUser frame notice:', sbErr);
-      }
-
-      // 3. Backend API sync
-      try {
-        await api.post('/users/equip', {
-          item_id: milestone.reward_item_id || milestone.reward?.id,
-          reward_item_id: milestone.reward_item_id || milestone.reward?.id,
-          frame_id: frameId,
-          type: 'FRAME',
-        });
-      } catch (apiErr) {
-        console.warn('Backend equip API notice:', apiErr);
-      }
-
-      // 4. Update auth store
-      const updatedUser = {
-        ...user,
-        user_metadata: {
-          ...(user?.user_metadata || {}),
-          profile_frame_id: frameId,
-        },
-        current_frame_id: frameId,
-      };
-      useAuthStore.getState().login(updatedUser);
-
-      toast.success(`✨ เปลี่ยนไปใช้ "${milestone.reward.name}" เรียบร้อย!`);
     } catch (err) {
       console.error('Error equipping frame:', err);
       toast.error('ไม่สามารถเปลี่ยนกรอบรูปได้');
@@ -265,6 +257,11 @@ export default function Achievements() {
           <p className="text-slate-600 font-bold text-base">กำลังโหลดข้อมูลความสำเร็จ...</p>
           <p className="text-slate-400 text-xs mt-1">โปรดรอสักครู่</p>
         </div>
+      ) : error ? (
+        <div className="mx-auto max-w-md rounded-3xl border border-red-100 bg-white p-10 text-center shadow-sm">
+          <h3 className="font-bold text-slate-800">โหลดข้อมูลความสำเร็จไม่สำเร็จ</h3>
+          <button type="button" onClick={fetchMilestones} className="mt-4 rounded-xl bg-primary px-5 py-2 text-sm font-bold text-white">ลองใหม่</button>
+        </div>
       ) : filteredMilestones.length === 0 ? (
         <div className="bg-white rounded-3xl border border-slate-200/80 p-12 text-center shadow-sm max-w-md mx-auto">
           <div className="h-16 w-16 mx-auto rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-4">
@@ -294,7 +291,7 @@ export default function Achievements() {
               hasReward && milestone.reward.type !== 'FRAME' && !!milestone.reward.previewUrl;
 
             // Check if user currently has this frame equipped
-            const milestoneFrameId = milestone.reward_item_id || milestone.id;
+            const milestoneFrameId = milestone.reward_item_id || milestone.reward_item?.id || milestone.reward?.id;
             const isEquipped =
               isClaimed &&
               isFrameReward &&
@@ -554,7 +551,7 @@ export default function Achievements() {
                           <button
                             type="button"
                             onClick={() => handleEquipFrame(milestone)}
-                            disabled={equippingId === milestoneFrameId}
+                            disabled={!milestoneFrameId || equippingId === milestoneFrameId}
                             className="w-full py-2.5 rounded-2xl font-bold text-sm bg-emerald-50 border border-emerald-200/80 text-emerald-700 hover:bg-emerald-100/90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
                           >
                             {equippingId === milestoneFrameId ? (

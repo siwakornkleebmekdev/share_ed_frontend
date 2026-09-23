@@ -44,7 +44,7 @@ export default function AdminSidebar() {
 
   useEffect(() => {
     startRealtime();
-    fetchReports({ force: true }).catch(() => {});
+    fetchReports({ force: true }).catch(() => { });
     return () => stopRealtime();
   }, [fetchReports, startRealtime, stopRealtime]);
 
@@ -81,35 +81,35 @@ export default function AdminSidebar() {
           const visibleItems = group.items.filter((item) => item.roles.includes(role));
           if (visibleItems.length === 0) return null;
           return (
-          <div key={group.label}>
-            <p className="admin-sidebar-group-label">{group.label}</p>
-            <div className="space-y-1">
-              {visibleItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    end={item.end}
-                    className={navLinkClass}
-                  >
-                    <Icon className="h-4 w-4 shrink-0" />
-                    <span className="flex-1">{item.label}</span>
-                    {item.showReportCount && (
-                      <span className={`inline-flex min-w-6 items-center justify-center rounded-full px-1.5 py-0.5 text-xs font-extrabold ${reportCount > 0 ? "bg-rose-500 text-white" : "bg-slate-100 text-slate-500"}`}>
-                        {reportCount}
-                      </span>
-                    )}
-                    {item.showDeletedCount && (
-                      <span className={`inline-flex min-w-6 items-center justify-center rounded-full px-1.5 py-0.5 text-xs font-extrabold ${deletedCount > 0 ? "bg-sky-500 text-white" : "bg-slate-100 text-slate-500"}`}>
-                        {deletedCount}
-                      </span>
-                    )}
-                  </NavLink>
-                );
-              })}
+            <div key={group.label}>
+              <p className="admin-sidebar-group-label">{group.label}</p>
+              <div className="space-y-1">
+                {visibleItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      end={item.end}
+                      className={navLinkClass}
+                    >
+                      <Icon className="h-4 w-4 shrink-0" />
+                      <span className="flex-1">{item.label}</span>
+                      {item.showReportCount && (
+                        <span className={`inline-flex min-w-6 items-center justify-center rounded-full px-1.5 py-0.5 text-xs font-extrabold ${reportCount > 0 ? "bg-rose-500 text-white" : "bg-slate-100 text-slate-500"}`}>
+                          {reportCount}
+                        </span>
+                      )}
+                      {item.showDeletedCount && (
+                        <span className={`inline-flex min-w-6 items-center justify-center rounded-full px-1.5 py-0.5 text-xs font-extrabold ${deletedCount > 0 ? "bg-sky-500 text-white" : "bg-slate-100 text-slate-500"}`}>
+                          {deletedCount}
+                        </span>
+                      )}
+                    </NavLink>
+                  );
+                })}
+              </div>
             </div>
-          </div>
           );
         })}
 

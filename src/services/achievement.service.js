@@ -1,13 +1,14 @@
 import api from "../utils/api";
-import { DEFAULT_FRAMES } from "./profile.service";
-import { convertSvgToPngFile, convertSvgUrlToPngFile } from "../utils/imageUtils";
+import { convertSvgToPngFile } from "../utils/imageUtils";
+import { prepareRewardImageFile } from "../utils/rewardImage";
 
-// Configuration and Thai metadata for milestone/achievement types
+// การตั้งค่าและข้อมูลอธิบายประเภทภารกิจความสำเร็จ (Milestone / Achievement Types)
 export const MILESTONE_TYPES = [
   {
     key: "FOLLOWERS_COUNT",
     label: "👥 จำนวนผู้ติดตาม (Followers)",
     shortLabel: "ผู้ติดตาม",
+    achievementDescription: "จำนวนผู้ติดตาม",
     unit: "คน",
     description: "ระบบจะตรวจจับและนับจำนวนผู้ติดตามของสมาชิกโดยอัตโนมัติเมื่อมีผู้อื่นกดติดตาม",
     placeholder: "เช่น 10",
@@ -17,42 +18,15 @@ export const MILESTONE_TYPES = [
     key: "POST_LIKES",
     label: "❤️ ยอดถูกใจที่ได้รับ (Post Likes)",
     shortLabel: "ยอดถูกใจ",
+    achievementDescription: "ยอดถูกใจที่ได้รับ",
     unit: "ไลก์",
     description: "ระบบจะรวมยอดถูกใจสะสมจากทุกโพสต์ที่สมาชิกเผยแพร่โดยอัตโนมัติ",
     placeholder: "เช่น 50",
     color: "bg-rose-50 text-rose-700 border-rose-200",
   },
-  {
-    key: "POSTS_CREATED",
-    label: "📝 จำนวนโพสต์ที่สร้าง (Posts Created)",
-    shortLabel: "จำนวนโพสต์",
-    unit: "โพสต์",
-    description: "ระบบจะนับจำนวนโพสต์สรุปบทเรียนที่ผู้ใช้สร้างและเผยแพร่สำเร็จ",
-    placeholder: "เช่น 5",
-    color: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  },
-  {
-    key: "COMMENTS_CREATED",
-    label: "💬 จำนวนความคิดเห็น (Comments)",
-    shortLabel: "ความคิดเห็น",
-    unit: "คอมเมนต์",
-    description: "ระบบจะนับจำนวนความคิดเห็นที่ผู้ใช้ร่วมพูดคุยแลกเปลี่ยนใต้โพสต์",
-    placeholder: "เช่น 10",
-    color: "bg-purple-50 text-purple-700 border-purple-200",
-  },
-  {
-    key: "LOGIN_STREAK",
-    label: "🔥 เข้าสู่ระบบต่อเนื่อง (Login Streak)",
-    shortLabel: "ล็อกอินต่อเนื่อง",
-    unit: "วัน",
-    description: "ระบบจะนับจำนวนวันติดต่อกันที่ผู้ใช้เข้าสู่ระบบอย่างต่อเนื่อง",
-    placeholder: "เช่น 7",
-    color: "bg-amber-50 text-amber-700 border-amber-200",
-  },
 ];
 
 export const MILESTONE_TYPE_ALIASES = {
-  POSTS_COUNT: "POSTS_CREATED",
   LIKES_RECEIVED: "POST_LIKES",
 };
 
@@ -61,6 +35,12 @@ export const MILESTONE_TYPE_MAP = MILESTONE_TYPES.reduce((acc, curr) => {
   return acc;
 }, {});
 
+/**
+ * ดึงข้อมูลและคำอธิบายของประเภทภารกิจ (Milestone Type)
+ * - การทำงาน: ค้นหาข้อมูลประเภทภารกิจจาก MILESTONE_TYPE_MAP (รองรับชื่อ alias เช่น LIKES_RECEIVED)
+ * - อิงจาก: ประเภทภารกิจที่ Backend รองรับ
+ * - เชื่อมโยงกับ: getMilestoneTypeLabel และ UI ต่างๆ ในการแสดงป้ายชื่อ/สี/หน่วยนับ
+ */
 export function getMilestoneTypeInfo(typeKey) {
   if (!typeKey) return null;
   const resolvedKey = MILESTONE_TYPE_ALIASES[typeKey] || typeKey;
@@ -78,6 +58,12 @@ export function getMilestoneTypeInfo(typeKey) {
   };
 }
 
+/**
+ * แปลงรหัสประเภทภารกิจเป็นข้อความภาษาไทย
+ * - การทำงาน: ส่งคืนชื่อเต็มหรือชื่อสั้นสำหรับนำไปแสดงบน UI
+ * - อิงจาก: getMilestoneTypeInfo
+ * - เชื่อมโยงกับ: หน้า AchievementManagement.jsx และ Achievements.jsx
+ */
 export function getMilestoneTypeLabel(typeKey, short = false) {
   const info = getMilestoneTypeInfo(typeKey);
   if (!info) return typeKey || "-";
@@ -86,27 +72,18 @@ export function getMilestoneTypeLabel(typeKey, short = false) {
 
 export const SUGGESTED_MILESTONE_TYPES = MILESTONE_TYPES.map((m) => m.key);
 
-// Cache of reward items seen so far, keyed by id
-let rewardItemCache = new Map();
-
-// Initialize default frames into cache
-DEFAULT_FRAMES.forEach((df) => {
-  rewardItemCache.set(df.id, {
-    id: df.id,
-    item_name: df.reward.name,
-    item_type: df.reward.type,
-    image_url: df.reward.previewUrl,
-    item_description: df.description,
-    is_active: true,
-  });
-});
-
+/**
+ * สร้าง FormData สำหรับส่งข้อมูลภารกิจพร้อมไฟล์รูปภาพ
+ * - การทำงาน: รวบรวมฟิลด์ข้อความและไฟล์รูปภาพเพื่อส่งเป็น multipart/form-data
+ * - อิงจาก: Backend API /admin/achievements กรณีที่เซิร์ฟเวอร์ต้องการรับรูปแบบ Form-Data
+ * - เชื่อมโยงกับ: เรียกใช้เป็น Fallback ใน createAchievement และ updateAchievement
+ */
 function buildAchievementFormData(payload) {
   const formData = new FormData();
   formData.append("title", payload.title);
   formData.append("description", payload.description);
   formData.append("target_value", payload.target_value);
-  const type = payload.achievement_type || payload.milestone_type || "POSTS_COUNT";
+  const type = payload.achievement_type || payload.milestone_type || "FOLLOWERS_COUNT";
   formData.append("achievement_type", type);
   formData.append("milestone_type", type);
 
@@ -127,17 +104,25 @@ function buildAchievementFormData(payload) {
   return formData;
 }
 
+/**
+ * จัดการของรางวัลที่แนบมากับภารกิจ (Auto-create Reward Item)
+ * - การทำงาน: หากผู้ใช้กรอกชื่อของรางวัลใหม่พร้อมไฟล์ภาพ แต่ยังไม่มี reward_item_id
+ *   ระบบจะทำการสร้างไอเทมของรางวัลขึ้นก่อนอัตโนมัติ โดยตรวจไฟล์ APNG หรือแปลง SVG เป็น PNG
+ *   จากนั้นนำ ID ของรางวัลที่ได้มาผูกเข้ากับภารกิจ
+ * - อิงจาก: Backend API POST /admin/rewards
+ * - เชื่อมโยงกับ: AchievementFormModal.jsx -> prepareRewardImageFile() ใน rewardImage.js -> createAchievement() / updateAchievement()
+ */
 async function resolvePayloadReward(payload) {
   if (!payload) {
     return payload;
   }
 
-  // 1. If user specified a new reward inline (name + optional file/type)
+  // 1. กรณีผู้ใช้ระบุของรางวัลใหม่พร้อมภารกิจ (ชื่อรางวัล + ไฟล์/ประเภท)
   if (payload.item_name && !payload.reward_item_id) {
     try {
-      let fileToUpload = payload.imageFile;
-      if (fileToUpload) {
-        // Auto convert SVG to high-res transparent PNG for backend compatibility
+      let fileToUpload = await prepareRewardImageFile(payload.imageFile);
+      if (fileToUpload && (fileToUpload.type === 'image/svg+xml' || fileToUpload.name?.toLowerCase().endsWith('.svg'))) {
+        // รักษาข้อมูลไฟล์ APNG และไฟล์รูปภาพอื่นแบบ byte-for-byte เพื่อคงความต่อเนื่องของแอนิเมชัน
         fileToUpload = await convertSvgToPngFile(fileToUpload);
       }
 
@@ -154,7 +139,6 @@ async function resolvePayloadReward(payload) {
       const createRes = await api.post("/admin/rewards", rewardForm);
       const newReward = createRes.data?.data || createRes.data;
       if (newReward?.id) {
-        rewardItemCache.set(newReward.id, newReward);
         const updated = { ...payload, reward_item_id: newReward.id };
         delete updated.imageFile;
         delete updated.item_name;
@@ -169,173 +153,67 @@ async function resolvePayloadReward(payload) {
     }
   }
 
-  if (!payload.reward_item_id) {
-    return payload;
-  }
-
-  const rawId = String(payload.reward_item_id);
-  // If it's not a local template ID (e.g. doesn't start with "m"), it's already a real backend ID
-  if (!rawId.startsWith("m")) {
-    return payload;
-  }
-
-  const localItem = rewardItemCache.get(payload.reward_item_id);
-  if (!localItem) {
-    return payload;
-  }
-
-  // 1. Check if backend /admin/rewards already has this item by name
-  try {
-    const res = await api.get("/admin/rewards");
-    const backendRewards = res.data?.data || res.data || [];
-    const match = backendRewards.find(
-      (r) =>
-        r.item_name &&
-        r.item_name.trim().toLowerCase() === localItem.item_name.trim().toLowerCase()
-    );
-    if (match && match.id && !String(match.id).startsWith("m")) {
-      rewardItemCache.set(match.id, match);
-      return { ...payload, reward_item_id: match.id };
-    }
-  } catch (err) {
-    console.warn("Could not check /admin/rewards:", err);
-  }
-
-  // 2. Create the reward item in the backend database via POST /admin/rewards
-  try {
-    const rewardForm = new FormData();
-    rewardForm.append("item_name", localItem.item_name);
-    rewardForm.append("item_type", localItem.item_type || "FRAME");
-    if (localItem.item_description) {
-      rewardForm.append("description", localItem.item_description);
-    }
-    rewardForm.append("is_active", "true");
-
-    // Convert template SVG to transparent PNG for backend upload compatibility
-    if (localItem.image_url) {
-      let imageFile = null;
-      if (localItem.image_url.startsWith("/")) {
-        imageFile = await convertSvgUrlToPngFile(
-          localItem.image_url,
-          `${localItem.item_name}.png`
-        );
-      }
-      if (imageFile) {
-        rewardForm.append("image", imageFile);
-      } else if (localItem.image_url.startsWith("/")) {
-        try {
-          const fileRes = await fetch(localItem.image_url);
-          const blob = await fileRes.blob();
-          const svgFile = new File([blob], `${localItem.item_name}.svg`, {
-            type: "image/svg+xml",
-          });
-          const pngFile = await convertSvgToPngFile(svgFile);
-          rewardForm.append("image", pngFile);
-        } catch (fetchErr) {
-          console.warn("Could not fetch SVG blob for reward upload:", fetchErr);
-        }
-      }
-    }
-
-    const createRes = await api.post("/admin/rewards", rewardForm);
-    const newReward = createRes.data?.data || createRes.data;
-    if (newReward?.id) {
-      rewardItemCache.set(newReward.id, newReward);
-      return { ...payload, reward_item_id: newReward.id };
-    }
-  } catch (createErr) {
-    console.error("Auto-creating backend reward failed:", createErr?.response?.data || createErr);
-    const msg = createErr?.response?.data?.message || createErr?.response?.data?.error || createErr.message;
-    throw new Error(`ไม่สามารถลงทะเบียนกรอบ "${localItem.item_name}" สู่ระบบได้: ${msg}`);
-  }
-
   return payload;
 }
 
 export const achievementService = {
+  /**
+   * ดึงรายการภารกิจความสำเร็จทั้งหมดในระบบสำหรับฝั่งแอดมิน
+   * - การทำงาน: ส่งคำขอ GET ไปยังเซิร์ฟเวอร์ และ map ฟิลด์ milestone_type/achievement_type ให้เข้ากันได้
+   * - อิงจาก: Backend API GET /admin/achievements
+   * - เชื่อมโยงกับ: หน้า AchievementManagement.jsx เพื่อแสดงตารางภารกิจทั้งหมด
+   */
   getAllAchievements: async () => {
-    let backendAchievements = [];
-    try {
-      const response = await api.get("/admin/achievements");
-      const data = response.data?.data || response.data;
-      backendAchievements = Array.isArray(data) ? data : [];
-      backendAchievements.forEach((a) => {
-        if (!a.milestone_type && a.achievement_type) a.milestone_type = a.achievement_type;
-        if (!a.achievement_type && a.milestone_type) a.achievement_type = a.milestone_type;
-        if (a.reward_item?.id) rewardItemCache.set(a.reward_item.id, a.reward_item);
-        a.is_default_template = false;
-      });
-    } catch (error) {
-      console.warn("Could not fetch /admin/achievements from backend, using templates:", error);
-    }
-
-    // Read any hidden template IDs from localStorage
-    let hiddenIds = [];
-    try {
-      hiddenIds = JSON.parse(localStorage.getItem("shareed_hidden_achievement_templates") || "[]");
-    } catch (_) {}
-
-    const mergedList = [...backendAchievements];
-
-    // Merge DEFAULT_FRAMES so admin sees all 14 designed achievements
-    DEFAULT_FRAMES.forEach((df) => {
-      if (hiddenIds.includes(df.id)) return;
-
-      const alreadyExists = backendAchievements.some((ba) => {
-        const titleMatch =
-          ba.title && ba.title.trim().toLowerCase() === df.title.trim().toLowerCase();
-        const idMatch = ba.id === df.id;
-        const rewardMatch =
-          ba.reward_item?.item_name &&
-          df.reward?.name &&
-          ba.reward_item.item_name.trim().toLowerCase() === df.reward.name.trim().toLowerCase();
-        return titleMatch || idMatch || rewardMatch;
-      });
-
-      if (!alreadyExists) {
-        mergedList.push({
-          id: df.id,
-          title: df.title,
-          description: df.description,
-          target_value: df.target,
-          achievement_type: df.achievement_type || df.milestone_type || "POSTS_CREATED",
-          milestone_type: df.milestone_type || df.achievement_type || "POSTS_CREATED",
-          reward_item_id: df.reward_item_id || df.reward?.id,
-          reward_item: {
-            id: df.reward?.id || df.id,
-            item_name: df.reward?.name,
-            item_type: df.reward?.type || "FRAME",
-            image_url: df.reward?.previewUrl,
-            is_active: true,
-          },
-          is_default_template: true,
-        });
-      }
-    });
-
-    return mergedList;
+    const response = await api.get('/admin/achievements');
+    const data = response.data?.data || response.data;
+    if (!Array.isArray(data)) return [];
+    return data.map((achievement) => ({
+      ...achievement,
+      milestone_type: achievement.milestone_type || achievement.achievement_type,
+      achievement_type: achievement.achievement_type || achievement.milestone_type,
+    }));
   },
 
+  /**
+   * ดึงรายการไอเทมของรางวัลทั้งหมดที่มีในระบบ
+   * - การทำงาน: ส่งคำขอ GET เพื่อรับของรางวัล (เช่น กรอบโปรไฟล์ FRAME หรือ THEME)
+   * - อิงจาก: Backend API GET /admin/rewards
+   * - เชื่อมโยงกับ: RewardManagementModal.jsx และตัวเลือกของรางวัลใน AchievementFormModal.jsx
+   */
   getRewardItems: async () => {
-    try {
-      const response = await api.get("/admin/rewards");
-      const data = response.data?.data || response.data;
-      if (Array.isArray(data)) {
-        data.forEach((r) => {
-          if (r.id) rewardItemCache.set(r.id, r);
-        });
-      }
-    } catch (e) {
-      console.warn("Failed to fetch /admin/rewards, falling back to cache:", e);
-    }
-    return Array.from(rewardItemCache.values());
+    const response = await api.get("/admin/rewards");
+    const data = response.data?.data || response.data;
+    return Array.isArray(data) ? data : [];
   },
 
+  /**
+   * สร้างของรางวัลใหม่ในระบบโดยตรง
+   * - การทำงาน: รวบรวมข้อมูลผ่าน FormData พร้อมตรวจสอบไฟล์ภาพด้วย prepareRewardImageFile
+   * - อิงจาก: Backend API POST /admin/rewards
+   * - เชื่อมโยงกับ: ปุ่ม "+ เพิ่มของรางวัล" ใน RewardManagementModal.jsx
+   */
+  createRewardItem: async ({ item_name, item_type = 'FRAME', description, imageFile }) => {
+    const formData = new FormData();
+    formData.append('item_name', item_name.trim());
+    formData.append('item_type', item_type);
+    if (description?.trim()) formData.append('description', description.trim());
+    formData.append('is_active', 'true');
+    formData.append('image', await prepareRewardImageFile(imageFile));
+    const response = await api.post('/admin/rewards', formData);
+    return response.data?.data || response.data;
+  },
+
+  /**
+   * สร้างภารกิจความสำเร็จใหม่เข้าสู่ระบบ
+   * - การทำงาน: เรียก resolvePayloadReward เพื่อจัดการของรางวัลก่อน จากนั้นส่งคำขอเป็น JSON (มี FormData เป็น Fallback)
+   * - อิงจาก: Backend API POST /admin/achievements
+   * - เชื่อมโยงกับ: AchievementFormModal.jsx -> เรียกบันทึกภารกิจใหม่
+   */
   createAchievement: async (payload) => {
     try {
       const resolvedPayload = await resolvePayloadReward(payload);
       const type =
-        resolvedPayload.achievement_type || resolvedPayload.milestone_type || "POSTS_COUNT";
+        resolvedPayload.achievement_type || resolvedPayload.milestone_type || "FOLLOWERS_COUNT";
 
       const jsonPayload = {
         title: resolvedPayload.title,
@@ -374,16 +252,17 @@ export const achievementService = {
     }
   },
 
+  /**
+   * อัปเดตข้อมูลภารกิจความสำเร็จที่มีอยู่แล้ว
+   * - การทำงาน: อัปเดตของรางวัล (ถ้ามีการระบุใหม่) และส่งคำขอ PUT อัปเดตข้อมูลภารกิจ
+   * - อิงจาก: Backend API PUT /admin/achievements/:id
+   * - เชื่อมโยงกับ: AchievementFormModal.jsx ในโหมดแก้ไข (isEdit = true)
+   */
   updateAchievement: async (id, payload) => {
     try {
       const resolvedPayload = await resolvePayloadReward(payload);
-      // If it is a template item not yet created in backend DB, create it directly
-      if (String(id).startsWith("m")) {
-        return await achievementService.createAchievement(resolvedPayload);
-      }
-
       const type =
-        resolvedPayload.achievement_type || resolvedPayload.milestone_type || "POSTS_COUNT";
+        resolvedPayload.achievement_type || resolvedPayload.milestone_type || "FOLLOWERS_COUNT";
 
       const jsonPayload = {
         title: resolvedPayload.title,
@@ -401,10 +280,6 @@ export const achievementService = {
         const response = await api.put(`/admin/achievements/${id}`, jsonPayload);
         return response.data?.data || response.data;
       } catch (err) {
-        if (err.response?.status === 404) {
-          // If backend returned 404, fallback to creating it in the database
-          return await achievementService.createAchievement(resolvedPayload);
-        }
         if (
           err.response?.status === 400 ||
           err.response?.status === 415 ||
@@ -426,21 +301,13 @@ export const achievementService = {
     }
   },
 
+  /**
+   * ลบภารกิจความสำเร็จออกจากระบบจริง
+   * - การทำงาน: ส่งคำขอ DELETE ไปยัง Backend (หากมีผู้ใช้ที่มี progress ค้างอยู่ Backend จะบล็อกไม่ให้ลบ)
+   * - อิงจาก: Backend API DELETE /admin/achievements/:id
+   * - เชื่อมโยงกับ: ปุ่มลบภารกิจในตารางของหน้า AchievementManagement.jsx
+   */
   deleteAchievement: async (id) => {
-    if (String(id).startsWith("m")) {
-      // Template item: mark as hidden in localStorage
-      try {
-        const hidden = JSON.parse(
-          localStorage.getItem("shareed_hidden_achievement_templates") || "[]"
-        );
-        if (!hidden.includes(id)) {
-          hidden.push(id);
-          localStorage.setItem("shareed_hidden_achievement_templates", JSON.stringify(hidden));
-        }
-      } catch (_) {}
-      return { success: true, message: "Template removed" };
-    }
-
     try {
       const response = await api.delete(`/admin/achievements/${id}`);
       return response.data;
@@ -450,59 +317,12 @@ export const achievementService = {
     }
   },
 
-  syncDefaultAchievementsToBackend: async () => {
-    let existingAchievements = [];
-    try {
-      const res = await api.get("/admin/achievements");
-      const data = res.data?.data || res.data;
-      existingAchievements = Array.isArray(data) ? data : [];
-    } catch (err) {
-      console.warn("Could not fetch existing achievements:", err);
-    }
-
-    const existingTitles = new Set(
-      existingAchievements
-        .map((a) => a.title && a.title.trim().toLowerCase())
-        .filter(Boolean)
-    );
-    const existingRewardNames = new Set(
-      existingAchievements
-        .map((a) => a.reward_item?.item_name && a.reward_item.item_name.trim().toLowerCase())
-        .filter(Boolean)
-    );
-
-    let syncedCount = 0;
-    const errors = [];
-
-    for (const df of DEFAULT_FRAMES) {
-      const titleLower = df.title?.trim()?.toLowerCase();
-      const rewardLower = df.reward?.name?.trim()?.toLowerCase();
-
-      if (existingTitles.has(titleLower) || (rewardLower && existingRewardNames.has(rewardLower))) {
-        continue;
-      }
-
-      try {
-        const payload = {
-          title: df.title,
-          description: df.description,
-          target_value: df.target,
-          achievement_type: df.achievement_type || df.milestone_type || "POSTS_CREATED",
-          milestone_type: df.milestone_type || df.achievement_type || "POSTS_CREATED",
-          reward_item_id: df.reward_item_id || df.reward?.id,
-        };
-
-        await achievementService.createAchievement(payload);
-        syncedCount++;
-      } catch (err) {
-        console.error(`Failed to sync achievement "${df.title}":`, err);
-        errors.push({ title: df.title, error: err?.response?.data?.message || err.message });
-      }
-    }
-
-    return { success: true, count: syncedCount, errors };
-  },
-
+  /**
+   * ลบไอเทมของรางวัลออกจากระบบ
+   * - การทำงาน: ส่งคำขอ DELETE ไปยัง /admin/rewards/:id (มี fallback ไปที่ /rewards/:id กรณี route แตกต่าง)
+   * - อิงจาก: Backend API DELETE /admin/rewards/:id
+   * - เชื่อมโยงกับ: ปุ่มลบของรางวัลใน RewardManagementModal.jsx
+   */
   deleteRewardItem: async (id) => {
     try {
       try {
@@ -511,14 +331,9 @@ export const achievementService = {
         if (err.response?.status === 404) {
           try {
             await api.delete(`/rewards/${id}`);
-          } catch (_) {}
+          } catch (_) { }
         } else {
           throw err;
-        }
-      }
-      for (const [key] of rewardItemCache.entries()) {
-        if (String(key) === String(id)) {
-          rewardItemCache.delete(key);
         }
       }
       return { success: true };
