@@ -153,6 +153,7 @@ export default function SettingsProfile() {
       login({
         ...user,
         current_frame_id: persistedFrameId,
+        current_frame: persistedFrameId ? selectedMilestone : null,
         user_metadata: {
           ...user?.user_metadata,
           profile_frame_id: persistedFrameId,
