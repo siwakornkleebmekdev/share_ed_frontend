@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import PostCard from "@/components/PostCard";
+import FollowListModal from "@/components/profile/FollowListModal";
 
 import useAuthStore from "@/store/authStore";
 import useHeroThemeStore from "@/store/heroThemeStore";
@@ -29,9 +30,9 @@ import useAchievementStore from "@/store/achievementStore";
 import {
   profileService,
   normalizeFollowCounts,
-  DEFAULT_FRAMES,
 } from "@/services/profile.service";
 import { resolveProfileFrame } from "@/utils/profileFrame";
+import AvatarWithFrame from "@/components/profile/AvatarWithFrame";
 import { getPlatformConfig } from "@/pages/settings/widgetConstants";
 import { getGlassColor, rgbToRgba } from "@/utils/colorUtils";
 
@@ -44,13 +45,6 @@ const ACHIEVEMENT_STATUS_META = {
     label: "ได้รับรางวัลแล้ว",
     badgeClass: "bg-emerald-100 text-emerald-700",
   },
-};
-
-const AVATAR_SHAPE_CLASS = {
-  square: "rounded-none",
-  soft: "rounded-2xl",
-  rounded: "rounded-3xl",
-  circle: "rounded-full",
 };
 
 const getEducationLevelLabel = (level) => {
@@ -82,6 +76,7 @@ export default function Profile() {
 
   const [activeTab, setActiveTab] = useState("posts");
   const [otherProfile, setOtherProfile] = useState(null);
+  const [ownProfile, setOwnProfile] = useState(null);
   const [isFollowing, setIsFollowing] = useState(false);
   const [isFollowLoading, setIsFollowLoading] = useState(false);
   const [userNotFound, setUserNotFound] = useState(false);
@@ -94,6 +89,13 @@ export default function Profile() {
     followersCount: 0,
     followingCount: 0,
   });
+  const [isFollowModalOpen, setIsFollowModalOpen] = useState(false);
+  const [followModalTab, setFollowModalTab] = useState("followers");
+
+  const openFollowModal = (tab = "followers") => {
+    setFollowModalTab(tab);
+    setIsFollowModalOpen(true);
+  };
 
   const handleBookmarkChange = (postId, isBookmarked) => {
     setMyPosts((posts) =>
@@ -113,9 +115,6 @@ export default function Profile() {
   const theme = isOtherUser
     ? otherProfile?.current_theme?.settings || {}
     : user?.user_metadata?.theme_settings || {};
-
-  const avatarShapeClass =
-    AVATAR_SHAPE_CLASS[theme.avatarShape] || AVATAR_SHAPE_CLASS.circle;
 
   const enterScreenEnabled = !isOtherUser && !!user?.user_metadata?.enter_screen_enabled;
   const [hasEntered, setHasEntered] = useState(!enterScreenEnabled);
@@ -202,18 +201,7 @@ export default function Profile() {
     fetchMilestones();
   }, [fetchMilestones]);
 
-  const allMilestones = [
-    ...DEFAULT_FRAMES,
-    ...milestones.filter(
-      (m) =>
-        !DEFAULT_FRAMES.some(
-          (df) =>
-            df.id === m.id ||
-            df.reward_item_id === m.reward_item_id ||
-            df.reward?.previewUrl === m.reward?.previewUrl,
-        ),
-    ),
-  ];
+  const allMilestones = milestones;
 
   const completedAchievements = allMilestones.filter(
     (m) => m.status !== "LOCKED",
@@ -262,7 +250,7 @@ export default function Profile() {
           const targetId = user?.user_id || user?.id;
           if (!targetId) return;
 
-          const [fetchedPosts, fetchedDrafts, fetchedBookmarks, ownProfile] =
+          const [fetchedPosts, fetchedDrafts, fetchedBookmarks, fetchedOwnProfile] =
             await Promise.all([
               profileService.getMyPosts(targetId),
               profileService.getDrafts(targetId),
@@ -273,8 +261,9 @@ export default function Profile() {
           setMyPosts(fetchedPosts);
           setDrafts(fetchedDrafts);
           setBookmarks(fetchedBookmarks);
-          if (ownProfile) {
-            setFollowCounts(normalizeFollowCounts(ownProfile));
+          if (fetchedOwnProfile) {
+            setOwnProfile(fetchedOwnProfile);
+            setFollowCounts(normalizeFollowCounts(fetchedOwnProfile));
           }
         } catch (error) {
           toast.error("เกิดข้อผิดพลาดในการโหลดข้อมูลโปรไฟล์");
@@ -325,69 +314,77 @@ export default function Profile() {
     }
   };
 
-  // ข้อมูลที่ใช้แสดงผลใน UI
-  const displayName = isOtherUser
-    ? otherProfile?.nickname || otherProfile?.username || "ผู้ใช้งาน"
-    : user?.display_name ||
-      user?.username ||
-      user?.user_metadata?.full_name ||
-      user?.name ||
-      "ผู้ใช้งาน";
+  // ข้อมูลที่ใช้แสดงผลใน UI (กรองอีเมลออกอย่างเด็ดขาด)
+  const sanitizeProfileName = (name) => {
+    if (!name || typeof name !== "string") return "";
+    const trimmed = name.trim();
+    return trimmed.includes("@") ? trimmed.split("@")[0] : trimmed;
+  };
 
-  const displaySubtitle = isOtherUser
-    ? otherProfile?.username ? `@${otherProfile.username}` : ""
-    : user?.email || (user?.username ? `@${user.username}` : "");
+  const rawUsername = isOtherUser
+    ? otherProfile?.username
+    : ownProfile?.username || user?.username;
+  const profileUsername = sanitizeProfileName(rawUsername);
+
+  const rawDisplayName = isOtherUser
+    ? otherProfile?.nickname || profileUsername
+    : ownProfile?.nickname ||
+      user?.nickname ||
+      user?.display_name ||
+      profileUsername ||
+      user?.user_metadata?.full_name ||
+      user?.name;
+
+  const displayName = sanitizeProfileName(rawDisplayName) || "ผู้ใช้งาน";
+
+  // Public profile headers must never expose an account email address.
+  const displaySubtitle = profileUsername ? `@${profileUsername}` : "";
 
   const displayAvatar = isOtherUser
     ? otherProfile?.profile_image ||
       `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=1e293b&color=38bdf8&size=200`
-    : user?.avatar_url ||
+    : ownProfile?.profile_image || user?.avatar_url ||
       `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=1e293b&color=38bdf8&size=200`;
 
   const bannerUrl = isOtherUser
     ? otherProfile?.profile_banner || otherProfile?.banner_url
-    : user?.user_metadata?.banner_url;
+    : ownProfile?.profile_banner || user?.user_metadata?.banner_url;
 
   const displayEducationLevel = isOtherUser
     ? otherProfile?.education_level
-    : user?.education_level;
+    : ownProfile?.education_level || user?.education_level;
 
   const displayOccupation = isOtherUser
     ? otherProfile?.occupation
-    : user?.user_metadata?.occupation;
+    : ownProfile?.occupation || user?.user_metadata?.occupation;
 
   const displayLocation = isOtherUser
     ? otherProfile?.location
-    : user?.user_metadata?.location;
+    : ownProfile?.location || user?.user_metadata?.location;
 
   const displayInstagram = isOtherUser
     ? otherProfile?.social_links?.instagram || otherProfile?.instagram_url
-    : user?.user_metadata?.instagram_url;
+    : ownProfile?.social_links?.instagram || user?.user_metadata?.instagram_url;
 
   const displayFacebook = isOtherUser
     ? otherProfile?.social_links?.facebook || otherProfile?.facebook_url
-    : user?.user_metadata?.facebook_url;
+    : ownProfile?.social_links?.facebook || user?.user_metadata?.facebook_url;
 
   const displayBio = isOtherUser
     ? otherProfile?.bio || "ยังไม่มีคำอธิบายตัวเอง..."
-    : user?.bio || "ยังไม่มีคำอธิบายตัวเอง...";
+    : ownProfile?.bio || user?.bio || "ยังไม่มีคำอธิบายตัวเอง...";
 
   // กรอบรูป
   const ownProfileWithCachedFrame = isOtherUser
     ? null
     : {
         ...user,
-        profile_frame_id:
-          user?.user_metadata?.profile_frame_id ||
-          user?.current_frame_id ||
-          (currentUserId
-            ? localStorage.getItem(`profile_frame_id_${currentUserId}`)
-            : null) ||
-          localStorage.getItem("profile_frame_id") ||
-          null,
+        ...ownProfile,
+        current_frame_id: user && 'current_frame_id' in user ? user.current_frame_id : ownProfile?.current_frame_id ?? null,
+        current_frame: user?.current_frame_id == null ? null : (user?.current_frame || ownProfile?.current_frame),
+        user_metadata: user?.user_metadata,
       };
   const {
-    frameId: equippedFrameId,
     previewUrl: framePreviewUrl,
   } = resolveProfileFrame(
     isOtherUser ? otherProfile : ownProfileWithCachedFrame,
@@ -428,7 +425,7 @@ export default function Profile() {
         )}
         <div className="relative z-10 max-w-md w-full text-center bg-slate-900/70 backdrop-blur-xl border border-white/10 rounded-3xl p-10 shadow-2xl">
           <DoorOpen className="h-10 w-10 text-primary mx-auto mb-4" />
-          <h2 className="text-2xl font-extrabold text-black mb-3">
+          <h2 className="text-2xl font-extrabold text-white mb-3">
             {displayName}
           </h2>
           <p className="text-slate-300 mb-8">
@@ -506,33 +503,13 @@ export default function Profile() {
               />
             </div>
           )}
-          <div className="flex flex-col sm:flex-row gap-8 items-start sm:items-end">
-            <div className="relative">
-              <div
-                className={`h-32 w-32 sm:h-40 sm:w-40 border-4 overflow-hidden shadow-2xl relative ${avatarBorderClass} ${avatarShapeClass}`}
-              >
-                <img
-                  src={displayAvatar}
-                  alt="Avatar"
-                  className="w-full h-full object-cover"
-                />
-
-                {/* แสดงกรอบรูปโปรไฟล์ */}
-                {framePreviewUrl ? (
-                  <img
-                    src={framePreviewUrl}
-                    alt="Frame"
-                    className="absolute inset-0 w-full h-full object-cover pointer-events-none z-10"
-                  />
-                ) : equippedFrameId ? (
-                  <div
-                    className={`absolute inset-0 border-4 border-amber-400 mix-blend-overlay pointer-events-none ${avatarShapeClass}`}
-                  ></div>
-                ) : null}
-              </div>
+          <div className="flex flex-col items-center gap-6 text-center sm:flex-row sm:items-end sm:gap-8 sm:text-left">
+            <div className="relative shrink-0">
+              {/* เมื่อสวมกรอบตกแต่ง ให้ซ่อนขอบขาวของรูปโปรไฟล์ที่อาจโผล่ผ่านช่องว่างของกรอบ */}
+              <AvatarWithFrame avatarSrc={displayAvatar} frameSrc={framePreviewUrl} avatarAlt="Avatar" sizeClass="h-32 w-32 sm:h-40 sm:w-40" className={framePreviewUrl ? "shadow-2xl" : `border-4 shadow-2xl ${avatarBorderClass}`} />
             </div>
 
-            <div className="flex-1 pb-2">
+            <div className="w-full flex-1 pb-2">
               <h1
                 className="text-3xl font-extrabold"
                 style={{
@@ -548,7 +525,7 @@ export default function Profile() {
                 </p>
               )}
 
-              <div className="flex items-center gap-7 mt-3 mb-3">
+              <div className="mt-4 mb-4 flex flex-wrap items-center justify-center gap-x-7 gap-y-2 sm:justify-start">
                 <div className="flex items-baseline gap-2">
                   <span className={`text-xl font-extrabold ${headingClass}`}>
                     {myPosts.length}
@@ -557,26 +534,36 @@ export default function Profile() {
                     โพสต์
                   </span>
                 </div>
-                <div className="flex items-baseline gap-2">
-                  <span className={`text-xl font-extrabold ${headingClass}`}>
+                <button
+                  type="button"
+                  onClick={() => openFollowModal("followers")}
+                  className="flex items-baseline gap-2 group cursor-pointer hover:opacity-80 transition-all text-left focus:outline-none"
+                  title="ดูรายชื่อผู้ติดตาม"
+                >
+                  <span className={`text-xl font-extrabold ${headingClass} group-hover:text-primary transition-colors`}>
                     {followCounts.followersCount}
                   </span>
-                  <span className={`text-sm font-medium ${mutedTextClass}`}>
+                  <span className={`text-sm font-medium ${mutedTextClass} group-hover:text-primary transition-colors group-hover:underline underline-offset-4`}>
                     ผู้ติดตาม
                   </span>
-                </div>
-                <div className="flex items-baseline gap-2">
-                  <span className={`text-xl font-extrabold ${headingClass}`}>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openFollowModal("following")}
+                  className="flex items-baseline gap-2 group cursor-pointer hover:opacity-80 transition-all text-left focus:outline-none"
+                  title="ดูรายชื่อกำลังติดตาม"
+                >
+                  <span className={`text-xl font-extrabold ${headingClass} group-hover:text-primary transition-colors`}>
                     {followCounts.followingCount}
                   </span>
-                  <span className={`text-sm font-medium ${mutedTextClass}`}>
+                  <span className={`text-sm font-medium ${mutedTextClass} group-hover:text-primary transition-colors group-hover:underline underline-offset-4`}>
                     กำลังติดตาม
                   </span>
-                </div>
+                </button>
               </div>
 
               <div
-                className={`flex flex-wrap gap-4 text-sm font-semibold ${mutedTextClass}`}
+                className={`flex flex-wrap justify-center gap-3 text-sm font-semibold sm:justify-start ${mutedTextClass}`}
               >
                 <div className="flex items-center gap-1.5">
                   <GraduationCap className="h-4 w-4 text-primary" />{" "}
@@ -618,14 +605,15 @@ export default function Profile() {
                 )}
               </div>
 
-              {/* Widgets (สำหรับโปรไฟล์ตัวเอง) */}
-              {!isOtherUser && (() => {
-                const profileWidgets = (
-                  user?.user_metadata?.widgets || []
-                ).filter((w) => w.options?.insideProfileCard !== false);
-                if (profileWidgets.length === 0) return null;
+              {/* Widgets */}
+              {(() => {
+                const widgetsList = isOtherUser
+                  ? otherProfile?.widgets || otherProfile?.user_metadata?.widgets || []
+                  : ownProfile?.widgets || ownProfile?.user_metadata?.widgets || user?.user_metadata?.widgets || [];
+                const profileWidgets = widgetsList.filter((w) => w.options?.insideProfileCard !== false);
+                if (!profileWidgets.length) return null;
                 return (
-                  <div className="flex flex-wrap gap-2 mt-3">
+                  <div className="flex flex-wrap gap-2 mt-3 justify-center sm:justify-start">
                     {profileWidgets.map((w) => {
                       const platform = getPlatformConfig(w.platformId);
                       if (!platform) return null;
@@ -648,22 +636,28 @@ export default function Profile() {
                 );
               })()}
 
-              {!isOtherUser && user?.user_metadata?.tags?.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-4">
-                  {user.user_metadata.tags.map((tag, i) => (
-                    <span
-                      key={i}
-                      className={`px-2.5 py-1 border rounded-full text-xs font-bold ${tagPillClass}`}
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
+              {(() => {
+                const tagsList = isOtherUser
+                  ? otherProfile?.tags || otherProfile?.user_metadata?.tags || []
+                  : ownProfile?.tags || ownProfile?.user_metadata?.tags || user?.user_metadata?.tags || [];
+                if (!tagsList.length) return null;
+                return (
+                  <div className="flex flex-wrap gap-2 mt-4 justify-center sm:justify-start">
+                    {tagsList.map((tag, i) => (
+                      <span
+                        key={i}
+                        className={`px-2.5 py-1 border rounded-full text-xs font-bold ${tagPillClass}`}
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Action Buttons: ติดตาม (คนอื่น) หรือ แก้ไขโปรไฟล์ (ตัวเอง) */}
-            <div className="flex gap-4 w-full sm:w-auto pb-2">
+            <div className="flex w-full gap-4 pb-2 sm:w-auto">
               {isOtherUser ? (
                 <button
                   onClick={handleToggleFollow}
@@ -922,30 +916,30 @@ export default function Profile() {
                           className={`backdrop-blur-xl rounded-3xl border shadow-lg shadow-black/10 p-5 flex flex-col gap-3 ${emptyCardClass}`}
                         >
                           <div className="flex items-center justify-between gap-3">
-                            <div
-                              className={`h-12 w-12 rounded-full overflow-hidden border-2 shrink-0 ${m.status === "CLAIMED" ? "border-emerald-400" : "border-amber-400"}`}
-                            >
-                              {hasImage ? (
-                                <img
-                                  src={m.reward.previewUrl}
-                                  alt={m.reward.name}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <div className="relative w-full h-full">
+                            <div className="relative h-14 w-14 flex items-center justify-center shrink-0">
+                              <div
+                                className={`h-11 w-11 rounded-full overflow-hidden border-2 shrink-0 ${m.status === "CLAIMED" ? "border-emerald-400" : "border-amber-400"}`}
+                              >
+                                {hasImage ? (
+                                  <img
+                                    src={m.reward.previewUrl}
+                                    alt={m.reward.name}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
                                   <img
                                     src={displayAvatar}
                                     alt=""
                                     className="w-full h-full object-cover"
                                   />
-                                  {m.reward?.type === "FRAME" && m.reward.previewUrl && (
-                                    <img
-                                      src={m.reward.previewUrl}
-                                      alt={m.reward.name}
-                                      className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-                                    />
-                                  )}
-                                </div>
+                                )}
+                              </div>
+                              {m.reward?.type === "FRAME" && m.reward.previewUrl && (
+                                <img
+                                  src={m.reward.previewUrl}
+                                  alt={m.reward.name}
+                                  className="absolute -inset-1 w-[calc(100%+8px)] h-[calc(100%+8px)] pointer-events-none object-contain drop-shadow-sm z-10 scale-110"
+                                />
                               )}
                             </div>
                             <span
@@ -1003,6 +997,17 @@ export default function Profile() {
           )}
         </div>
       </div>
+
+      {/* Follow List Modal (Followers & Following) */}
+      <FollowListModal
+        isOpen={isFollowModalOpen}
+        onClose={() => setIsFollowModalOpen(false)}
+        userId={isOtherUser ? userId : (user?.user_id || user?.id)}
+        initialTab={followModalTab}
+        followersCount={followCounts.followersCount}
+        followingCount={followCounts.followingCount}
+        profileUsername={displayName}
+      />
     </div>
   );
 }

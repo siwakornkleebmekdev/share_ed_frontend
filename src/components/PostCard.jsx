@@ -3,10 +3,11 @@ import { Heart, Eye, Bookmark, BookmarkPlus, BookmarkCheck, Crown, Medal } from 
 import { useNavigate } from 'react-router';
 import toast from 'react-hot-toast';
 import { postService } from '../services/post.service';
-import { DEFAULT_FRAMES, profileService } from '../services/profile.service';
+import { profileService } from '../services/profile.service';
 import useAuthStore from '../store/authStore';
 import useHeroThemeStore from '../store/heroThemeStore';
 import { getGlassColor, rgbToRgba } from '../utils/colorUtils';
+import AvatarWithFrame from './profile/AvatarWithFrame';
 
 const authorProfileRequests = new Map();
 
@@ -23,6 +24,7 @@ function getAuthorProfile(userId) {
   }
   return authorProfileRequests.get(key);
 }
+
 
 export default function PostCard({ post, viewMode, rank = null, dark = false, onBookmarkChange, authorOverride = null }) {
   const [isLiked, setIsLiked] = useState(Boolean(post.isLiked || post.is_liked));
@@ -64,11 +66,9 @@ export default function PostCard({ post, viewMode, rank = null, dark = false, on
       post.current_frame;
     const suppliedFrameId =
       authorOverride?.current_frame_id ||
-      authorOverride?.profile_frame_id ||
       post.author_frame_id ||
       post.authorFrameId ||
       post.author?.current_frame_id ||
-      post.author?.profile_frame_id ||
       post.current_frame_id;
 
     setFetchedAuthorProfile(null);
@@ -94,56 +94,31 @@ export default function PostCard({ post, viewMode, rank = null, dark = false, on
   const authorAvatar = rawAuthorAvatar || defaultAvatar;
 
   const isCurrentUser = user && authorId && (String(user.id) === String(authorId) || String(user.user_id) === String(authorId));
-  const authorFrameId =
-    (isCurrentUser
-      ? authorOverride?.current_frame_id ||
-        authorOverride?.profile_frame_id ||
-        authorOverride?.user_metadata?.profile_frame_id ||
-        user?.user_metadata?.profile_frame_id ||
-        user?.current_frame_id ||
-        user?.profile_frame_id ||
-        (authorId ? localStorage.getItem(`profile_frame_id_${authorId}`) : null) ||
-        localStorage.getItem('profile_frame_id')
-      : null) ||
+  const authorFrameId = isCurrentUser && 'current_frame_id' in user
+    ? user.current_frame_id
+    : authorOverride?.current_frame_id ||
     post.author_frame_id ||
     post.authorFrameId ||
     post.author?.current_frame_id ||
-    post.author?.profile_frame_id ||
-    post.author?.frame_id ||
     post.current_frame_id ||
     fetchedAuthorProfile?.current_frame_id ||
-    fetchedAuthorProfile?.profile_frame_id ||
-    fetchedAuthorProfile?.user_metadata?.profile_frame_id ||
-    (authorId ? localStorage.getItem(`profile_frame_id_${authorId}`) : null);
+    null;
 
-  const authorFrameObj = authorFrameId
-    ? DEFAULT_FRAMES.find(
-        (df) =>
-          df.id === authorFrameId ||
-          df.reward_item_id === authorFrameId ||
-          df.reward?.id === authorFrameId
-      )
-    : null;
-
-  const serverFrame =
-    authorOverride?.current_frame ||
-    authorOverride?.profile_frame ||
+  const serverFrame = isCurrentUser && 'current_frame_id' in user
+    ? user.current_frame
+    : authorOverride?.current_frame ||
     post.authorFrame ||
     post.author_frame ||
     post.author?.current_frame ||
     post.current_frame ||
-    fetchedAuthorProfile?.current_frame ||
-    fetchedAuthorProfile?.profile_frame;
+    fetchedAuthorProfile?.current_frame;
 
-  const authorFrameUrl =
+  const authorFrameUrl = isCurrentUser && !authorFrameId ? null : (
     serverFrame?.image_url ||
     serverFrame?.previewUrl ||
     serverFrame?.reward?.previewUrl ||
     serverFrame?.metadata?.previewUrl ||
-    authorFrameObj?.reward?.previewUrl ||
-    authorFrameObj?.image_url ||
-    authorFrameObj?.previewUrl ||
-    (typeof authorFrameId === 'string' && (authorFrameId.startsWith('/') || authorFrameId.startsWith('http')) ? authorFrameId : null);
+    (typeof authorFrameId === 'string' && (authorFrameId.startsWith('/') || authorFrameId.startsWith('http')) ? authorFrameId : null));
 
   const handleAuthorClick = (e) => {
     if (authorId) {
@@ -232,12 +207,12 @@ export default function PostCard({ post, viewMode, rank = null, dark = false, on
 
   // Special Rank classes
   const cardRankClasses = dark
-    ? "backdrop-blur-xl rounded-2xl shadow-lg shadow-black/20 border border-white/10 hover:shadow-xl hover:border-white/20 transition-all overflow-hidden group cursor-pointer flex flex-col relative"
+    ? "h-[400px] backdrop-blur-xl rounded-2xl shadow-lg shadow-black/20 border border-white/10 hover:shadow-xl hover:border-white/20 transition-all overflow-hidden group cursor-pointer flex flex-col relative"
     : rank === 1
-    ? "bg-white rounded-2xl shadow-xl shadow-yellow-500/10 border-2 border-yellow-400 hover:shadow-2xl hover:shadow-yellow-500/20 transition-all overflow-visible group cursor-pointer flex flex-col relative scale-[1.02]"
+    ? "h-[400px] bg-white rounded-2xl shadow-xl shadow-yellow-500/10 border-2 border-yellow-400 hover:shadow-2xl hover:shadow-yellow-500/20 transition-all overflow-visible group cursor-pointer flex flex-col relative"
     : rank === 2 || rank === 3
-    ? "bg-white rounded-2xl shadow-lg border-2 border-slate-100 hover:shadow-xl transition-all overflow-visible group cursor-pointer flex flex-col relative"
-    : "bg-white rounded-2xl shadow-sm border border-slate-100 hover:shadow-md hover:border-primary/20 transition-all overflow-hidden group cursor-pointer flex flex-col relative";
+    ? "h-[400px] bg-white rounded-2xl shadow-lg border-2 border-slate-100 hover:shadow-xl transition-all overflow-visible group cursor-pointer flex flex-col relative"
+    : "h-[400px] bg-white rounded-2xl shadow-sm border border-slate-100 hover:shadow-md hover:border-primary/20 transition-all overflow-hidden group cursor-pointer flex flex-col relative";
 
   if (viewMode === 'list') {
     return (
@@ -272,26 +247,7 @@ export default function PostCard({ post, viewMode, rank = null, dark = false, on
               onClick={handleAuthorClick}
               className={`flex items-center gap-2 min-w-0 ${authorId ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
             >
-              <div className="relative flex-shrink-0 flex items-center justify-center">
-                <div className={`h-7 w-7 rounded-full overflow-hidden flex items-center justify-center font-bold text-xs ${dark ? 'bg-white/10 border border-white/10 text-primary' : 'bg-blue-50 border border-blue-100 text-primary'}`}>
-                  <img
-                    src={authorAvatar}
-                    alt={authorName}
-                    className="h-full w-full object-cover"
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.src = defaultAvatar;
-                    }}
-                  />
-                </div>
-                {authorFrameUrl && (
-                  <img
-                    src={authorFrameUrl}
-                    alt="Frame"
-                    className="absolute inset-0 w-full h-full pointer-events-none scale-125 z-10"
-                  />
-                )}
-              </div>
+              <AvatarWithFrame avatarSrc={authorAvatar} frameSrc={authorFrameUrl} avatarAlt={authorName} sizeClass="h-7 w-7" className={dark ? 'bg-white/10 text-primary' : 'bg-blue-50 text-primary'} onAvatarError={(e) => { e.target.onerror = null; e.target.src = defaultAvatar; }} />
               <span className={`text-sm font-semibold transition-colors line-clamp-1 ${dark ? 'text-slate-300 group-hover:text-white' : 'text-slate-600 group-hover:text-slate-900'}`}>{authorName}</span>
             </div>
             <div className="flex items-center gap-4 text-slate-400 text-sm font-medium">
@@ -310,7 +266,7 @@ export default function PostCard({ post, viewMode, rank = null, dark = false, on
   return (
     <div onClick={handlePostClick} className={cardRankClasses} style={cardGlassStyle}>
       {getRankBadge()}
-      <div className={`w-full relative bg-slate-100 overflow-hidden ${rank ? 'h-56 rounded-t-[14px]' : 'h-48'}`}>
+      <div className={`w-full h-48 relative bg-slate-100 overflow-hidden ${rank ? 'rounded-t-[14px]' : ''}`}>
         <img src={post.image} alt={post.title} className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300" />
         <div className={`absolute top-3 left-3 px-2.5 py-1 backdrop-blur-md rounded-lg text-[11px] font-bold shadow-sm z-10 ${dark ? 'bg-black/40 text-white border border-white/10' : 'bg-white/90 text-slate-700'}`}>
           {post.subject}
@@ -332,26 +288,7 @@ export default function PostCard({ post, viewMode, rank = null, dark = false, on
             onClick={handleAuthorClick}
             className={`flex items-center gap-2 min-w-0 ${authorId ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
           >
-            <div className="relative flex-shrink-0 flex items-center justify-center">
-              <div className={`h-7 w-7 rounded-full overflow-hidden flex items-center justify-center font-bold text-xs ${dark ? 'bg-white/10 border border-white/10 text-primary' : 'bg-blue-50 border border-blue-100 text-primary'}`}>
-                <img
-                  src={authorAvatar}
-                  alt={authorName}
-                  className="h-full w-full object-cover"
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.src = defaultAvatar;
-                  }}
-                />
-              </div>
-              {authorFrameUrl && (
-                <img
-                  src={authorFrameUrl}
-                  alt="Frame"
-                  className="absolute inset-0 w-full h-full pointer-events-none scale-125 z-10"
-                />
-              )}
-            </div>
+            <AvatarWithFrame avatarSrc={authorAvatar} frameSrc={authorFrameUrl} avatarAlt={authorName} sizeClass="h-7 w-7" className={dark ? 'bg-white/10 text-primary' : 'bg-blue-50 text-primary'} onAvatarError={(e) => { e.target.onerror = null; e.target.src = defaultAvatar; }} />
             <span className={`text-sm font-semibold transition-colors line-clamp-1 ${dark ? 'text-slate-300 group-hover:text-white' : 'text-slate-600 group-hover:text-slate-900'}`}>{authorName}</span>
           </div>
           <div className="flex items-center gap-3 text-slate-400 text-sm font-medium flex-shrink-0">

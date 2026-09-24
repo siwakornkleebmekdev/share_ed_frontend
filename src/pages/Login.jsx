@@ -37,11 +37,6 @@ export default function Login() {
 
       const data = await authService.login(email, password);
       const session = data?.session || data?.data?.session;
-      const token = session?.access_token || data?.token || data?.access_token || data?.data?.token;
-
-      if (token) {
-        localStorage.setItem('access_token', token);
-      }
 
       const loggedInUser = session?.user || data?.user || data?.data?.user || data?.data || data || {};
       const meta = loggedInUser.user_metadata || {};

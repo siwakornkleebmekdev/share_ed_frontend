@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import useAchievementStore from '@/store/achievementStore';
-import { AVATAR_SHAPES, DEFAULT_THEME } from '@/pages/settings/themeConstants';
+import { DEFAULT_THEME } from '@/pages/settings/themeConstants';
 import { hexToRgba } from '@/utils/colorUtils';
-import { DEFAULT_FRAMES } from '@/services/profile.service';
+import AvatarWithFrame from '@/components/profile/AvatarWithFrame';
 
 // Card-surface treatment per cardStyle — background/border come from
 // cardColor+cardOpacity via inline style below, this only controls blur and
@@ -23,33 +23,13 @@ const STYLE_CLASSES = {
 export default function ProfilePreview({ user, formData }) {
   const { milestones } = useAchievementStore();
   const theme = formData.theme_settings;
-  const avatarShape = AVATAR_SHAPES.find(s => s.id === theme.avatarShape) || AVATAR_SHAPES[3];
   const wallpaperUrl = user?.user_metadata?.wallpaper_url;
   const bannerUrl = user?.user_metadata?.banner_url;
   const avatarUrl = user?.avatar_url;
-  const currentUserId = user?.id || user?.user_id;
-  const frameId =
-    user?.user_metadata?.profile_frame_id ||
-    user?.current_frame_id ||
-    (currentUserId ? localStorage.getItem(`profile_frame_id_${currentUserId}`) : null) ||
-    localStorage.getItem("profile_frame_id") ||
-    null;
+  const frameId = user?.current_frame_id || null;
   const hasFrame = !!frameId;
-  const allMilestones = [
-    ...DEFAULT_FRAMES,
-    ...milestones.filter(
-      (m) =>
-        !DEFAULT_FRAMES.some(
-          (df) =>
-            df.id === m.id ||
-            df.reward_item_id === m.reward_item_id ||
-            df.reward?.previewUrl === m.reward?.previewUrl,
-        ),
-    ),
-  ];
-  const equippedFrame = allMilestones.find(
+  const equippedFrame = milestones.find(
     (m) =>
-      m.id === frameId ||
       m.reward_item_id === frameId ||
       m.reward?.id === frameId,
   );
@@ -74,26 +54,15 @@ export default function ProfilePreview({ user, formData }) {
   };
 
   const avatarBlock = (size) => (
-    <div className={`relative ${size} bg-slate-200 border-2 border-white/50 overflow-hidden shrink-0 ${avatarShape.className}`}>
-      {avatarUrl ? (
-        <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-      ) : (
-        <div className="w-full h-full flex items-center justify-center font-black text-xl text-slate-500">
-          {(formData.nickname || 'U').charAt(0).toUpperCase()}
-        </div>
-      )}
-      {hasFrame && (
-        frameUrl ? (
-          <img
-            src={frameUrl}
-            alt={equippedFrame?.reward?.name || "Frame"}
-            className="absolute inset-0 w-full h-full object-cover pointer-events-none z-10"
-          />
-        ) : (
-          <div className={`absolute inset-0 border-4 border-amber-400 mix-blend-overlay pointer-events-none ${avatarShape.className}`}></div>
-        )
-      )}
-    </div>
+    // ซ่อนขอบรูปในภาพตัวอย่างเมื่อมีกรอบตกแต่ง เพื่อให้เห็นเฉพาะงานกรอบจริง
+    <AvatarWithFrame
+      avatarSrc={avatarUrl}
+      frameSrc={hasFrame ? frameUrl : null}
+      frameAlt={equippedFrame?.reward?.name || ''}
+      sizeClass={size}
+      className={hasFrame ? "bg-slate-200" : "border-2 border-white/50 bg-slate-200"}
+      avatarFallback={<div className="flex h-full w-full items-center justify-center font-black text-xl text-slate-500">{(formData.nickname || 'U').charAt(0).toUpperCase()}</div>}
+    />
   );
 
   const nameBlock = (align) => (

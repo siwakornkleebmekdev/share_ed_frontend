@@ -12,6 +12,7 @@ import {
   FileText,
   Trophy,
   ShieldCheck,
+  ShieldAlert,
   PenTool,
   Bookmark,
   UserPlus,
@@ -25,7 +26,8 @@ import useHeroThemeStore from "@/store/heroThemeStore";
 import useAchievementStore from "@/store/achievementStore";
 import { supabase } from "@/utils/supabase";
 import { authService } from "@/services/auth.service";
-import { DEFAULT_FRAMES } from "@/services/profile.service";
+import { resolveProfileFrame } from "@/utils/profileFrame";
+import AvatarWithFrame from "@/components/profile/AvatarWithFrame";
 import { getGlassColor, rgbToRgba } from "@/utils/colorUtils";
 import toast from "react-hot-toast";
 
@@ -47,7 +49,7 @@ export default function Navbar() {
   const { notifications, unreadCount, fetchNotifications, markAsRead, markAllAsRead, deleteNotification, error, isLoading, isMutating } =
     useNotificationStore();
   const { isAuthenticated, user, logout } = useAuthStore();
-  const { readyToClaimCount, fetchMilestones } = useAchievementStore();
+  const { milestones, readyToClaimCount, fetchMilestones } = useAchievementStore();
 
   const avatarSrc =
     user?.avatar_url ||
@@ -56,19 +58,7 @@ export default function Navbar() {
     user?.profile_image ||
     user?.user_metadata?.picture;
 
-  const equippedFrameId =
-    user?.user_metadata?.profile_frame_id ||
-    user?.current_frame_id ||
-    user?.profile_frame_id;
-
-  const equippedFrame = equippedFrameId
-    ? DEFAULT_FRAMES.find(
-        (f) =>
-          f.id === equippedFrameId ||
-          f.reward?.id === equippedFrameId ||
-          f.reward_item_id === equippedFrameId
-      )
-    : null;
+  const { previewUrl: equippedFrameUrl } = resolveProfileFrame(user, milestones);
 
   // Relative time formatter
   const formatRelativeTime = (iso) => {
@@ -98,11 +88,18 @@ export default function Navbar() {
 
   useEffect(() => {
     if (isAuthenticated) {
-
       fetchMilestones();
-
     }
   }, [isAuthenticated, fetchNotifications, fetchMilestones]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const handleAchievementEvent = () => {
+      fetchMilestones(true);
+    };
+    window.addEventListener("achievement_completed", handleAchievementEvent);
+    return () => window.removeEventListener("achievement_completed", handleAchievementEvent);
+  }, [isAuthenticated, fetchMilestones]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -144,9 +141,24 @@ export default function Navbar() {
         return <Bookmark className="h-4 w-4 text-amber-500" />;
       case "SYSTEM":
         return <Info className="h-4 w-4 text-indigo-500" />;
+      case "POST_SUSPENDED":
+      case "POST_REPORTED":
+        return <ShieldAlert className="h-4 w-4 text-rose-500" />;
+      case "POST_REMOVED":
+        return <FileText className="h-4 w-4 text-slate-500" />;
+      case "ACHIEVEMENT_COMPLETED":
+        return <Trophy className="h-4 w-4 text-amber-500" />;
       default:
         return <Bell className="h-4 w-4 text-slate-500" />;
     }
+  };
+
+  const getNotificationActionLabel = (type) => {
+    if (type === "POST_SUSPENDED") return "ดูโพสต์ที่ถูกระงับ →";
+    if (type === "POST_REMOVED") return "ดูโพสต์ที่ถูกลบ →";
+    if (type === "POST_REPORTED") return "ดูโพสต์ที่ถูกรายงาน →";
+    if (type === "ACHIEVEMENT_COMPLETED") return "ดูความสำเร็จและรับรางวัล →";
+    return "ดูรายละเอียด →";
   };
 
   return (
@@ -293,6 +305,11 @@ export default function Navbar() {
                                   <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
                                     {notif.message}
                                   </p>
+                                  {notif.link && (
+                                    <span className="mt-1 inline-flex text-[11px] font-bold text-primary group-hover:text-blue-700">
+                                      {getNotificationActionLabel(notif.type)}
+                                    </span>
+                                  )}
                                   <p className="text-[10px] text-slate-400 mt-0.5">
                                     {formatRelativeTime(notif.createdAt)}
                                   </p>
@@ -356,7 +373,11 @@ export default function Navbar() {
 
                 <div className="relative" ref={profileRef}>
                   <button
-                    onClick={() => setShowProfileMenu(!showProfileMenu)}
+                    onClick={() => {
+                      const willOpen = !showProfileMenu;
+                      setShowProfileMenu(willOpen);
+                      if (willOpen && isReviewer) fetchReports({ force: true }).catch(() => {});
+                    }}
                     className={`relative flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-full transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/30 ${
                       avatarSrc
                         ? "p-0 ring-1 ring-slate-200/80 hover:ring-primary/50"
@@ -366,50 +387,14 @@ export default function Navbar() {
                     }`}
                     title="เมนูผู้ใช้"
                   >
-                    {avatarSrc ? (
-                      <div className="w-full h-full rounded-full overflow-hidden flex items-center justify-center">
-                        <img
-                          src={avatarSrc}
-                          alt="Profile"
-                          className="w-full h-full rounded-full object-cover"
-                        />
-                      </div>
-                    ) : (
-                      <User className="h-4 w-4 sm:h-5 sm:w-5" />
-                    )}
-                    {equippedFrame?.reward?.previewUrl && (
-                      <img
-                        src={equippedFrame.reward.previewUrl}
-                        alt="Frame"
-                        className="absolute inset-0 w-full h-full pointer-events-none scale-125 z-10"
-                      />
-                    )}
+                    <AvatarWithFrame avatarSrc={avatarSrc} frameSrc={equippedFrameUrl} avatarAlt="Profile" sizeClass="h-full w-full" avatarFallback={<User className="h-4 w-4 sm:h-5 sm:w-5" />} />
                   </button>
 
                   {/* Profile Dropdown */}
                   {showProfileMenu && (
                     <div className="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
                       <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
-                        <div className="relative w-10 h-10 rounded-full flex-shrink-0">
-                          {avatarSrc ? (
-                            <img
-                              src={avatarSrc}
-                              alt="Profile"
-                              className="w-full h-full rounded-full object-cover border border-slate-200"
-                            />
-                          ) : (
-                            <div className="w-full h-full rounded-full bg-slate-200 flex items-center justify-center text-slate-500">
-                              <User className="h-5 w-5" />
-                            </div>
-                          )}
-                          {equippedFrame?.reward?.previewUrl && (
-                            <img
-                              src={equippedFrame.reward.previewUrl}
-                              alt="Frame"
-                              className="absolute inset-0 w-full h-full pointer-events-none scale-125 z-10"
-                            />
-                          )}
-                        </div>
+                        <AvatarWithFrame avatarSrc={avatarSrc} frameSrc={equippedFrameUrl} avatarAlt="Profile" sizeClass="h-10 w-10" avatarFallback={<div className="flex h-full w-full items-center justify-center bg-slate-200 text-slate-500"><User className="h-5 w-5" /></div>} />
                         <div className="min-w-0 flex-1">
                           <p className="font-bold text-slate-800 truncate text-sm">
                             {user?.display_name ||

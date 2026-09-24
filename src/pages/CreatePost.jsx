@@ -3,16 +3,20 @@ import { useNavigate } from 'react-router';
 import { UploadCloud, File, X, GraduationCap, Tag, AlignLeft, BookOpen, PenTool, Save, Image as ImageIcon, Plus, Eye, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
-import ReactQuill from 'react-quill-new';
-import 'react-quill-new/dist/quill.snow.css';
+import ContentEditor from '@/components/posts/ContentEditor';
 import { postService } from '../services/post.service';
 import { categoryService, isValidCategoryUuid } from '../services/category.service';
 import { getDefaultDraftCoverFile } from '../utils/draftCover';
 
 const SUGGESTED_TAGS = ['#AI', '#เรียนรู้ไปด้วยกัน', '#เตรียมสอบ', '#TCAS67', '#สรุปย่อ', '#แชร์ความรู้', '#เด็กซิ่ว', '#สรุปชีท'];
+const DIRECT_UPLOAD_ENABLED = import.meta.env.VITE_DIRECT_UPLOAD_ENABLED !== 'false';
 
 export default function CreatePost() {
   const navigate = useNavigate();
+  const submitting = useRef(false);
+  const uploadCache = useRef(null);
+  const draftCover = useRef(null);
+  const idempotencyKey = useRef(null);
   const [coverImage, setCoverImage] = useState(null);
   const [pdfFile, setPdfFile] = useState(null);
   const [images, setImages] = useState([]);
@@ -45,6 +49,7 @@ export default function CreatePost() {
   const [title, setTitle] = useState('');
   const [summary, setSummary] = useState('');
   const [content, setContent] = useState('');
+  const [isContentUploading, setIsContentUploading] = useState(false);
 
   const [categoriesList, setCategoriesList] = useState([]);
   const [categoryId, setCategoryId] = useState('');
@@ -111,6 +116,9 @@ export default function CreatePost() {
       return;
     }
     setCoverImage(file);
+    if (fieldErrors.cover) {
+      setFieldErrors(prev => ({ ...prev, cover: null }));
+    }
   };
 
   const handlePdfUpload = (e) => {
@@ -177,7 +185,7 @@ export default function CreatePost() {
     }
 
     if (hasOversized) {
-      toast.error('รูปภาพบางรูปมีขนาดเกิน 2 MB');
+      toast.error('รูปภาพประกอบต้องมีขนาดไม่เกิน 2 MB');
     }
 
     setImages(newImages);
@@ -292,9 +300,14 @@ export default function CreatePost() {
   };
 
   const handleSubmit = async (status = 'ACTIVE') => {
+    if (submitting.current) return;
     setFieldErrors({});
     const newErrors = {};
     const isDraft = status === 'DRAFT';
+    if (!isDraft && isContentUploading) {
+      setFieldErrors({ content: 'กรุณารอให้อัปโหลดรูปในรายละเอียดเพิ่มเติมเสร็จก่อนเผยแพร่' });
+      return;
+    }
 
     // Drafts may be saved at any point. Publish validation only runs for ACTIVE posts.
     if (!isDraft) {
@@ -303,15 +316,16 @@ export default function CreatePost() {
       if (!level) newErrors.level = 'กรุณาเลือกระดับชั้น';
       if (!summary.trim()) newErrors.summary = 'กรุณากรอกบทสรุปย่อ';
       if (!categoryId && !categoryName) newErrors.category = 'กรุณาเลือกหมวดหมู่วิชา';
+      if (!content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim()) {
+        newErrors.content = 'กรุณากรอกรายละเอียดเพิ่มเติม';
+      }
 
       if (!coverImage) {
         newErrors.cover = 'กรุณาอัปโหลดรูปภาพหน้าปก';
-        toast.error('กรุณาอัปโหลดรูปภาพหน้าปก');
       }
 
-      if (!images || images.length === 0) {
+      if (!pdfFile && (!images || images.length === 0)) {
         newErrors.media = 'กรุณาแนบรูปภาพประกอบอย่างน้อย 1 รูป';
-        toast.error('กรุณาแนบรูปภาพประกอบอย่างน้อย 1 รูป');
       }
     }
 
@@ -320,6 +334,7 @@ export default function CreatePost() {
       return;
     }
 
+    submitting.current = true;
     try {
       Swal.fire({
         allowOutsideClick: false,
@@ -343,29 +358,72 @@ export default function CreatePost() {
       if (level === 'มัธยมศึกษาตอนต้น') backendLevel = 'MIDDLE_SCHOOL';
       else if (level === 'มัธยมศึกษาตอนปลาย') backendLevel = 'HIGH_SCHOOL';
 
-      // The database fields are non-nullable, so unfinished drafts receive neutral
-      // placeholders without requiring the user to enter anything.
-      const postPayload = new FormData();
-      postPayload.append('title', title.trim() || 'Untitled draft');
-      postPayload.append('summary', summary.trim());
-      postPayload.append('content', content || '<p></p>');
-      postPayload.append('education_level', backendLevel);
-      postPayload.append('post_status', isDraft ? 'DRAFT' : 'ACTIVE');
-      postPayload.append('tags', JSON.stringify(hashtags));
-      if (validCatId) postPayload.append('category_id', validCatId);
-      if (categoryName) postPayload.append('category', categoryName);
-      if (coverImage) {
-        postPayload.append('cover_image', coverImage);
-      } else if (isDraft) {
-        postPayload.append('cover_image', await getDefaultDraftCoverFile());
-      }
-      if (pdfFile) postPayload.append('media_files', pdfFile);
-      images.forEach((image) => postPayload.append('media_files', image));
+      if (!coverImage && isDraft && !draftCover.current) draftCover.current = await getDefaultDraftCoverFile();
+      const coverFile = coverImage || draftCover.current;
+      let postPayload;
+      let directAssets = null;
 
-      const result = await postService.createPost(postPayload);
+      if (DIRECT_UPLOAD_ENABLED) {
+        const files = [coverFile, pdfFile, ...images];
+        const cached = uploadCache.current;
+        const sessionIsUsable = cached?.uploads?.uploadSessionExpiresAt
+          && Date.parse(cached.uploads.uploadSessionExpiresAt) > Date.now() + 30000;
+        const sameFiles = cached && sessionIsUsable && cached.files.length === files.length
+          && files.every((file, index) => file === cached.files[index]);
+        const uploads = sameFiles
+          ? cached.uploads
+          : await postService.uploadPostFilesDirect({ coverImage: coverFile, pdfFile, images });
+        uploadCache.current = { files, uploads };
+        const { coverUpload, mediaUploads, uploadSessionId } = uploads;
+        directAssets = [coverUpload, ...mediaUploads];
+        if (!idempotencyKey.current) idempotencyKey.current = crypto.randomUUID();
+
+        postPayload = {
+          title: title.trim() || 'Untitled draft',
+          summary: summary.trim(),
+          content: content || '<p></p>',
+          education_level: backendLevel,
+          post_status: isDraft ? 'DRAFT' : 'ACTIVE',
+          tags: hashtags,
+          category_id: validCatId,
+          category: categoryName,
+          cover_upload: coverUpload,
+          media_uploads: mediaUploads,
+          upload_session_id: uploadSessionId,
+          idempotency_key: idempotencyKey.current,
+        };
+      } else {
+        postPayload = new FormData();
+        postPayload.append('title', title.trim() || 'Untitled draft');
+        postPayload.append('summary', summary.trim());
+        postPayload.append('content', content || '<p></p>');
+        postPayload.append('education_level', backendLevel);
+        postPayload.append('post_status', isDraft ? 'DRAFT' : 'ACTIVE');
+        postPayload.append('tags', JSON.stringify(hashtags));
+        if (validCatId) postPayload.append('category_id', validCatId);
+        if (categoryName) postPayload.append('category', categoryName);
+        if (coverFile) postPayload.append('cover_image', coverFile);
+        if (pdfFile) postPayload.append('media_files', pdfFile);
+        images.forEach(image => postPayload.append('media_files', image));
+      }
+
+      let result;
+      try {
+        result = await postService.createPost(postPayload);
+      } catch (error) {
+        // A network/5xx error may occur after the database committed. Only clean
+        // up definitive client rejection; never delete possibly attached assets.
+        if (directAssets && error.response?.status >= 400 && error.response.status < 500) {
+          uploadCache.current = null;
+          await postService.cleanupDirectUploads(directAssets);
+        }
+        throw error;
+      }
       Swal.close();
 
       if (result.success) {
+        uploadCache.current = null;
+        idempotencyKey.current = null;
         Swal.fire({
           icon: 'success',
           title: status === 'ACTIVE' ? 'โพสต์สำเร็จ!' : 'บันทึกสำเร็จ!',
@@ -387,6 +445,8 @@ export default function CreatePost() {
         text: errMsg,
         confirmButtonColor: '#3b82f6'
       });
+    } finally {
+      submitting.current = false;
     }
   };
 
@@ -412,7 +472,7 @@ export default function CreatePost() {
               </label>
               <p className="text-xs text-slate-400 mb-3">แนะนำอัตราส่วน 16:9 (เช่น 1280×720px) เพื่อให้แสดงผลสวยที่สุด</p>
               {!coverImage ? (
-                <label className="flex flex-col items-center justify-center w-full aspect-video border-2 border-dashed border-slate-300 rounded-2xl hover:border-primary hover:bg-slate-50 cursor-pointer transition-all">
+                <label className={`flex flex-col items-center justify-center w-full aspect-video border-2 border-dashed rounded-2xl hover:bg-slate-50 cursor-pointer transition-all ${fieldErrors.cover ? 'border-red-500 hover:border-red-500' : 'border-slate-300 hover:border-primary'}`}>
                   <ImageIcon className="h-10 w-10 text-slate-400 mb-3" />
                   <span className="text-sm font-medium text-slate-500">คลิกเพื่ออัปโหลดรูปปก</span>
                   <span className="text-xs text-slate-400 mt-1">อัตราส่วนที่แนะนำ 16:9 (1280×720px) รูปภาพขนาดไม่เกิน 2 Mb</span>
@@ -434,6 +494,9 @@ export default function CreatePost() {
                     <Eye className="h-8 w-8" />
                   </div>
                 </div>
+              )}
+              {fieldErrors.cover && (
+                <p className="mt-1.5 text-xs text-red-500 font-medium" role="alert">{fieldErrors.cover}</p>
               )}
             </div>
 
@@ -525,7 +588,6 @@ export default function CreatePost() {
             <div
               onClick={() => {
                 setShowModal(true);
-                if (fieldErrors.category) setFieldErrors(prev => ({ ...prev, category: null }));
               }}
               className={`p-5 border border-dashed hover:border-primary rounded-2xl bg-white hover:bg-blue-50/10 cursor-pointer transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${fieldErrors.category ? 'border-red-500 bg-red-50/10' : 'border-slate-200'
                 }`}
@@ -563,22 +625,17 @@ export default function CreatePost() {
                 ตั้งค่าวิชาและแท็ก
               </button>
             </div>
+            {fieldErrors.category && (
+              <p className="mt-1.5 text-xs text-red-500 font-medium" role="alert">{fieldErrors.category}</p>
+            )}
           </div>
 
           {/* Rich Text Editor */}
           <div>
             <label className="flex items-center gap-2 text-base font-bold text-slate-800 mb-3">
-              <AlignLeft className="h-5 w-5 text-slate-400" /> รายละเอียดเพิ่มเติม
+              <AlignLeft className="h-5 w-5 text-slate-400" /> รายละเอียดเพิ่มเติม <span className="text-rose-500">*</span>
             </label>
-            <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
-              <ReactQuill
-                theme="snow"
-                value={content}
-                onChange={setContent}
-                className="h-48 pb-10"
-                placeholder="อธิบายเพิ่มเติมเกี่ยวกับเนื้อหา เทคนิคการจำ หรือที่มา..."
-              />
-            </div>
+            <ContentEditor value={content} onUploadingChange={setIsContentUploading} error={fieldErrors.content} onChange={(value) => { setContent(value); if (fieldErrors.content && value.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim()) setFieldErrors(prev => ({ ...prev, content: null })); }} />
           </div>
 
           {/* File Uploads (Split left/right) */}
@@ -643,7 +700,12 @@ export default function CreatePost() {
 
                 {/* Upload Button */}
                 <div className="relative group/btn inline-block">
-                  <label className={`w-20 h-20 border-2 border-dashed rounded-xl flex flex-col items-center justify-center transition-all ${images.length >= 15 ? 'border-slate-200 bg-slate-100 cursor-not-allowed opacity-60' : 'border-slate-300 hover:border-primary hover:bg-slate-50 cursor-pointer'}`}>
+                  <label className={`w-20 h-20 border-2 border-dashed rounded-xl flex flex-col items-center justify-center transition-all ${images.length >= 15
+                    ? 'border-slate-200 bg-slate-100 cursor-not-allowed opacity-60'
+                    : fieldErrors.media
+                      ? 'border-red-500 hover:border-red-500 hover:bg-slate-50 cursor-pointer'
+                      : 'border-slate-300 hover:border-primary hover:bg-slate-50 cursor-pointer'
+                    }`}>
                     <Plus className="h-6 w-6 text-slate-400" />
                     <input
                       type="file"
@@ -710,7 +772,10 @@ export default function CreatePost() {
                 <select
                   value={categoryId || categoryName}
                   onChange={(e) => handleCategorySelect(e.target.value)}
-                  className="w-full px-5 py-3.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors bg-white font-medium text-slate-700 text-base cursor-pointer"
+                  className={`w-full px-5 py-3.5 rounded-xl border focus:outline-none transition-colors bg-white font-medium text-slate-700 text-base cursor-pointer ${fieldErrors.category
+                    ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+                    : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
+                    }`}
                 >
                   <option value="" disabled>เลือกหมวดหมู่วิชา</option>
                   {categoriesList.map((cat) => (
@@ -719,6 +784,9 @@ export default function CreatePost() {
                     </option>
                   ))}
                 </select>
+                {fieldErrors.category && (
+                  <p className="mt-1.5 text-xs text-red-500 font-medium" role="alert">{fieldErrors.category}</p>
+                )}
               </div>
 
               {/* Hashtags Input */}

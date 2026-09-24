@@ -1,7 +1,24 @@
 import { create } from 'zustand';
 
-const POST_TYPES = new Set(['LIKE', 'NEW_LIKE', 'COMMENT', 'NEW_COMMENT', 'NEW_POST', 'BOOKMARK', 'BOOKMARK_REMOVED']);
+const POST_TYPES = new Set(['LIKE', 'NEW_LIKE', 'COMMENT', 'NEW_COMMENT', 'NEW_POST', 'BOOKMARK', 'BOOKMARK_REMOVED', 'POST_SUSPENDED', 'POST_REMOVED', 'POST_REPORTED']);
 const FOLLOW_TYPES = new Set(['FOLLOW', 'NEW_FOLLOWER']);
+const THAI_TEXT = /[\u0E00-\u0E7F]/;
+const THAI_TITLES = {
+  LIKE: 'มีคนถูกใจโพสต์ของคุณ',
+  NEW_LIKE: 'มีคนถูกใจโพสต์ของคุณ',
+  COMMENT: 'ความคิดเห็นใหม่',
+  NEW_COMMENT: 'ความคิดเห็นใหม่',
+  FOLLOW: 'มีคนติดตามคุณ',
+  NEW_FOLLOWER: 'มีคนติดตามคุณ',
+  NEW_POST: 'โพสต์ใหม่จากคนที่คุณติดตาม',
+  SYSTEM: 'การแจ้งเตือนจากระบบ',
+  BOOKMARK: 'มีคนบันทึกโพสต์ของคุณ',
+  BOOKMARK_REMOVED: 'มีคนยกเลิกการบันทึกโพสต์ของคุณ',
+  POST_SUSPENDED: 'โพสต์ของคุณถูกระงับ',
+  POST_REMOVED: 'โพสต์ของคุณถูกลบ',
+  POST_REPORTED: 'มีโพสต์ถูกรายงาน',
+  ACHIEVEMENT_COMPLETED: 'ปลดล็อกความสำเร็จใหม่!',
+};
 
 function asId(value) {
   if (typeof value === 'string' || typeof value === 'number') return String(value);
@@ -27,6 +44,113 @@ function safeInternalLink(value) {
   return /^\/(?!\/)/.test(link) && !/[\\\s]/.test(link) ? link : null;
 }
 
+function getNestedValue(sources, keys) {
+  for (const source of sources) {
+    if (!source || typeof source !== 'object') continue;
+    for (const key of keys) {
+      const value = source[key];
+      if (typeof value === 'string' && value.trim()) return value.trim();
+    }
+  }
+  return null;
+}
+
+function inferActorNameFromText(values) {
+  const patterns = [
+    /^new post from\s+(.+?)(?:[.!]|$)/i,
+    /^(.+?)\s+(?:has\s+)?(?:liked|commented|followed|published|created|shared|posted|bookmarked)\b/i,
+    /^(.+?)\s+(?:ได้)?(?:กดถูกใจ|แสดงความคิดเห็น|เริ่มติดตาม|ติดตาม|เผยแพร่|สร้าง|แชร์|บันทึก)/,
+  ];
+  for (const value of values) {
+    if (typeof value !== 'string') continue;
+    for (const pattern of patterns) {
+      const match = value.trim().match(pattern);
+      const candidate = match?.[1]?.trim().replace(/^['“"]|['”"]$/g, '');
+      if (
+        candidate &&
+        candidate.length <= 80 &&
+        !/^(someone|a user|user|ผู้ใช้|ผู้ใช้คนหนึ่ง)$/i.test(candidate)
+      ) {
+        return candidate;
+      }
+    }
+  }
+  return null;
+}
+
+export function localizeNotificationContent(n, type) {
+  const sources = [n, n.data, n.metadata, n.meta, n.payload, n.context, n.target].filter(Boolean);
+  const actorSources = [
+    ...sources,
+    ...sources.flatMap(source => [
+      source.actor, source.sender, source.follower, source.author, source.owner, source.user,
+      source.fromUser, source.from_user, source.createdBy, source.created_by,
+      source.triggeredBy, source.triggered_by, source.relatedUser, source.related_user,
+    ]),
+  ].filter(Boolean);
+  const postSources = [
+    ...sources,
+    ...sources.flatMap(source => [source.post, source.targetPost, source.target_post]),
+  ].filter(Boolean);
+  const achievementSources = [
+    ...sources,
+    ...sources.flatMap(source => [source.achievement, source.milestone, source.reward, source.reward_item, source.rewardItem]),
+  ].filter(Boolean);
+  const actorName = getNestedValue(sources, [
+    'actorName', 'actor_name', 'senderName', 'sender_name', 'followerName', 'follower_name',
+    'authorName', 'author_name', 'authorUsername', 'author_username',
+    'actorUsername', 'actor_username', 'senderUsername', 'sender_username',
+    'createdByName', 'created_by_name', 'triggeredByName', 'triggered_by_name', 'username',
+  ]) || getNestedValue(actorSources.slice(sources.length), [
+    'displayName', 'display_name', 'username', 'name',
+  ]) || inferActorNameFromText(
+    sources.flatMap(source => [source.message, source.content, source.title]).filter(Boolean),
+  );
+  const postTitle = getNestedValue(sources, [
+    'postTitle', 'post_title', 'targetTitle', 'target_title',
+  ]) || getNestedValue(postSources.slice(sources.length), ['title']);
+  const achievementTitle = getNestedValue(sources, [
+    'achievementTitle', 'achievement_title', 'milestoneTitle', 'milestone_title',
+    'achievementName', 'achievement_name', 'milestoneName', 'milestone_name',
+    'rewardName', 'reward_name', 'itemName', 'item_name',
+  ]) || getNestedValue(achievementSources.slice(sources.length), ['title', 'name', 'item_name']);
+  const backendMessage = getNestedValue(sources, ['message', 'content']);
+  const actor = actorName || 'ผู้ใช้คนหนึ่ง';
+  const post = postTitle ? ` “${postTitle}”` : 'ของคุณ';
+
+  const messages = {
+    LIKE: `${actor} ถูกใจโพสต์${post}`,
+    NEW_LIKE: `${actor} ถูกใจโพสต์${post}`,
+    COMMENT: `${actor} แสดงความคิดเห็นในโพสต์${post}`,
+    NEW_COMMENT: `${actor} แสดงความคิดเห็นในโพสต์${post}`,
+    FOLLOW: `${actor} เริ่มติดตามคุณ`,
+    NEW_FOLLOWER: `${actor} เริ่มติดตามคุณ`,
+    NEW_POST: postTitle
+      ? `${actor} เผยแพร่โพสต์ใหม่ “${postTitle}”`
+      : `${actor} เผยแพร่โพสต์ใหม่`,
+    BOOKMARK: `${actor} บันทึกโพสต์${post}`,
+    BOOKMARK_REMOVED: `${actor} ยกเลิกการบันทึกโพสต์${post}`,
+    ACHIEVEMENT_COMPLETED: (backendMessage && THAI_TEXT.test(backendMessage))
+      ? backendMessage
+      : (achievementTitle
+        ? `คุณปลดล็อกความสำเร็จ “${achievementTitle}” เรียบร้อยแล้ว เข้าไปรับรางวัลได้เลย`
+        : 'คุณปลดล็อกความสำเร็จใหม่เรียบร้อยแล้ว เข้าไปรับรางวัลได้เลย'),
+  };
+  return {
+    title: THAI_TITLES[type] || 'การแจ้งเตือน',
+    message:
+      messages[type] ||
+      (backendMessage && THAI_TEXT.test(backendMessage)
+        ? backendMessage
+        : type === 'SYSTEM'
+          ? 'คุณมีข้อความแจ้งเตือนใหม่จากระบบ'
+          : type === 'ACHIEVEMENT_COMPLETED'
+            ? 'คุณปลดล็อกความสำเร็จใหม่เรียบร้อยแล้ว เข้าไปรับรางวัลได้เลย'
+            : 'คุณมีการแจ้งเตือนใหม่'),
+    actorName,
+  };
+}
+
 export function getNotificationTarget(n, normalizedType) {
   if (!n || typeof n !== 'object') return { link: null, postId: null, actorId: null };
   const type = normalizedType || String(n.type || n.notification_type || 'SYSTEM').trim().replace(/[\s-]+/g, '_').toUpperCase();
@@ -41,13 +165,16 @@ export function getNotificationTarget(n, normalizedType) {
   const actorId = findId(sources, [
     'followerId', 'follower_id', 'actorId', 'actor_id', 'senderId', 'sender_id', 'fromUserId', 'from_user_id',
     'triggeredById', 'triggered_by_id', 'relatedUserId', 'related_user_id', 'actor', 'sender', 'follower',
-    'fromUser', 'from_user', 'userId', 'user_id',
+    'authorId', 'author_id', 'createdById', 'created_by_id', 'fromUser', 'from_user', 'author',
+    'createdBy', 'created_by', 'triggeredBy', 'triggered_by', 'relatedUser', 'related_user', 'userId', 'user_id',
   ]);
   const generatedLink = POST_TYPES.has(type) && postId
     ? `/post/${encodeURIComponent(postId)}`
     : FOLLOW_TYPES.has(type) && actorId
       ? `/profile/${encodeURIComponent(actorId)}`
-      : null;
+      : type === 'ACHIEVEMENT_COMPLETED'
+        ? '/achievements'
+        : null;
   const link = FOLLOW_TYPES.has(type) && generatedLink
     ? generatedLink
     : explicitLink || generatedLink;
@@ -57,21 +184,15 @@ export function getNotificationTarget(n, normalizedType) {
 export function normalize(n) {
   if (!n || typeof n !== 'object' || (n.id ?? n._id) == null) return null;
   const type = String(n.type || n.notification_type || 'SYSTEM').trim().replace(/[\s-]+/g, '_').toUpperCase();
-  const labels = {
-    LIKE: 'มีคนถูกใจโพสต์ของคุณ', NEW_LIKE: 'มีคนถูกใจโพสต์ของคุณ',
-    COMMENT: 'ความคิดเห็นใหม่', NEW_COMMENT: 'ความคิดเห็นใหม่',
-    FOLLOW: 'มีคนติดตามคุณ', NEW_FOLLOWER: 'มีคนติดตามคุณ',
-    NEW_POST: 'โพสต์ใหม่จากคนที่คุณติดตาม', SYSTEM: 'การแจ้งเตือนจากระบบ',
-    BOOKMARK: 'มีคนบุ๊กมาร์กโพสต์ของคุณ', BOOKMARK_REMOVED: 'มีคนยกเลิกบุ๊กมาร์กโพสต์ของคุณ',
-  };
+  const localized = localizeNotificationContent(n, type);
   const { link, postId, actorId } = getNotificationTarget(n, type);
   const read = n.isRead ?? n.is_read ?? false;
   return {
-    id: String(n.id ?? n._id), type, title: n.title || labels[type] || 'การแจ้งเตือน',
-    message: n.message || n.content || '', isRead: read === true || read === 'true' || read === 1,
+    id: String(n.id ?? n._id), type, title: localized.title,
+    message: localized.message, isRead: read === true || read === 'true' || read === 1,
     link, postId, actorId,
     createdAt: Number.isNaN(Date.parse(n.createdAt || n.created_at)) ? new Date(0).toISOString() : new Date(n.createdAt || n.created_at).toISOString(),
-    actorName: n.actorName || n.actor?.username || null,
+    actorName: localized.actorName,
     actorAvatar: n.actorAvatar || n.actor?.avatarUrl || n.actor?.avatar_url || null,
   };
 }
@@ -128,8 +249,17 @@ export function createNotificationStore(service, realtime) {
         const refresh = () => { if (session === epoch) get().fetchNotifications(); };
         const receive = payload => { if (session === epoch) get().addNotification(payload?.data ?? payload); };
         const remove = payload => { if (session === epoch) get().removeNotification(payload?.data ?? payload); };
+        const receiveAchievement = payload => {
+          if (session === epoch) {
+            get().fetchNotifications();
+            globalThis.window?.dispatchEvent(new CustomEvent('achievement_completed', { detail: payload?.data ?? payload }));
+          }
+        };
         socket.on('new_notification', receive);
         socket.on('notification_removed', remove);
+        socket.on('achievement_completed', receiveAchievement);
+        socket.on('achievement_unlocked', receiveAchievement);
+        socket.on('milestone_completed', receiveAchievement);
         socket.on('connect', refresh);
         const timer = setInterval(refresh, 60000);
         globalThis.window?.addEventListener('online', refresh);
@@ -138,6 +268,9 @@ export function createNotificationStore(service, realtime) {
           clearInterval(timer);
           socket.off('new_notification', receive);
           socket.off('notification_removed', remove);
+          socket.off('achievement_completed', receiveAchievement);
+          socket.off('achievement_unlocked', receiveAchievement);
+          socket.off('milestone_completed', receiveAchievement);
           socket.off('connect', refresh);
           globalThis.window?.removeEventListener('online', refresh);
           globalThis.window?.removeEventListener('focus', refresh);
@@ -195,6 +328,9 @@ export function createNotificationStore(service, realtime) {
           const existing = state.notifications.find(item => item.id === n.id);
           return { notifications: sorted([...state.notifications.filter(item => item.id !== n.id), { ...n, isRead: n.isRead || existing?.isRead || false }]) };
         });
+        if (n.type === 'ACHIEVEMENT_COMPLETED') {
+          globalThis.window?.dispatchEvent(new CustomEvent('achievement_completed', { detail: n }));
+        }
       },
     };
   });

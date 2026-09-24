@@ -1,95 +1,43 @@
 import { Routes, Route, Navigate } from "react-router";
-import toast, { Toaster } from "react-hot-toast";
-import { useEffect, useRef } from "react";
+import { Toaster } from "react-hot-toast";
+import { lazy, Suspense, useEffect, useRef } from "react";
 import useAuthStore from "./store/authStore";
 import useNotificationStore from "./store/notificationStore";
 import MainLayout from "./layouts/MainLayout";
 import SettingsLayout from "./layouts/SettingsLayout";
 import AdminLayout from "./layouts/AdminLayout";
-import LandingPage from "./pages/LandingPage";
-import Home from "./pages/Home";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import ResetPassword from "./pages/ResetPassword";
-import Explore from "./pages/Explore";
-import CreatePost from "./pages/CreatePost";
-import EditPost from "./pages/EditPost";
-import Trending from "./pages/Trending";
-import Profile from "./pages/Profile";
-import Notifications from "./pages/Notifications";
-import Achievements from "./pages/Achievements";
-import PostDetails from "./pages/PostDetails";
-import SettingsProfile from "./pages/settings/SettingsProfile";
-import SettingsAppearance from "./pages/settings/SettingsAppearance";
-import SettingsWidgets from "./pages/settings/SettingsWidgets";
-import SettingsAccount from "./pages/settings/SettingsAccount";
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import UserManagement from "./pages/admin/UserManagement";
-import UserDetails from "./pages/admin/UserDetails";
-import AchievementManagement from "./pages/admin/AchievementManagement";
 import { authService } from "./services/auth.service";
 import { supabase } from "./utils/supabase";
 
-// Helper to decode JWT token payload safely
-const getUserFromToken = (token) => {
-  if (!token || typeof token !== "string") return null;
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 3) return null;
-    const base64Url = parts[1];
-    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split("")
-        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-        .join(""),
-    );
-    const payload = JSON.parse(jsonPayload);
+const LandingPage = lazy(() => import("./pages/LandingPage"));
+const Home = lazy(() => import("./pages/Home"));
+const Login = lazy(() => import("./pages/Login"));
+const Register = lazy(() => import("./pages/Register"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const Explore = lazy(() => import("./pages/Explore"));
+const CreatePost = lazy(() => import("./pages/CreatePost"));
+const EditPost = lazy(() => import("./pages/EditPost"));
+const Trending = lazy(() => import("./pages/Trending"));
+const Profile = lazy(() => import("./pages/Profile"));
+const Notifications = lazy(() => import("./pages/Notifications"));
+const Achievements = lazy(() => import("./pages/Achievements"));
+const PostDetails = lazy(() => import("./pages/PostDetails"));
+const SettingsProfile = lazy(() => import("./pages/settings/SettingsProfile"));
+const SettingsAppearance = lazy(() => import("./pages/settings/SettingsAppearance"));
+const SettingsWidgets = lazy(() => import("./pages/settings/SettingsWidgets"));
+const SettingsAccount = lazy(() => import("./pages/settings/SettingsAccount"));
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const UserManagement = lazy(() => import("./pages/admin/UserManagement"));
+const UserDetails = lazy(() => import("./pages/admin/UserDetails"));
+const AchievementManagement = lazy(() => import("./pages/admin/AchievementManagement"));
+const PostConsole = lazy(() => import("./pages/admin/PostConsole"));
 
-    // Check if token expired
-    if (payload.exp && Date.now() >= payload.exp * 1000) {
-      return null;
-    }
-
-    const meta = payload.user_metadata || payload.app_metadata || {};
-    const userId = payload.sub || payload.id || payload.user_id;
-
-    return {
-      id: userId,
-      user_id: userId,
-      email: payload.email || meta.email || "",
-      name:
-        meta.display_name ||
-        meta.full_name ||
-        meta.name ||
-        meta.username ||
-        payload.email?.split("@")[0] ||
-        "ผู้ใช้งาน",
-      avatar: meta.avatar_url || payload.avatar,
-      display_name:
-        meta.display_name ||
-        meta.full_name ||
-        meta.name ||
-        meta.username ||
-        payload.email?.split("@")[0] ||
-        "ผู้ใช้งาน",
-      username:
-        meta.username ||
-        meta.display_name ||
-        meta.full_name ||
-        payload.email?.split("@")[0] ||
-        "ผู้ใช้งาน",
-      education_level:
-        meta.education_level || payload.education_level || "HIGH_SCHOOL",
-      age: meta.age || payload.age || 0,
-      bio: meta.bio || payload.bio || "ยังไม่ได้ระบุ",
-      user_metadata: meta,
-    };
-  } catch (e) {
-    console.error("Error decoding token:", e);
-    return null;
-  }
-};
+const RouteLoader = () => (
+  <div className="min-h-[50vh] flex flex-col items-center justify-center gap-3 bg-background">
+    <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+    <p className="text-sm text-slate-500 font-medium">กำลังโหลดหน้า...</p>
+  </div>
+);
 
 // Route Guardian Component
 const ProtectedRoute = ({ children }) => {
@@ -109,6 +57,15 @@ const ProtectedRoute = ({ children }) => {
   }
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
+  return children;
+};
+
+// Public-only routes must not be accessible once a session is active.
+// This applies to every role; authorization is handled separately by AdminRoute.
+const PublicRoute = ({ children }) => {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+
+  if (isAuthenticated) return <Navigate to="/home" replace />;
   return children;
 };
 
@@ -136,6 +93,21 @@ const AdminRoute = ({ children }) => {
   return children;
 };
 
+const ReviewerRoute = ({ children }) => {
+  const { isAuthenticated, isInitializing, isRoleLoading, user } = useAuthStore();
+  const role = String(user?.role || "").toUpperCase();
+
+  if (isInitializing || (isAuthenticated && isRoleLoading)) return <RouteLoader />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!["ADMIN", "MODERATOR"].includes(role)) return <Navigate to="/home" replace />;
+  return children;
+};
+
+const AdminIndex = () => {
+  const role = String(useAuthStore((state) => state.user?.role) || "").toUpperCase();
+  return role === "ADMIN" ? <AdminDashboard /> : <Navigate to="/admin/reports" replace />;
+};
+
 function App() {
   const loginAction = useAuthStore((state) => state.login);
   const logoutAction = useAuthStore((state) => state.logout);
@@ -143,18 +115,21 @@ function App() {
   const setRoleLoading = useAuthStore((state) => state.setRoleLoading);
   const { connectRealtime, disconnectRealtime, fetchNotifications } = useNotificationStore();
   const prevUserId = useRef(null);
+  const sessionVersion = useRef(0);
 
   useEffect(() => {
+    // Remove the token mirror left by older builds. Supabase owns session
+    // persistence and every authenticated transport reads from that session.
+    localStorage.removeItem("access_token");
+
     const handleSession = async (session) => {
+      const version = ++sessionVersion.current;
       // 1. If Supabase session is active, update login state
       if (session && session.user) {
-        const meta = session.user.user_metadata || {};
+        const meta = { ...(session.user.user_metadata || {}) };
+        delete meta.profile_frame_id;
+        localStorage.removeItem("profile_frame_id");
         const userId = session.user.id;
-        const cachedFrameId =
-          meta.profile_frame_id ||
-          localStorage.getItem(`profile_frame_id_${userId}`) ||
-          localStorage.getItem("profile_frame_id") ||
-          null;
         const cachedWallpaper =
           meta.wallpaper_url ||
           localStorage.getItem(`wallpaper_url_${userId}`) ||
@@ -162,9 +137,6 @@ function App() {
           null;
 
         const userEmail = session.user.email;
-        if (session.access_token) {
-          localStorage.setItem("access_token", session.access_token);
-        }
 
         const baseUser = {
           ...session.user,
@@ -190,7 +162,6 @@ function App() {
           bio: meta.bio || "ยังไม่ได้ระบุ",
           user_metadata: {
             ...meta,
-            profile_frame_id: cachedFrameId,
             wallpaper_url: cachedWallpaper,
           },
         };
@@ -201,6 +172,7 @@ function App() {
         // fetch and merge that in the background (see authService.getMe).
         try {
           const res = await authService.getMe();
+          if (version !== sessionVersion.current) return;
           const dbUser = res?.data || res?.user || (res?.id ? res : null);
           
           if (dbUser) {
@@ -212,11 +184,6 @@ function App() {
               user_metadata: {
                 ...baseUser.user_metadata,
                 ...dbUser.user_metadata,
-                profile_frame_id:
-                  dbUser.user_metadata?.profile_frame_id ||
-                  dbUser.current_frame_id ||
-                  baseUser.user_metadata?.profile_frame_id ||
-                  cachedFrameId,
                 wallpaper_url:
                   dbUser.user_metadata?.wallpaper_url ||
                   dbUser.wallpaper ||
@@ -228,80 +195,15 @@ function App() {
         } catch (e) {
           console.log("Background role sync notice:", e);
         } finally {
-          setInitializing(false);
-          setRoleLoading(false);
+          if (version === sessionVersion.current) {
+            setInitializing(false);
+            setRoleLoading(false);
+          }
         }
         return;
       }
 
-      // 2. If Supabase session is empty, check localStorage access_token
-      const savedToken = localStorage.getItem("access_token");
-      if (savedToken && savedToken !== "undefined" && savedToken !== "null") {
-        const tokenUser = getUserFromToken(savedToken);
-        if (tokenUser) {
-          const userId = tokenUser.id || tokenUser.user_id;
-          const cachedFrameId =
-            tokenUser.user_metadata?.profile_frame_id ||
-            localStorage.getItem(`profile_frame_id_${userId}`) ||
-            localStorage.getItem("profile_frame_id") ||
-            null;
-          const cachedWallpaper =
-            tokenUser.user_metadata?.wallpaper_url ||
-            localStorage.getItem(`wallpaper_url_${userId}`) ||
-            localStorage.getItem("wallpaper_url") ||
-            null;
-
-          const baseTokenUser = {
-            ...tokenUser,
-            user_metadata: {
-              ...tokenUser.user_metadata,
-              profile_frame_id: cachedFrameId,
-              wallpaper_url: cachedWallpaper,
-            },
-          };
-
-          // Token is valid and not expired -> keep user logged in!
-          loginAction(baseTokenUser);
-
-          // Asynchronously attempt to refresh user profile from server
-          try {
-            const res = await authService.getMe();
-            const dbUser = res?.data || res?.user || (res?.id ? res : null);
-            if (dbUser) {
-              const finalUserId =
-                dbUser.id || dbUser._id || dbUser.user_id || userId;
-              loginAction({
-                ...baseTokenUser,
-                ...dbUser,
-                id: finalUserId,
-                user_id: finalUserId,
-                user_metadata: {
-                  ...baseTokenUser.user_metadata,
-                  ...dbUser.user_metadata,
-                  profile_frame_id:
-                    dbUser.user_metadata?.profile_frame_id ||
-                    dbUser.current_frame_id ||
-                    baseTokenUser.user_metadata?.profile_frame_id ||
-                    cachedFrameId,
-                  wallpaper_url:
-                    dbUser.user_metadata?.wallpaper_url ||
-                    dbUser.wallpaper ||
-                    baseTokenUser.user_metadata?.wallpaper_url ||
-                    cachedWallpaper,
-                },
-              });
-            }
-          } catch (e) {
-            console.log("Background getMe check notice:", e);
-          } finally {
-            setInitializing(false);
-            setRoleLoading(false);
-          }
-          return;
-        }
-      }
-
-      // 3. Token is missing or expired -> log out cleanly
+      // Supabase is the browser-session authority.
       logoutAction();
       setInitializing(false);
       setRoleLoading(false);
@@ -314,13 +216,8 @@ function App() {
         handleSession(session);
       })
       .catch(() => {
-        const savedToken = localStorage.getItem("access_token");
-        const tokenUser = getUserFromToken(savedToken);
-        if (tokenUser) {
-          loginAction(tokenUser);
-        } else {
-          logoutAction();
-        }
+        sessionVersion.current += 1;
+        logoutAction();
         setInitializing(false);
         setRoleLoading(false);
       });
@@ -330,6 +227,7 @@ function App() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT") {
+        sessionVersion.current += 1;
         logoutAction();
         setInitializing(false);
         setRoleLoading(false);
@@ -338,9 +236,6 @@ function App() {
         // ป้องกันการรีโหลดหน้า/กระพริบ เมื่อสลับแท็บแล้ว Supabase ยิง event ซ้ำ
         if (!currentUser || currentUser.id !== session.user.id) {
           handleSession(session);
-        } else if (session.access_token) {
-          // อัปเดตเฉพาะ Token เงียบๆ ไม่ต้องโหลดโปรไฟล์ใหม่
-          localStorage.setItem("access_token", session.access_token);
         }
       }
     });
@@ -368,6 +263,7 @@ function App() {
 
   return (
     <>
+      <Suspense fallback={<RouteLoader />}>
       <Routes>
         <Route element={<MainLayout />}>
           <Route path="/" element={<LandingPage />} />
@@ -391,7 +287,14 @@ function App() {
             }
           />
 
-          <Route path="/login" element={<Login />} />
+          <Route
+            path="/login"
+            element={
+              <PublicRoute>
+                <Login />
+              </PublicRoute>
+            }
+          />
           <Route path="/register" element={<Register />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route
@@ -431,6 +334,14 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/report-console"
+            element={
+              <ReviewerRoute>
+                <Navigate to="/admin/reports" replace />
+              </ReviewerRoute>
+            }
+          />
         </Route>
 
         <Route
@@ -450,17 +361,20 @@ function App() {
         <Route
           path="/admin"
           element={
-            <AdminRoute>
+            <ReviewerRoute>
               <AdminLayout />
-            </AdminRoute>
+            </ReviewerRoute>
           }
         >
-          <Route index element={<AdminDashboard />} />
-          <Route path="users" element={<UserManagement />} />
-          <Route path="users/:id" element={<UserDetails />} />
-          <Route path="achievements" element={<AchievementManagement />} />
+          <Route index element={<AdminIndex />} />
+          <Route path="users" element={<AdminRoute><UserManagement /></AdminRoute>} />
+          <Route path="users/:id" element={<AdminRoute><UserDetails /></AdminRoute>} />
+          <Route path="achievements" element={<AdminRoute><AchievementManagement /></AdminRoute>} />
+          <Route path="posts" element={<Navigate to="/admin/reports" replace />} />
+          <Route path="reports" element={<PostConsole />} />
         </Route>
       </Routes>
+      </Suspense>
 
       <Toaster
         position="bottom-right"
@@ -478,3 +392,4 @@ function App() {
 }
 
 export default App;
+

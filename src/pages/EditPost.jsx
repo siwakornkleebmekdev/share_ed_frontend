@@ -3,10 +3,9 @@ import { useParams, useNavigate } from 'react-router';
 import { UploadCloud, File, X, GraduationCap, Tag, AlignLeft, BookOpen, PenTool, Save, Image as ImageIcon, Plus, Eye, FileText, ChevronLeft, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
-import ReactQuill from 'react-quill-new';
-import 'react-quill-new/dist/quill.snow.css';
+import ContentEditor from '@/components/posts/ContentEditor';
 import { postService, resolveCategoryName } from '@/services/post.service';
-import { categoryService, isValidCategoryUuid, DEFAULT_SUBJECT_NAMES } from '@/services/category.service';
+import { categoryService, isValidCategoryUuid } from '@/services/category.service';
 import { uploadFileToSupabase } from '@/utils/storage';
 import useAuthStore from '@/store/authStore';
 import { getDefaultDraftCoverFile } from '@/utils/draftCover';
@@ -64,6 +63,7 @@ export default function EditPost() {
   const [title, setTitle] = useState('');
   const [summary, setSummary] = useState('');
   const [content, setContent] = useState('');
+  const [isContentUploading, setIsContentUploading] = useState(false);
   const [categoriesList, setCategoriesList] = useState([]);
   const [categoryId, setCategoryId] = useState('');
   const [categoryName, setCategoryName] = useState('');
@@ -181,7 +181,7 @@ export default function EditPost() {
         if (pdfMedia) {
           setExistingPdf({
             id: pdfMedia.id,
-            name: (() => {
+            name: pdfMedia.original_name || (() => {
               try {
                 const decoded = decodeURIComponent(pdfMedia.media_url);
                 const segments = decoded.split('/');
@@ -241,6 +241,9 @@ export default function EditPost() {
     }
     setCoverImage(file);
     setExistingCoverImage(null);
+    if (fieldErrors.cover) {
+      setFieldErrors(prev => ({ ...prev, cover: null }));
+    }
   };
 
   const handlePdfUpload = (e) => {
@@ -426,7 +429,7 @@ export default function EditPost() {
   const handleDelete = async () => {
     const result = await Swal.fire({
       title: 'คุณต้องการลบโพสต์นี้ใช่หรือไม่?',
-      text: 'การดำเนินการนี้จะทำการลบโพสต์แบบ Soft Delete (ซ่อนโพสต์ชั่วคราว)',
+      text: 'โพสต์และไฟล์ที่เกี่ยวข้องจะถูกลบถาวรและไม่สามารถกู้คืนได้',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#ef4444',
@@ -476,16 +479,25 @@ export default function EditPost() {
     setFieldErrors({});
     const newErrors = {};
     const isDraft = status === 'DRAFT';
+    if (!isDraft && isContentUploading) {
+      setFieldErrors({ content: 'กรุณารอให้อัปโหลดรูปในรายละเอียดเพิ่มเติมเสร็จก่อนเผยแพร่' });
+      return;
+    }
     if (!isDraft) {
       if (!title.trim()) newErrors.title = 'กรุณากรอกชื่อหัวข้อสรุปความรู้';
       else if (title.length > 100) newErrors.title = 'ชื่อหัวข้อต้องมีความยาวไม่เกิน 100 ตัวอักษร';
       if (!level) newErrors.level = 'กรุณาเลือกระดับชั้น';
       if (!summary.trim()) newErrors.summary = 'กรุณากรอกบทสรุปย่อ';
       if (!categoryId && !categoryName) newErrors.category = 'กรุณาเลือกหมวดหมู่วิชา';
+      if (!content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim()) {
+        newErrors.content = 'กรุณากรอกรายละเอียดเพิ่มเติม';
+      }
+      if (!coverImage && !existingCoverImage) {
+        newErrors.cover = 'กรุณาอัปโหลดรูปภาพหน้าปก';
+      }
 
       if (existingImages.length + images.length === 0) {
         newErrors.media = 'กรุณาแนบรูปภาพประกอบอย่างน้อย 1 รูป';
-        toast.error('กรุณาแนบรูปภาพประกอบอย่างน้อย 1 รูป');
       }
     }
 
@@ -557,7 +569,7 @@ export default function EditPost() {
           try {
             const url = await uploadFileToSupabase(img, 'posts', 'images');
             if (url) imageUrls.push(url);
-          } catch (e) { }
+          } catch { }
         }
         if (imageUrls.length > 0) {
           formData.append('image_urls', JSON.stringify(imageUrls));
@@ -636,7 +648,7 @@ export default function EditPost() {
               </label>
               <p className="text-xs text-slate-400 mb-3">แนะนำอัตราส่วน 16:9 (เช่น 1280×720px) เพื่อให้แสดงผลสวยที่สุด</p>
               {!coverImage && !existingCoverImage ? (
-                <label className="flex flex-col items-center justify-center w-full aspect-video border-2 border-dashed border-slate-300 rounded-2xl hover:border-primary hover:bg-slate-50 cursor-pointer transition-all">
+                <label className={`flex flex-col items-center justify-center w-full aspect-video border-2 border-dashed rounded-2xl hover:bg-slate-50 cursor-pointer transition-all ${fieldErrors.cover ? 'border-red-500 hover:border-red-500' : 'border-slate-300 hover:border-primary'}`}>
                   <ImageIcon className="h-10 w-10 text-slate-400 mb-3" />
                   <span className="text-sm font-medium text-slate-500">คลิกเพื่ออัปโหลดรูปปกใหม่</span>
                   <span className="text-xs text-slate-400 mt-1">อัตราส่วนที่แนะนำ 16:9 (1280×720px) รูปภาพขนาดไม่เกิน 2 MB</span>
@@ -667,6 +679,9 @@ export default function EditPost() {
                     <Eye className="h-8 w-8" />
                   </div>
                 </div>
+              )}
+              {fieldErrors.cover && (
+                <p className="mt-1.5 text-xs text-red-500 font-medium" role="alert">{fieldErrors.cover}</p>
               )}
             </div>
 
@@ -796,30 +811,17 @@ export default function EditPost() {
                 ตั้งค่าวิชาและแท็ก
               </button>
             </div>
+            {fieldErrors.category && (
+              <p className="mt-2 text-xs font-medium text-rose-500" role="alert">{fieldErrors.category}</p>
+            )}
           </div>
 
           {/* Rich Text Editor */}
           <div>
             <label className="flex items-center gap-2 text-base font-bold text-slate-800 mb-3">
-              <AlignLeft className="h-5 w-5 text-slate-400" /> รายละเอียดเพิ่มเติม
+              <AlignLeft className="h-5 w-5 text-slate-400" /> รายละเอียดเพิ่มเติม <span className="text-rose-500">*</span>
             </label>
-            <div className="border border-slate-200 rounded-xl overflow-hidden bg-white focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all">
-              <ReactQuill
-                theme="snow"
-                value={content}
-                onChange={setContent}
-                modules={{
-                  toolbar: [
-                    [{ 'header': [1, 2, 3, false] }],
-                    ['bold', 'italic', 'underline', 'strike'],
-                    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                    ['link', 'clean']
-                  ]
-                }}
-                className="h-48 pb-10 border-0"
-                placeholder="อธิบายเพิ่มเติมเกี่ยวกับเนื้อหา เทคนิคการจำ หรือที่มา..."
-              />
-            </div>
+            <ContentEditor value={content} onUploadingChange={setIsContentUploading} error={fieldErrors.content} onChange={(value) => { setContent(value); if (fieldErrors.content && value.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim()) setFieldErrors(prev => ({ ...prev, content: null })); }} />
           </div>
 
           {/* Files (PDF & Images) */}
@@ -937,7 +939,12 @@ export default function EditPost() {
 
                 {/* Upload Button */}
                 <div className="relative group/btn inline-block">
-                  <label className={`w-20 h-20 border-2 border-dashed rounded-xl flex flex-col items-center justify-center transition-all ${existingImages.length + images.length >= 15 ? 'border-slate-200 bg-slate-100 cursor-not-allowed opacity-60' : 'border-slate-300 hover:border-primary hover:bg-slate-50 cursor-pointer'}`}>
+                  <label className={`w-20 h-20 border-2 border-dashed rounded-xl flex flex-col items-center justify-center transition-all ${existingImages.length + images.length >= 15
+                    ? 'border-slate-200 bg-slate-100 cursor-not-allowed opacity-60'
+                    : fieldErrors.media
+                      ? 'border-red-500 hover:border-red-500 hover:bg-slate-50 cursor-pointer'
+                      : 'border-slate-300 hover:border-primary hover:bg-slate-50 cursor-pointer'
+                    }`}>
                     <Plus className="h-6 w-6 text-slate-400" />
                     <input
                       type="file"

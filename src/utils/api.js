@@ -34,18 +34,43 @@ api.interceptors.request.use(
       }
     }
 
+    // Check if Authorization header is already provided
+    const existingAuth =
+      (config.headers && typeof config.headers.get === 'function' ? config.headers.get('Authorization') : null) ||
+      config.headers?.Authorization ||
+      config.headers?.authorization;
+
+    if (existingAuth) {
+      return config;
+    }
+
     let token = null;
     try {
-      const { data, error } = await supabase.auth.getSession();
-      if (!error) token = data?.session?.access_token || null;
-      if (token) localStorage.setItem('access_token', token);
-      else localStorage.removeItem('access_token');
+      let { data, error } = await supabase.auth.getSession();
+      let session = (!error && data?.session) || null;
+
+      // If session exists but access_token is absent, try refresh
+      if (!session?.access_token && typeof supabase.auth.refreshSession === 'function') {
+        const refreshed = await supabase.auth.refreshSession().catch(() => null);
+        session = refreshed?.data?.session || null;
+      }
+      token = session?.access_token || null;
     } catch {
-      // Storage can be unavailable in restricted browser contexts. In that
-      // case only, retain compatibility with the last known token.
-      token = localStorage.getItem('access_token');
+      token = null;
     }
+
+    // Secondary fallback: check local storage token
+    if (!token) {
+      try {
+        const local = localStorage.getItem('access_token');
+        if (local && local !== 'undefined' && local !== 'null') {
+          token = local;
+        }
+      } catch {}
+    }
+
     if (token && token !== 'undefined' && token !== 'null') {
+      try { localStorage.setItem('access_token', token); } catch {}
       if (config.headers && typeof config.headers.set === 'function') {
         config.headers.set('Authorization', `Bearer ${token}`);
       } else {
@@ -59,10 +84,40 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response Interceptor: Handle global errors
+// Response Interceptor: Handle global errors & token auto-recovery
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    const originalRequest = error.config;
+    // If 401 Authorization error and not retried yet, try refreshing the session
+    const status = error.response?.status;
+    const errorMsg = error.response?.data?.message || '';
+    const isAuthError = status === 401 && (
+      errorMsg.includes('Authorization header missing') ||
+      errorMsg.includes('Invalid or expired token') ||
+      errorMsg.includes('jwt')
+    );
+
+    if (isAuthError && originalRequest && !originalRequest._retry) {
+      originalRequest._retry = true;
+      try {
+        const { data } = await supabase.auth.refreshSession();
+        const newToken = data?.session?.access_token;
+        if (newToken) {
+          try { localStorage.setItem('access_token', newToken); } catch {}
+          if (originalRequest.headers && typeof originalRequest.headers.set === 'function') {
+            originalRequest.headers.set('Authorization', `Bearer ${newToken}`);
+          } else {
+            if (!originalRequest.headers) originalRequest.headers = {};
+            originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          }
+          return api(originalRequest);
+        }
+      } catch {
+        // Refresh failed, continue with rejection
+      }
+    }
     return Promise.reject(error);
   }
 );

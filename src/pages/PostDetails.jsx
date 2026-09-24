@@ -1,20 +1,30 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router';
-import { FileText, Download, Heart, Share2, Tag, ChevronLeft, ChevronRight, Calendar, Eye, EyeOff, ExternalLink, Bookmark, X, Edit3, Trash2, Send, MessageSquare, AlignLeft, ImageIcon } from 'lucide-react';
+import { FileText, Download, Heart, Share2, Tag, ChevronLeft, ChevronRight, Calendar, Eye, EyeOff, Bookmark, X, Edit3, Trash2, Send, MessageSquare, AlignLeft, ImageIcon, Flag } from 'lucide-react';
 import { postService } from '@/services/post.service';
-import { profileService, DEFAULT_FRAMES } from '@/services/profile.service';
+import { profileService } from '@/services/profile.service';
 import useAuthStore from '@/store/authStore';
-import api from '@/utils/api';
+import useAchievementStore from '@/store/achievementStore';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import { supabase } from '@/utils/supabase';
+import { sanitizePostContent } from '@/utils/sanitizePostContent';
+import { resolveProfileFrame } from '@/utils/profileFrame';
+import AvatarWithFrame from '@/components/profile/AvatarWithFrame';
 
 const COMMENTS_PER_PAGE = 5;
+const REPORT_REASONS = [
+  'เนื้อหาไม่เหมาะสม',
+  'สแปม',
+  'คัดลอกผลงานผู้อื่น',
+  'เนื้อหามีความหยาบคาย',
+];
 
 export default function PostDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuthStore();
+  const { milestones, fetchMilestones } = useAchievementStore();
   const [isLiked, setIsLiked] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
 
@@ -30,50 +40,29 @@ export default function PostDetails() {
   // Loading states for actions to prevent spamming
   const [isLiking, setIsLiking] = useState(false);
   const [isBookmarking, setIsBookmarking] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [isReporting, setIsReporting] = useState(false);
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
+  useEffect(() => {
+    if (isAuthenticated) fetchMilestones();
+  }, [fetchMilestones, isAuthenticated]);
+
   const [post, setPost] = useState(null);
   const [authorProfile, setAuthorProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isDeletedPost, setIsDeletedPost] = useState(false);
-  const [isDeletedPostOwner, setIsDeletedPostOwner] = useState(false);
-
-  useEffect(() => {
-    if (!isDeletedPost) return undefined;
-
-    const redirectTimer = window.setTimeout(() => {
-      navigate('/home', { replace: true });
-    }, 2000);
-
-    return () => window.clearTimeout(redirectTimer);
-  }, [isDeletedPost, navigate]);
 
   useEffect(() => {
     const fetchPost = async () => {
       try {
-        setIsDeletedPost(false);
-        setIsDeletedPostOwner(false);
         if (!post || String(post.id) !== String(id)) {
           setIsLoading(true);
         }
         const data = await postService.getPostById(id);
-
-        if (String(data?.postStatus || data?.post_status).toUpperCase() === 'DELETED') {
-          const viewerId = user?.id || user?.user_id;
-          const deletedPostAuthorId = data?.authorId || data?.author_id || data?.user_id || data?.author?.id;
-
-          setPost(null);
-          setIsDeletedPostOwner(Boolean(
-            viewerId &&
-            deletedPostAuthorId &&
-            String(viewerId) === String(deletedPostAuthorId)
-          ));
-          setIsDeletedPost(true);
-          return;
-        }
 
         setPost(data);
         if (data) {
@@ -103,14 +92,7 @@ export default function PostDetails() {
         }
       } catch (error) {
         console.error('Error loading post details:', error);
-        const errorMessage = error?.response?.data?.message || error?.message || '';
-        const deletedResponse = error?.response?.status === 410 || /ถูกลบ|deleted/i.test(errorMessage);
-
         setPost(null);
-        // Other members receive a 404 for a deleted post, without its author
-        // data, so this branch must use the non-owner wording.
-        setIsDeletedPostOwner(false);
-        setIsDeletedPost(deletedResponse);
       } finally {
         setIsLoading(false);
       }
@@ -196,6 +178,7 @@ export default function PostDetails() {
     postAuthorId &&
     String(currentUserId) === String(postAuthorId)
   );
+  const isSuspendedPost = String(post?.postStatus || post?.post_status).toUpperCase() === 'UNACTIVED';
 
   const authorUsername = isAuthor
     ? (user?.username || authorProfile?.username || post?.author?.username || 'ผู้ใช้งาน')
@@ -209,13 +192,54 @@ export default function PostDetails() {
     ? 'แอดมิน'
     : (authorProfile?.role === 'MODERATOR' ? 'ผู้ดูแลระบบ' : (post?.author?.role || 'Contributor'));
 
-  const authorFrameId = isAuthor
-    ? (user?.user_metadata?.profile_frame_id || user?.current_frame_id || (currentUserId ? localStorage.getItem(`profile_frame_id_${currentUserId}`) : null) || localStorage.getItem('profile_frame_id'))
-    : (authorProfile?.user_metadata?.profile_frame_id || authorProfile?.current_frame_id || post?.author_frame_id || post?.author?.current_frame_id || (postAuthorId ? localStorage.getItem(`profile_frame_id_${postAuthorId}`) : null));
+  const authorFrameProfile = {
+    ...post?.author,
+    ...(isAuthor ? user : {}),
+    ...authorProfile,
+    user_metadata: isAuthor ? user?.user_metadata : authorProfile?.user_metadata,
+    current_frame_id: (isAuthor && user && 'current_frame_id' in user) ? user.current_frame_id : authorProfile?.current_frame_id
+      || post?.author_frame_id
+      || post?.authorFrameId
+      || post?.author?.current_frame_id,
+    current_frame: (isAuthor && user && 'current_frame_id' in user) ? user.current_frame : authorProfile?.current_frame
+      || post?.authorFrame
+      || post?.author_frame
+      || post?.author?.current_frame,
+  };
+  const authorFrame = resolveProfileFrame(authorFrameProfile, milestones);
+  const authorFrameUrl = authorFrame?.previewUrl;
 
-  const serverFrame = authorProfile?.current_frame || post?.authorFrame || post?.author_frame || post?.author?.current_frame;
-  const authorFrameObj = serverFrame || DEFAULT_FRAMES.find(df => df.id === authorFrameId || df.reward_item_id === authorFrameId);
-  const authorFrameUrl = authorFrameObj?.image_url || authorFrameObj?.previewUrl || authorFrameObj?.reward?.previewUrl || authorFrameObj?.metadata?.previewUrl;
+  const handleOpenReport = () => {
+    if (!isAuthenticated) {
+      toast.error('กรุณาเข้าสู่ระบบก่อนรายงานโพสต์');
+      navigate('/login');
+      return;
+    }
+    setShowReportModal(true);
+  };
+
+  const handleSubmitReport = async (event) => {
+    event.preventDefault();
+    if (!reportReason || isReporting || !post) return;
+
+    try {
+      setIsReporting(true);
+      await postService.reportPost(post.id, reportReason);
+      toast.success('ส่งรายงานโพสต์เรียบร้อยแล้ว');
+      setShowReportModal(false);
+      setReportReason('');
+    } catch (error) {
+      console.error('Error reporting post:', error);
+      const alreadyReported = error.response?.status === 400
+        && /already reported/i.test(error.response?.data?.message || '');
+      const message = alreadyReported
+        ? 'คุณเคยรายงานโพสต์นี้แล้ว'
+        : (error.response?.data?.message || 'ไม่สามารถส่งรายงานได้ กรุณาลองใหม่อีกครั้ง');
+      toast.error(message);
+    } finally {
+      setIsReporting(false);
+    }
+  };
 
   const handleLike = async () => {
     if (!isAuthenticated) {
@@ -288,7 +312,7 @@ export default function PostDetails() {
   const handleDelete = async () => {
     const result = await Swal.fire({
       title: `คุณต้องการลบโพสต์ "${post?.title}" ใช่หรือไม่?`,
-      text: 'การดำเนินการนี้จะทำการลบโพสต์แบบ Soft Delete (ซ่อนโพสต์ชั่วคราว)',
+      text: 'โพสต์และไฟล์ที่เกี่ยวข้องจะถูกลบถาวรและไม่สามารถกู้คืนได้',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#ef4444',
@@ -314,10 +338,10 @@ export default function PostDetails() {
           await Swal.fire({
             icon: 'success',
             title: 'ลบสำเร็จ!',
-            text: 'โพสต์ของคุณถูกลบเรียบร้อยแล้ว',
+            text: 'โพสต์และไฟล์ที่เกี่ยวข้องถูกลบถาวรแล้ว',
             confirmButtonColor: '#3b82f6'
           });
-          navigate('/explore');
+          navigate('/home');
         } else {
           throw new Error(response?.message || 'เกิดข้อผิดพลาดในการลบโพสต์');
         }
@@ -341,7 +365,11 @@ export default function PostDetails() {
       navigate('/register');
       return;
     }
-    if (!newCommentText.trim() || !post) return;
+    if (!newCommentText.trim()) {
+      toast.error('กรุณากรอกความคิดเห็น');
+      return;
+    }
+    if (!post) return;
 
     try {
       setIsSubmittingComment(true);
@@ -418,29 +446,6 @@ export default function PostDetails() {
     return <div className="text-center py-20 text-slate-500 font-medium">กำลังโหลดข้อมูล...</div>;
   }
 
-  if (isDeletedPost) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center px-4 py-16" role="status" aria-live="polite">
-        <div className="w-full max-w-lg rounded-3xl border border-red-100 bg-white p-8 sm:p-10 text-center shadow-xl shadow-red-100/50">
-          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-red-50 text-red-500">
-            <Trash2 className="h-8 w-8" aria-hidden="true" />
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">
-            {isDeletedPostOwner ? 'โพสต์ของคุณถูกลบไปแล้ว' : 'โพสต์นี้ถูกลบไปแล้ว'}
-          </h1>
-          <p className="mt-3 text-slate-500">กำลังพาคุณกลับไปหน้า Home ภายใน 2 วินาที...</p>
-          <Link
-            to="/home"
-            replace
-            className="mt-6 inline-flex items-center justify-center rounded-xl bg-primary px-5 py-2.5 font-semibold text-white transition-opacity hover:opacity-90"
-          >
-            กลับหน้า Home
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
   if (!post) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center px-4 py-16" role="status" aria-live="polite">
@@ -465,12 +470,30 @@ export default function PostDetails() {
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
 
+      {isSuspendedPost && isAuthor && (
+        <div role="status" className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm font-semibold text-amber-800">
+          โพสต์นี้ถูกระงับอยู่ คุณยังดูเนื้อหาได้ แต่ผู้ใช้อื่นจะเปิดโพสต์นี้ไม่ได้
+        </div>
+      )}
+
       {/* Header Actions */}
       <div className="flex items-center justify-between mb-6">
         <Link to="/home" className="inline-flex items-center gap-2 text-slate-500 hover:text-primary transition-colors font-medium">
           <ChevronLeft className="h-5 w-5" /> กลับไปหน้าหลัก
         </Link>
         <div className="flex items-center gap-2">
+          {!isAuthor && (
+            <button
+              type="button"
+              onClick={handleOpenReport}
+              disabled={isReporting}
+              className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 bg-white hover:bg-rose-50 text-slate-500 hover:text-rose-600 border border-slate-200 hover:border-rose-200 rounded-xl text-sm font-bold shadow-sm transition-all disabled:cursor-not-allowed disabled:opacity-50"
+              title="รายงานโพสต์"
+            >
+              <Flag className="h-4 w-4" />
+              <span className="hidden sm:inline">รายงานโพสต์</span>
+            </button>
+          )}
           {isAuthor && (
             <>
               <Link to={`/post/edit/${post.id}`} className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-primary border border-blue-100 rounded-xl text-sm font-bold shadow-sm transition-all">
@@ -510,25 +533,8 @@ export default function PostDetails() {
 
             <div className="flex flex-wrap items-center justify-between gap-4 py-4 border-y border-slate-100">
               <div className="flex items-center gap-3">
-                <Link to={postAuthorId ? `/profile/${encodeURIComponent(postAuthorId)}` : '#'} className="relative shrink-0 block group cursor-pointer">
-                  <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-sm bg-slate-100 flex items-center justify-center">
-                    <img
-                      src={authorAvatar}
-                      alt={authorUsername}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(authorUsername || 'User')}&background=1e293b&color=38bdf8`;
-                      }}
-                    />
-                  </div>
-                  {authorFrameUrl && (
-                    <img
-                      src={authorFrameUrl}
-                      alt="Frame"
-                      className="absolute -inset-1.5 w-[calc(100%+12px)] h-[calc(100%+12px)] object-cover pointer-events-none z-10 scale-110"
-                    />
-                  )}
+                <Link to={postAuthorId ? `/profile/${encodeURIComponent(postAuthorId)}` : '#'} className="relative h-14 w-14 shrink-0 block group cursor-pointer" aria-label={`ดูโปรไฟล์ของ ${authorUsername}`}>
+                  <AvatarWithFrame avatarSrc={authorAvatar} frameSrc={authorFrameUrl} avatarAlt={authorUsername} sizeClass="h-14 w-14" className="bg-slate-100" onAvatarError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(authorUsername || 'User')}&background=1e293b&color=38bdf8`; }} />
                 </Link>
                 <div>
                   <Link to={postAuthorId ? `/profile/${encodeURIComponent(postAuthorId)}` : '#'} className="font-bold text-slate-900 hover:text-primary transition-colors block">
@@ -564,7 +570,7 @@ export default function PostDetails() {
               <AlignLeft className="h-5 w-5 text-primary" /> รายละเอียดเพิ่มเติม
             </h3>
             <div className="prose prose-slate max-w-none prose-p:text-slate-600 prose-headings:text-slate-900 prose-a:text-primary p-6 bg-white border border-slate-100 shadow-sm rounded-2xl">
-              <div dangerouslySetInnerHTML={{ __html: post.details || post.content || '<p className="text-slate-400 italic">ไม่มีรายละเอียดเพิ่มเติม</p>' }} />
+              <div className="post-details-content" dangerouslySetInnerHTML={{ __html: sanitizePostContent(post.details || post.content || '<p>ไม่มีรายละเอียดเพิ่มเติม</p>') }} />
             </div>
           </div>
 
@@ -628,7 +634,7 @@ export default function PostDetails() {
 
                     <a
                       href={post.pdf.url}
-                      download
+                      download={post.pdf.name || 'เอกสารประกอบการเรียน.pdf'}
                       target="_blank"
                       rel="noreferrer"
                       className="flex-1 sm:flex-none px-4 py-2.5 bg-primary text-white rounded-xl font-bold shadow-sm hover:bg-blue-600 transition-all flex items-center justify-center gap-2 text-sm"
@@ -694,8 +700,8 @@ export default function PostDetails() {
                 <div className="flex justify-end mt-2">
                   <button
                     type="submit"
-                    disabled={isSubmittingComment || !newCommentText.trim() || !isAuthenticated}
-                    className={`px-5 py-2.5 rounded-xl font-bold text-white transition-all flex items-center gap-2 text-sm shadow-sm ${(!newCommentText.trim() || !isAuthenticated) ? 'bg-slate-300 cursor-not-allowed' : 'bg-primary hover:bg-blue-600 hover:shadow'}`}
+                    disabled={isSubmittingComment || !isAuthenticated}
+                    className={`px-5 py-2.5 rounded-xl font-bold text-white transition-all flex items-center gap-2 text-sm shadow-sm ${!isAuthenticated ? 'bg-slate-300 cursor-not-allowed' : 'bg-primary hover:bg-blue-600 hover:shadow'}`}
                   >
                     <Send className="h-4 w-4" />
                     {isSubmittingComment ? 'กำลังส่ง...' : 'ส่งความคิดเห็น'}
@@ -825,6 +831,75 @@ export default function PostDetails() {
         </div>
 
       </div>
+
+      {showReportModal && (
+        <div
+          className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm"
+          role="presentation"
+          onClick={() => !isReporting && setShowReportModal(false)}
+        >
+          <div
+            className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl sm:p-8"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="report-post-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-6 flex items-start justify-between gap-4">
+              <div>
+                <h2 id="report-post-title" className="text-xl font-extrabold text-slate-900">รายงานโพสต์</h2>
+                <p className="mt-1 text-sm text-slate-500">เลือกเหตุผลเพื่อส่งให้ทีมงานตรวจสอบ</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowReportModal(false)}
+                disabled={isReporting}
+                className="rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
+                aria-label="ปิดหน้าต่างรายงาน"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmitReport} className="space-y-5">
+              <div>
+                <label htmlFor="report-reason" className="mb-2 block text-sm font-bold text-slate-700">เหตุผลที่รายงาน</label>
+                <select
+                  id="report-reason"
+                  value={reportReason}
+                  onChange={(event) => setReportReason(event.target.value)}
+                  required
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-700 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
+                >
+                  <option value="">เลือกเหตุผล</option>
+                  {REPORT_REASONS.map((reason) => (
+                    <option key={reason} value={reason}>{reason}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowReportModal(false)}
+                  disabled={isReporting}
+                  className="rounded-xl border border-slate-200 px-5 py-2.5 font-bold text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="submit"
+                  disabled={!reportReason || isReporting}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-rose-600 px-5 py-2.5 font-bold text-white transition-colors hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Flag className="h-4 w-4" />
+                  {isReporting ? 'กำลังส่งรายงาน...' : 'ส่งรายงาน'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Image Preview Modal */}
       {previewImage && (

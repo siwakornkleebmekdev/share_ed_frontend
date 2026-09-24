@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import {
   Upload,
   Image as ImageIcon,
@@ -13,10 +13,11 @@ import {
 import toast from "react-hot-toast";
 import useAuthStore from "@/store/authStore";
 import useAchievementStore from "@/store/achievementStore";
-import { profileService, DEFAULT_FRAMES } from "@/services/profile.service";
-import { AVATAR_SHAPES, DEFAULT_THEME } from "./themeConstants";
+import { profileService } from "@/services/profile.service";
+import { DEFAULT_THEME } from "./themeConstants";
 import ProfilePreview from "@/components/settings/ProfilePreview";
 import FrameDecorationModal from "@/components/settings/FrameDecorationModal";
+import AvatarWithFrame from "@/components/profile/AvatarWithFrame";
 import { supabase } from "@/utils/supabase";
 
 const generateGradientFile = (filename, width, height, color1, color2) => {
@@ -48,7 +49,7 @@ const generateGradientFile = (filename, width, height, color1, color2) => {
 
 export default function SettingsProfile() {
   const { user, login } = useAuthStore();
-  const { milestones, fetchMilestones } = useAchievementStore();
+  const { milestones: storedMilestones, ownerId, fetchMilestones } = useAchievementStore();
   const [isSaving, setIsSaving] = useState(false);
   const [tagInput, setTagInput] = useState("");
   const [isFrameModalOpen, setIsFrameModalOpen] = useState(false);
@@ -70,58 +71,25 @@ export default function SettingsProfile() {
     fetchMilestones();
   }, [fetchMilestones]);
 
-  // Merge live milestones with DEFAULT_FRAMES, honoring local & backend claimed state
-  const allMilestones = useMemo(() => {
-    const map = new Map();
-    DEFAULT_FRAMES.forEach((df) => {
-      map.set(df.id, { ...df });
-    });
-    milestones.forEach((m) => {
-      const key = m.id || m.reward_item_id;
-      if (map.has(key)) {
-        map.set(key, { ...map.get(key), ...m });
-      } else {
-        map.set(key, m);
-      }
-    });
-
-    try {
-      const claimedLocal = JSON.parse(localStorage.getItem("claimed_milestones") || "[]");
-      claimedLocal.forEach((claimedId) => {
-        for (const [, v] of map.entries()) {
-          if (
-            v.id === claimedId ||
-            v.reward_item_id === claimedId ||
-            v.reward?.id === claimedId
-          ) {
-            v.status = "CLAIMED";
-          }
-        }
-      });
-    } catch (_) {}
-
-    return Array.from(map.values());
-  }, [milestones]);
+  const currentUserId = user?.id || user?.user_id || null;
+  const allMilestones = ownerId === currentUserId ? storedMilestones : [];
 
   const frameMilestones = allMilestones.filter((m) => m.reward?.type === "FRAME");
-  const currentUserId = user?.id || user?.user_id;
-  const rawEquippedFrameId =
-    user?.user_metadata?.profile_frame_id ||
-    user?.current_frame_id ||
-    (currentUserId ? localStorage.getItem(`profile_frame_id_${currentUserId}`) : null) ||
-    localStorage.getItem("profile_frame_id") ||
-    null;
+  const rawEquippedFrameId = user && 'current_frame_id' in user
+    ? user.current_frame_id
+    : null;
 
   const foundFrame = allMilestones.find(
     (m) =>
-      m.id === rawEquippedFrameId ||
       m.reward_item_id === rawEquippedFrameId ||
       m.reward?.id === rawEquippedFrameId,
   );
 
   // Enforce: only claimed frames can be actively equipped
   const equippedFrame = foundFrame && foundFrame.status === "CLAIMED" ? foundFrame : null;
-  const equippedFrameId = equippedFrame ? (equippedFrame.reward_item_id || equippedFrame.id) : null;
+  const equippedFrameId = equippedFrame
+    ? (equippedFrame.reward_item_id || equippedFrame.reward?.id)
+    : (user?.current_frame?.id && String(user.current_frame.id) === String(rawEquippedFrameId) ? rawEquippedFrameId : null);
 
   const claimedWallpapers = allMilestones.filter(
     (m) => m.status === "CLAIMED" && m.reward?.type === "WALLPAPER",
@@ -131,68 +99,27 @@ export default function SettingsProfile() {
     user?.avatar_url ||
     `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.display_name || user?.username || "User")}&background=1e293b&color=38bdf8`;
 
-  // Equipping a claimed reward applies immediately (own toast, own API call)
-  // rather than going through the big form's "บันทึกข้อมูล" button — same
-  // instant-apply pattern the Achievements page already uses for claiming.
+  // Equipping a claimed reward is independent from the main profile form, but
+  // the UI changes only after the backend confirms the database update.
   const handleEquipFrame = async (frameId) => {
-    const userId = user?.id || user?.user_id;
     try {
-      // 1. Persist to LocalStorage immediately so refresh retains frame even offline
-      if (frameId) {
-        if (userId) localStorage.setItem(`profile_frame_id_${userId}`, frameId);
-        localStorage.setItem("profile_frame_id", frameId);
-      } else {
-        if (userId) localStorage.removeItem(`profile_frame_id_${userId}`);
-        localStorage.removeItem("profile_frame_id");
-      }
-
-      // 2. Persist to Supabase Auth metadata for permanent cloud persistence across devices/refreshes
-      try {
-        await supabase.auth.updateUser({
-          data: { profile_frame_id: frameId || null },
-        });
-      } catch (sbErr) {
-        console.warn("Supabase updateUser frame notice:", sbErr);
-      }
-
-      // 3. Notify backend API via /users/equip
       const selectedMilestone = allMilestones.find(
         (m) =>
-          m.id === frameId ||
           m.reward_item_id === frameId ||
           m.reward?.id === frameId,
       );
-      const rewardItemId =
-        selectedMilestone?.reward_item_id ||
-        selectedMilestone?.reward?.id ||
-        frameId;
-
-      try {
-        if (frameId) {
-          await profileService.equipItem(rewardItemId, "FRAME");
-        } else {
-          await profileService.equipItem(null, "FRAME");
-        }
-      } catch (apiErr) {
-        console.warn("Backend equipItem frame notice:", apiErr);
+      if (frameId && selectedMilestone?.status !== "CLAIMED") {
+        throw new Error("กรอบนี้ยังไม่ได้ปลดล็อกในบัญชีของคุณ");
       }
-
-      // 4. Update in-memory Zustand store
-      login({
-        ...user,
-        current_frame_id: frameId || null,
-        user_metadata: {
-          ...user?.user_metadata,
-          profile_frame_id: frameId || null,
-        },
-      });
-
-      toast.success(
-        frameId ? "เปลี่ยนกรอบโปรไฟล์แล้ว" : "นำกรอบโปรไฟล์ออกแล้ว",
-      );
+      const equipResult = await profileService.equipItem(frameId || null, 'FRAME');
+      if (equipResult?.success === false) {
+        throw new Error(equipResult.error?.message || 'ไม่สามารถบันทึกกรอบโปรไฟล์ได้');
+      }
+      login({ ...user, ...(equipResult?.data || {}) });
+      toast.success(frameId ? 'เปลี่ยนกรอบโปรไฟล์แล้ว' : 'นำกรอบโปรไฟล์ออกแล้ว');
     } catch (error) {
       console.error("Error equipping frame:", error);
-      toast.error("เกิดข้อผิดพลาด กรุณาลองใหม่");
+      toast.error(error.response?.data?.message || error.message || "ไม่สามารถเปลี่ยนกรอบโปรไฟล์ได้ กรุณาลองใหม่");
     }
   };
 
@@ -241,10 +168,8 @@ export default function SettingsProfile() {
       username: user.username || user.display_name || user.name || "",
       bio: user.bio || "",
       education_level: user.education_level || "HIGH_SCHOOL",
-      // Full theme_settings is loaded (not just avatarShape) since saving
-      // this page resubmits the whole object — partial objects would wipe
-      // out fields edited on the Appearance settings page.
-      theme_settings: { ...DEFAULT_THEME, ...(meta.theme_settings || {}) },
+      // Preserve appearance settings while standardizing avatar shape.
+      theme_settings: { ...DEFAULT_THEME, ...(meta.theme_settings || {}), avatarShape: 'circle' },
     });
   }, [user]);
 
@@ -290,13 +215,6 @@ export default function SettingsProfile() {
         type: file.type, 
         remove: true 
       } 
-    }));
-  };
-
-  const updateTheme = (key, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      theme_settings: { ...prev.theme_settings, [key]: value },
     }));
   };
 
@@ -356,7 +274,6 @@ export default function SettingsProfile() {
             display_name: trimmedUsername,
             avatar_url: newAvatarUrl,
             theme_settings: formData.theme_settings,
-            profile_frame_id: equippedFrameId,
             wallpaper_url:
               resData.user_metadata?.wallpaper_url ||
               resData.wallpaper ||
@@ -383,10 +300,6 @@ export default function SettingsProfile() {
     }
   };
 
-  const activeAvatarShape =
-    AVATAR_SHAPES.find((s) => s.id === formData.theme_settings.avatarShape) ||
-    AVATAR_SHAPES[3];
-
   // Merge unsaved local edits (avatar/wallpaper uploads, frame equip is
   // already live in `user` via handleEquipFrame) into the user object the
   // preview reads, so it reflects everything on this page in real time.
@@ -395,7 +308,6 @@ export default function SettingsProfile() {
     avatar_url: media.avatar?.url || user?.avatar_url,
     user_metadata: {
       ...user?.user_metadata,
-      profile_frame_id: equippedFrameId,
       wallpaper_url: media.wallpaper?.remove
         ? null
         : (media.wallpaper?.url || user?.user_metadata?.wallpaper_url),
@@ -442,34 +354,17 @@ export default function SettingsProfile() {
               อัปโหลดรูป และเลือกรูปทรง avatar
             </p>
             <div className="flex items-center gap-5 pt-2">
-              <div
-                className={`h-24 w-24 bg-slate-100 overflow-hidden border-4 border-slate-50 shadow-sm shrink-0 relative ${activeAvatarShape.className}`}
-              >
-                {media.avatar?.url || user?.avatar_url ? (
-                  <img
-                    src={media.avatar?.url || user?.avatar_url}
-                    alt="Avatar"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-slate-400 bg-slate-100">
-                    <ImageIcon className="h-8 w-8" />
-                  </div>
-                )}
-                {equippedFrameId && (
-                  equippedFrame?.reward?.previewUrl ? (
-                    <img
-                      src={equippedFrame.reward.previewUrl}
-                      alt={equippedFrame.reward.name || "Frame"}
-                      className="absolute inset-0 w-full h-full object-cover pointer-events-none z-10"
-                    />
-                  ) : (
-                    <div
-                      className={`absolute inset-0 border-4 border-amber-400 mix-blend-overlay pointer-events-none ${activeAvatarShape.className}`}
-                    ></div>
-                  )
-                )}
-              </div>
+              {/* ซ่อนขอบรูปเมื่อมีกรอบตกแต่ง เพื่อไม่ให้เห็นวงขาวซ้อนใต้ภาพกรอบ */}
+              <AvatarWithFrame
+                avatarSrc={media.avatar?.url || user?.avatar_url}
+                frameSrc={equippedFrame?.reward?.previewUrl || user?.current_frame?.image_url || user?.current_frame?.previewUrl}
+                frameAlt={equippedFrame?.reward?.name || ''}
+                sizeClass="h-24 w-24"
+                className={equippedFrame?.reward?.previewUrl || user?.current_frame?.image_url || user?.current_frame?.previewUrl
+                  ? "bg-slate-100 shadow-sm"
+                  : "border-4 border-slate-50 bg-slate-100 shadow-sm"}
+                avatarFallback={<div className="flex h-full w-full items-center justify-center text-slate-400"><ImageIcon className="h-8 w-8" /></div>}
+              />
               <div className="flex flex-col gap-2">
                 <label className="cursor-pointer px-5 py-2.5 bg-primary hover:bg-blue-600 rounded-xl text-sm font-bold text-white transition-colors flex items-center gap-2 shadow-sm">
                   <Upload className="h-4 w-4" /> แก้ไขรูปโปรไฟล์
@@ -490,28 +385,6 @@ export default function SettingsProfile() {
               </div>
             </div>
 
-            <div className="pt-2">
-              <label className="block text-sm font-semibold text-slate-600 mb-2">
-                รูปทรง Avatar
-              </label>
-              <div className="flex gap-3 flex-wrap">
-                {AVATAR_SHAPES.map((shape) => (
-                  <button
-                    key={shape.id}
-                    type="button"
-                    onClick={() => updateTheme("avatarShape", shape.id)}
-                    className={`flex flex-col items-center gap-2 p-3 rounded-2xl border-2 transition-all w-20 ${formData.theme_settings.avatarShape === shape.id ? "border-primary bg-primary/5" : "border-slate-100 hover:border-slate-200"}`}
-                  >
-                    <div
-                      className={`h-9 w-9 bg-slate-300 ${shape.className}`}
-                    ></div>
-                    <span className="text-[11px] font-bold text-slate-600">
-                      {shape.label}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
 
           {/* Wallpaper / Banner */}
@@ -739,8 +612,7 @@ export default function SettingsProfile() {
         frames={frameMilestones}
         currentFrameId={equippedFrameId ?? null}
         avatarSrc={currentAvatarSrc}
-        avatarShapeClass={activeAvatarShape.className}
-        onConfirm={handleEquipFrame}
+        onSelect={handleEquipFrame}
       />
     </div>
   );
