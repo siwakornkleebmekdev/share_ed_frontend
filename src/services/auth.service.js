@@ -191,6 +191,9 @@ export const authService = {
   // Logout user
   logout: async () => {
     try {
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem('manual_logout', 'true');
+      }
       await supabase.auth.signOut({ scope: 'global' }).catch(() => {
         return supabase.auth.signOut();
       });

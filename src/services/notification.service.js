@@ -1,5 +1,6 @@
-import api from '../utils/api';
+import api, { handleTokenExpiration } from '../utils/api';
 import { supabase } from '../utils/supabase';
+import useAuthStore from '../store/authStore';
 
 const checked = response => {
   if (response.data?.success === false) throw new Error('Notification request failed');
@@ -21,7 +22,11 @@ const withAuthenticatedSession = async request => {
   }
 
   if (!session?.access_token) {
-    await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+    if (useAuthStore.getState().isAuthenticated) {
+      await handleTokenExpiration();
+    } else {
+      await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+    }
     const error = new Error('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่');
     error.code = 'AUTH_SESSION_MISSING';
     throw error;
