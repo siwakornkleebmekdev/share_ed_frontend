@@ -533,22 +533,14 @@ export default function Profile() {
 
             <div className="w-full flex-1 pb-2">
               <h1
-                className="text-3xl font-extrabold"
+                className="text-3xl font-extrabold text-black"
                 style={{
                   color:
-                    theme.nameColor || (isDarkHero ? "#ffffff" : "#1e293b"),
+                    theme.nameColor || "#000000",
                 }}
               >
                 {displayName}
               </h1>
-              {displaySubtitle && (
-                <p
-                  className="font-semibold text-lg mt-1 text-black"
-                  style={{ color: "#000000" }}
-                >
-                  {displaySubtitle}
-                </p>
-              )}
 
               <div className="mt-4 mb-4 flex flex-wrap items-center justify-center gap-x-7 gap-y-2 sm:justify-start">
                 <div className="flex items-baseline gap-2">
