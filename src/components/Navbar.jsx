@@ -13,7 +13,6 @@ import {
   Trophy,
   ShieldCheck,
   ShieldAlert,
-  RotateCcw,
   PenTool,
   Bookmark,
   UserPlus,
@@ -145,8 +144,6 @@ export default function Navbar() {
       case "POST_SUSPENDED":
       case "POST_REPORTED":
         return <ShieldAlert className="h-4 w-4 text-rose-500" />;
-      case "POST_RESTORED":
-        return <FileText className="h-4 w-4 text-emerald-500" />;
       case "POST_REMOVED":
         return <FileText className="h-4 w-4 text-slate-500" />;
       case "ACHIEVEMENT_COMPLETED":
@@ -158,7 +155,6 @@ export default function Navbar() {
 
   const getNotificationActionLabel = (type) => {
     if (type === "POST_SUSPENDED") return "ดูโพสต์ที่ถูกระงับ →";
-    if (type === "POST_RESTORED") return "ดูโพสต์ที่คืนสถานะ →";
     if (type === "POST_REMOVED") return "ดูโพสต์ที่ถูกลบ →";
     if (type === "POST_REPORTED") return "ดูโพสต์ที่ถูกรายงาน →";
     if (type === "ACHIEVEMENT_COMPLETED") return "ดูความสำเร็จและรับรางวัล →";
@@ -441,14 +437,6 @@ export default function Navbar() {
                             แบบร่างของฉัน
                           </Link>
                         )}
-                        <Link
-                          to="/recover-posts"
-                          onClick={() => setShowProfileMenu(false)}
-                          className="flex items-center gap-3 w-full p-2 text-left text-sm font-medium text-slate-700 hover:bg-sky-50 hover:text-sky-700 rounded-xl transition-colors"
-                        >
-                          <RotateCcw className="h-4 w-4" />
-                          กู้คืนโพสต์
-                        </Link>
                         <Link
                           to="/settings/profile"
                           onClick={() => setShowProfileMenu(false)}

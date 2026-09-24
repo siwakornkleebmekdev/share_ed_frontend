@@ -8,7 +8,6 @@ import {
   LogOut,
   ShieldCheck,
   ShieldAlert,
-  FileWarning,
 } from "lucide-react";
 import { useEffect } from "react";
 import toast from "react-hot-toast";
@@ -24,7 +23,6 @@ const NAV_GROUPS = [
   {
     label: "จัดการ",
     items: [
-      { to: "/admin/posts", label: "จัดการโพสต์", icon: FileWarning, roles: ["ADMIN", "MODERATOR"], showDeletedCount: true },
       { to: "/admin/reports", label: "จัดการรีพอร์ต", icon: ShieldAlert, roles: ["ADMIN", "MODERATOR"], showReportCount: true },
       { to: "/admin/users", label: "จัดการผู้ใช้งาน", icon: Users, roles: ["ADMIN"] },
       { to: "/admin/achievements", label: "จัดการความสำเร็จ", icon: Award, roles: ["ADMIN"] },
@@ -35,12 +33,9 @@ const NAV_GROUPS = [
 export default function AdminSidebar() {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
-  const { reports, pendingCount, fetchReports, startRealtime, stopRealtime } = useReportStore();
+  const { pendingCount, fetchReports, startRealtime, stopRealtime } = useReportStore();
   const role = String(user?.role || "").toUpperCase();
   const reportCount = pendingCount();
-  const deletedCount = reports.filter((post) =>
-    String(post.post_status || post.postStatus || "").toUpperCase() === "DELETED"
-  ).length;
 
   useEffect(() => {
     startRealtime();
@@ -98,11 +93,6 @@ export default function AdminSidebar() {
                       {item.showReportCount && (
                         <span className={`inline-flex min-w-6 items-center justify-center rounded-full px-1.5 py-0.5 text-xs font-extrabold ${reportCount > 0 ? "bg-rose-500 text-white" : "bg-slate-100 text-slate-500"}`}>
                           {reportCount}
-                        </span>
-                      )}
-                      {item.showDeletedCount && (
-                        <span className={`inline-flex min-w-6 items-center justify-center rounded-full px-1.5 py-0.5 text-xs font-extrabold ${deletedCount > 0 ? "bg-sky-500 text-white" : "bg-slate-100 text-slate-500"}`}>
-                          {deletedCount}
                         </span>
                       )}
                     </NavLink>

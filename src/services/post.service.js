@@ -249,7 +249,7 @@ export const postService = {
     }
   },
 
-  // Delete a post (Soft Delete)
+  // Permanently delete a post
   deletePost: async (id) => {
     try {
       const response = await api.delete(`/posts/${id}`);
@@ -258,16 +258,6 @@ export const postService = {
       console.error(`Error deleting post ${id}:`, error);
       throw error;
     }
-  },
-
-  getRecoverablePosts: async () => {
-    const response = await api.get('/posts/user/recoverable');
-    return response.data?.data || [];
-  },
-
-  restoreOwnPost: async (id) => {
-    const response = await api.post(`/posts/${encodeURIComponent(id)}/restore`);
-    return response.data;
   },
 
   reportPost: async (id, reason) => {
@@ -539,8 +529,6 @@ export function formatSinglePostData(post) {
 
   return {
     id: post.id,
-    // Keep the server-side lifecycle status so detail pages can prevent a
-    // soft-deleted post from being rendered to its author or moderators.
     postStatus: post.post_status || post.status || null,
     post_status: post.post_status || post.status || null,
     title: post.title,
