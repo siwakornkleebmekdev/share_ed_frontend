@@ -374,9 +374,7 @@ export default function Navbar() {
                 <div className="relative" ref={profileRef}>
                   <button
                     onClick={() => {
-                      const willOpen = !showProfileMenu;
-                      setShowProfileMenu(willOpen);
-                      if (willOpen && isReviewer) fetchReports({ force: true }).catch(() => {});
+                      setShowProfileMenu((prev) => !prev);
                     }}
                     className={`relative flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-full transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/30 ${
                       avatarSrc
