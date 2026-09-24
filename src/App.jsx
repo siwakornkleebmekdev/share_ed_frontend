@@ -22,6 +22,7 @@ const Profile = lazy(() => import("./pages/Profile"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const Achievements = lazy(() => import("./pages/Achievements"));
 const PostDetails = lazy(() => import("./pages/PostDetails"));
+const AboutUs = lazy(() => import("./pages/AboutUs"));
 const SettingsProfile = lazy(() => import("./pages/settings/SettingsProfile"));
 const SettingsWidgets = lazy(() => import("./pages/settings/SettingsWidgets"));
 const SettingsAccount = lazy(() => import("./pages/settings/SettingsAccount"));
@@ -269,6 +270,7 @@ function App() {
           <Route path="/home" element={<Home />} />
           <Route path="/explore" element={<Explore />} />
           <Route path="/trending" element={<Trending />} />
+          <Route path="/about" element={<AboutUs />} />
           <Route
             path="/post/:id"
             element={
