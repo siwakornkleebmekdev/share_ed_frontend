@@ -63,6 +63,99 @@ const getEducationLevelLabel = (level) => {
   }
 };
 
+function ProfilePostsSkeleton({ dark = false }) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      {[1, 2, 3, 4, 5, 6].map((i) => (
+        <div
+          key={i}
+          className={`rounded-[2rem] border overflow-hidden shadow-sm animate-pulse ${
+            dark
+              ? "bg-slate-900/60 border-white/10"
+              : "bg-white/80 border-slate-200"
+          }`}
+        >
+          <div className={`aspect-video w-full ${dark ? "bg-slate-800" : "bg-slate-200"}`} />
+          <div className="p-5 space-y-4">
+            <div className={`h-5 w-20 rounded-full ${dark ? "bg-slate-800" : "bg-slate-200"}`} />
+            <div className={`h-6 w-3/4 rounded-lg ${dark ? "bg-slate-800" : "bg-slate-200"}`} />
+            <div className="flex items-center justify-between pt-2">
+              <div className="flex items-center gap-2.5">
+                <div className={`h-9 w-9 rounded-full ${dark ? "bg-slate-800" : "bg-slate-200"}`} />
+                <div className={`h-4 w-24 rounded ${dark ? "bg-slate-800" : "bg-slate-200"}`} />
+              </div>
+              <div className="flex items-center gap-3">
+                <div className={`h-4 w-10 rounded ${dark ? "bg-slate-800" : "bg-slate-200"}`} />
+                <div className={`h-4 w-10 rounded ${dark ? "bg-slate-800" : "bg-slate-200"}`} />
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ProfileSkeleton({ dark = false }) {
+  return (
+    <div className={`min-h-screen ${dark ? "bg-slate-950 text-white" : "bg-slate-50 text-slate-900"} pb-20`}>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 sm:pt-40 animate-pulse">
+        <div
+          className={`rounded-[32px] border p-6 sm:p-10 mb-8 overflow-hidden shadow-2xl ${
+            dark
+              ? "bg-slate-900/60 border-white/10"
+              : "bg-white/80 border-slate-200"
+          }`}
+        >
+          <div className="flex flex-col items-center gap-6 text-center sm:flex-row sm:items-end sm:gap-8 sm:text-left">
+            <div className="relative shrink-0">
+              <div className={`h-32 w-32 sm:h-40 sm:w-40 rounded-full border-4 shadow-2xl ${
+                dark ? "border-slate-800 bg-slate-800" : "border-white bg-slate-200"
+              }`} />
+            </div>
+
+            <div className="w-full flex-1 pb-2 space-y-4">
+              <div className={`h-9 w-56 rounded-xl mx-auto sm:mx-0 ${dark ? "bg-slate-800" : "bg-slate-200"}`} />
+
+              <div className="flex flex-wrap items-center justify-center gap-x-7 gap-y-2 sm:justify-start">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="flex items-baseline gap-2">
+                    <div className={`h-6 w-12 rounded ${dark ? "bg-slate-800" : "bg-slate-200"}`} />
+                    <div className={`h-4 w-12 rounded ${dark ? "bg-slate-800/60" : "bg-slate-100"}`} />
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-wrap justify-center gap-3 sm:justify-start">
+                <div className={`h-6 w-32 rounded-lg ${dark ? "bg-slate-800" : "bg-slate-100"}`} />
+                <div className={`h-6 w-24 rounded-lg ${dark ? "bg-slate-800" : "bg-slate-100"}`} />
+                <div className={`h-6 w-28 rounded-lg ${dark ? "bg-slate-800" : "bg-slate-100"}`} />
+              </div>
+            </div>
+
+            <div className="shrink-0">
+              <div className={`h-11 w-32 rounded-2xl ${dark ? "bg-slate-800" : "bg-slate-200"}`} />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-2 sm:gap-3 mb-8 overflow-x-auto pb-2">
+          {[1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              className={`h-12 w-32 rounded-xl shrink-0 ${
+                dark ? "bg-slate-800/80" : "bg-slate-200"
+              }`}
+            />
+          ))}
+        </div>
+
+        <ProfilePostsSkeleton dark={dark} />
+      </div>
+    </div>
+  );
+}
+
 export default function Profile() {
   const navigate = useNavigate();
   const { userId } = useParams();
@@ -465,6 +558,11 @@ export default function Profile() {
     );
   }
 
+  // แสดง Skeleton หากกำลังโหลดข้อมูลโปรไฟล์เริ่มต้น
+  if (isLoading && !otherProfile && !ownProfile && myPosts.length === 0) {
+    return <ProfileSkeleton dark={isDarkHero} />;
+  }
+
   return (
     <div
       className={`min-h-screen ${pageBg} pb-20 relative transition-colors duration-500`}
@@ -782,12 +880,7 @@ export default function Profile() {
         {/* เนื้อหาของแต่ละแท็บ */}
         <div className="min-h-[400px]">
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center py-20">
-              <Loader2 className="h-10 w-10 text-primary animate-spin mb-4" />
-              <p className={`font-medium ${subTextClass}`}>
-                กำลังโหลดข้อมูลโปรไฟล์...
-              </p>
-            </div>
+            <ProfilePostsSkeleton dark={isDarkHero} />
           ) : (
             <>
               {activeTab === "posts" && (
