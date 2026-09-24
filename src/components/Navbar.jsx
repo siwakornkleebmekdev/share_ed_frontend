@@ -208,12 +208,6 @@ export default function Navbar() {
               >
                 โพสต์ยอดนิยม
               </Link>
-              <Link
-                to="/about"
-                className={`font-bold transition-colors text-sm whitespace-nowrap ${isDarkHero ? "text-slate-300 hover:text-white" : "text-slate-600 hover:text-primary"}`}
-              >
-                เกี่ยวกับเรา
-              </Link>
             </div>
           </div>
 

@@ -19,7 +19,6 @@ import {
   UserCheck,
   UserX,
   Loader2,
-  Eye,
   Heart,
 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -118,7 +117,7 @@ function ProfileSkeleton({ dark = false }) {
               <div className={`h-9 w-56 rounded-xl mx-auto sm:mx-0 ${dark ? "bg-slate-800" : "bg-slate-200"}`} />
 
               <div className="flex flex-wrap items-center justify-center gap-x-7 gap-y-2 sm:justify-start">
-                {[1, 2, 3, 4, 5].map((i) => (
+                {[1, 2, 3, 4].map((i) => (
                   <div key={i} className="flex items-baseline gap-2">
                     <div className={`h-6 w-12 rounded ${dark ? "bg-slate-800" : "bg-slate-200"}`} />
                     <div className={`h-4 w-12 rounded ${dark ? "bg-slate-800/60" : "bg-slate-100"}`} />
@@ -437,13 +436,7 @@ export default function Profile() {
   // Username displayed without '@'
   const displaySubtitle = profileUsername ? `${profileUsername}` : "";
 
-  // คำนวณยอดวิวรวม และถูกใจรวมจากโพสต์ทั้งหมดของผู้ใช้งาน
-  const totalViews = useMemo(() => {
-    if (isOtherUser && typeof otherProfile?.totalViews === "number") return otherProfile.totalViews;
-    if (!isOtherUser && typeof ownProfile?.totalViews === "number") return ownProfile.totalViews;
-    return myPosts.reduce((sum, p) => sum + (Number(p.views ?? p.view_count ?? p.views_count ?? p.viewsCount ?? 0) || 0), 0);
-  }, [isOtherUser, otherProfile, ownProfile, myPosts]);
-
+  // คำนวณถูกใจรวมจากโพสต์ทั้งหมดของผู้ใช้งาน
   const totalLikes = useMemo(() => {
     if (isOtherUser && typeof otherProfile?.totalLikes === "number") return otherProfile.totalLikes;
     if (!isOtherUser && typeof ownProfile?.totalLikes === "number") return ownProfile.totalLikes;
@@ -675,15 +668,6 @@ export default function Profile() {
                     กำลังติดตาม
                   </span>
                 </button>
-                <div className="flex items-baseline gap-2" title="ยอดวิวรวมทั้งหมด">
-                  <span className={`text-xl font-extrabold ${headingClass}`}>
-                    {totalViews.toLocaleString()}
-                  </span>
-                  <span className={`text-sm font-medium flex items-center gap-1 ${mutedTextClass}`}>
-                    <Eye className="h-3.5 w-3.5 text-blue-500" />
-                    ยอดวิวรวม
-                  </span>
-                </div>
                 <div className="flex items-baseline gap-2" title="ถูกใจรวมทั้งหมด">
                   <span className={`text-xl font-extrabold ${headingClass}`}>
                     {totalLikes.toLocaleString()}
