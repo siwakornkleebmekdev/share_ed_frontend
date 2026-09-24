@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { DEFAULT_WIDGET_OPTIONS } from '@/pages/settings/widgetConstants';
+import { getWidgetUrlError } from '@/utils/widgetUrl';
 import WidgetCard from '@/components/settings/WidgetCard';
 
-// Add/edit modal for a single platform's widget — structural clone of
-// FrameDecorationModal.jsx (overlay, backdrop-click-to-close, staged local
-// state, live preview pane). Serves both add (initialData: null) and edit
-// (initialData: {url, options}) so there's one modal, not five.
+// หน้าต่างเพิ่มหรือแก้ไขวิดเจ็ตของทั้ง 4 แพลตฟอร์ม ใช้ฟอร์มและตัวอย่างร่วมกัน
 export default function WidgetModal({ isOpen, onClose, platformConfig, initialData, cardTheme, onConfirm }) {
   const [url, setUrl] = useState('');
   const [options, setOptions] = useState(DEFAULT_WIDGET_OPTIONS);
@@ -14,7 +12,8 @@ export default function WidgetModal({ isOpen, onClose, platformConfig, initialDa
   useEffect(() => {
     if (isOpen) {
       setUrl(initialData?.url || '');
-      setOptions({ ...DEFAULT_WIDGET_OPTIONS, ...(initialData?.options || {}) });
+      // คงไว้เฉพาะตัวเลือกที่ยังใช้งาน ไม่ดึงค่าตกแต่งเดิมกลับมาเมื่อแก้ไขวิดเจ็ต
+      setOptions({ ...DEFAULT_WIDGET_OPTIONS, insideProfileCard: initialData?.options?.insideProfileCard !== false });
     }
   }, [isOpen, initialData, platformConfig]);
 
@@ -22,9 +21,8 @@ export default function WidgetModal({ isOpen, onClose, platformConfig, initialDa
 
   const Icon = platformConfig.icon;
   const isEdit = !!initialData;
-  const urlError = url && !url.startsWith('http://') && !url.startsWith('https://')
-    ? 'URL ต้องขึ้นต้นด้วย http:// หรือ https://'
-    : '';
+  // แสดงข้อผิดพลาดตามแพลตฟอร์มทันที และปิดปุ่มบันทึกจนกว่า URL จะถูกต้อง
+  const urlError = url.trim() ? getWidgetUrlError(platformConfig.id, url) : '';
 
   const toggle = (key, label, desc) => (
     <label key={key} className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl p-4 cursor-pointer">
@@ -76,14 +74,14 @@ export default function WidgetModal({ isOpen, onClose, platformConfig, initialDa
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 placeholder={platformConfig.urlPlaceholder}
+                aria-invalid={!!urlError}
+                aria-describedby={urlError ? 'widget-url-error' : undefined}
                 className={`w-full px-4 py-3 bg-slate-50 border rounded-xl focus:outline-none focus:ring-4 transition-all text-slate-800 font-medium ${urlError ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500' : 'border-slate-200 focus:ring-primary/10 focus:border-primary'}`}
               />
-              {urlError && <p className="mt-2 text-xs font-bold text-red-500">{urlError}</p>}
+              {urlError && <p id="widget-url-error" className="mt-2 text-xs font-bold text-red-500">{urlError}</p>}
             </div>
 
             {toggle('insideProfileCard', 'แสดงในการ์ดโปรไฟล์', 'แสดงวิดเจ็ตนี้บนหน้าโปรไฟล์ของคุณ')}
-            {toggle('useCardStyle', 'ใช้พื้นตามสไตล์การ์ด', 'ใช้สีและความโค้งมนเดียวกับการ์ดโปรไฟล์')}
-            {toggle(platformConfig.extraOptionKey, platformConfig.extraOptionLabel, platformConfig.extraOptionDesc)}
           </div>
 
           <div className="space-y-2">
@@ -95,8 +93,8 @@ export default function WidgetModal({ isOpen, onClose, platformConfig, initialDa
         <div className="px-6 py-4 border-t border-slate-100 shrink-0">
           <button
             type="button"
-            disabled={!url || !!urlError}
-            onClick={() => { onConfirm(platformConfig.id, { url, options }); onClose(); }}
+            disabled={!url.trim() || !!urlError}
+            onClick={() => { onConfirm(platformConfig.id, { url: url.trim(), options }); onClose(); }}
             className="w-full px-6 py-2.5 rounded-xl font-bold text-sm text-white bg-primary hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-all"
           >
             {isEdit ? 'บันทึกการเปลี่ยนแปลง' : '+ เพิ่มวิดเจ็ต'}

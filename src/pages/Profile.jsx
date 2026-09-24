@@ -34,6 +34,7 @@ import {
 import { resolveProfileFrame } from "@/utils/profileFrame";
 import AvatarWithFrame from "@/components/profile/AvatarWithFrame";
 import { getPlatformConfig } from "@/pages/settings/widgetConstants";
+import { getWidgetUrlError } from "@/utils/widgetUrl";
 import { getGlassColor, rgbToRgba } from "@/utils/colorUtils";
 
 const ACHIEVEMENT_STATUS_META = {
@@ -610,8 +611,12 @@ export default function Profile() {
                 const widgetsList = isOtherUser
                   ? otherProfile?.widgets || otherProfile?.user_metadata?.widgets || []
                   : ownProfile?.widgets || ownProfile?.user_metadata?.widgets || user?.user_metadata?.widgets || [];
-                const profileWidgets = widgetsList.filter((w) => w.options?.insideProfileCard !== false);
-                if (!profileWidgets.length) return null;
+                // ซ่อนลิงก์เก่าที่ไม่ผ่านกฎ URL ทั้งโปรไฟล์ตนเองและผู้อื่น
+                const profileWidgets = widgetsList.filter((w) =>
+                  w.options?.insideProfileCard !== false &&
+                  !getWidgetUrlError(w.platformId, w.url)
+                );
+                if (profileWidgets.length === 0) return null;
                 return (
                   <div className="flex flex-wrap gap-2 mt-3 justify-center sm:justify-start">
                     {profileWidgets.map((w) => {
