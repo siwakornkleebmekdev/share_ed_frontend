@@ -5,6 +5,7 @@ import Swal from "sweetalert2";
 import toast from "react-hot-toast";
 import useReportStore from "@/store/reportStore";
 import { sanitizePostContent } from "@/utils/sanitizePostContent";
+import { subscribeSocketEvent } from "@/utils/socket";
 
 const STATUS_LABELS = { ACTIVE: "ยังเผยแพร่อยู่", UNACTIVED: "ถูกระงับชั่วคราว" };
 const getReportCount = (post) => post?._count?.reports ?? post?.reports?.length ?? 0;
@@ -12,12 +13,84 @@ const formatDate = (value) => value
   ? new Date(value).toLocaleString("th-TH", { dateStyle: "medium", timeStyle: "short" })
   : "ไม่ระบุเวลา";
 
+function PostConsoleSkeleton() {
+  return (
+    <div className="space-y-4">
+      {[1, 2, 3].map((i) => (
+        <article
+          key={i}
+          className="overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm animate-pulse"
+        >
+          <div className="flex flex-col lg:flex-row gap-6">
+            <div className="h-48 lg:h-44 lg:w-64 rounded-2xl bg-slate-200 shrink-0" />
+            <div className="flex-1 space-y-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="space-y-2 w-full max-w-md">
+                  <div className="flex items-center gap-2">
+                    <div className="h-6 w-24 rounded-full bg-slate-200" />
+                    <div className="h-6 w-28 rounded-full bg-slate-200" />
+                  </div>
+                  <div className="h-7 w-3/4 rounded-xl bg-slate-200" />
+                  <div className="h-4 w-40 rounded-lg bg-slate-100" />
+                </div>
+                <div className="h-9 w-24 rounded-xl bg-slate-200 shrink-0" />
+              </div>
+              <div className="grid gap-4 border-y border-slate-100 py-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <div className="h-3 w-28 rounded bg-slate-200" />
+                  <div className="flex gap-2">
+                    <div className="h-6 w-20 rounded-lg bg-slate-100" />
+                    <div className="h-6 w-16 rounded-lg bg-slate-100" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="h-3 w-24 rounded bg-slate-200" />
+                  <div className="h-4 w-36 rounded bg-slate-100" />
+                </div>
+              </div>
+              <div className="flex flex-col sm:flex-row justify-end gap-2 pt-1">
+                <div className="h-10 w-28 rounded-xl bg-slate-200" />
+                <div className="h-10 w-36 rounded-xl bg-slate-200" />
+                <div className="h-10 w-32 rounded-xl bg-slate-200" />
+              </div>
+            </div>
+          </div>
+        </article>
+      ))}
+    </div>
+  );
+}
+
 export default function PostConsole() {
   const { reports, fetchReports, reviewPost, isLoading, isReviewing, error } = useReportStore();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
 
-  useEffect(() => { fetchReports({ force: true }).catch(() => {}); }, [fetchReports]);
+  useEffect(() => {
+    fetchReports({ force: true }).catch(() => {});
+
+    // เวลามีการรายงานใหม่หรือมีการอัปเดตจากผู้ดูแลท่านอื่น ให้รีเฟรชข้อมูลอัตโนมัติ
+    const unsubCreated = subscribeSocketEvent("report_created", () => {
+      fetchReports({ force: true }).catch(() => {});
+    });
+    const unsubReviewed = subscribeSocketEvent("report_reviewed", () => {
+      fetchReports({ force: true }).catch(() => {});
+    });
+
+    // ตรวจสอบและรีเฟรชเมื่อผู้ใช้สลับแท็บกลับมา
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchReports({ force: true }).catch(() => {});
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      unsubCreated();
+      unsubReviewed();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [fetchReports]);
 
   const filteredReports = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -45,6 +118,10 @@ export default function PostConsole() {
     try {
       await reviewPost(post.id, action);
       toast.success(copy[3]);
+      // เวลามีการกระทำหรือข้อมูลเปลี่ยน ให้รีหน้าอัตโนมัติ
+      setTimeout(() => {
+        window.location.reload();
+      }, 700);
     } catch (actionError) {
       toast.error(actionError.response?.data?.message || "ดำเนินการไม่สำเร็จ กรุณาลองใหม่");
     }
@@ -73,7 +150,7 @@ export default function PostConsole() {
 
       {error && <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-medium text-rose-700">{error}</div>}
       {isLoading && reports.length === 0 ? (
-        <div className="flex min-h-64 items-center justify-center rounded-3xl border border-slate-200 bg-white"><div className="text-center text-slate-500"><div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />กำลังโหลดรายการรายงาน...</div></div>
+        <PostConsoleSkeleton />
       ) : filteredReports.length === 0 ? (
         <div className="flex min-h-64 flex-col items-center justify-center rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm"><CheckCircle2 className="mb-4 h-14 w-14 text-emerald-500" /><h2 className="text-xl font-extrabold text-slate-800">ไม่มีรีพอร์ตที่รอตรวจสอบ</h2><p className="mt-2 text-sm text-slate-500">โพสต์จะปรากฏเมื่อได้รับรายงานครบ 10 ครั้ง</p></div>
       ) : (

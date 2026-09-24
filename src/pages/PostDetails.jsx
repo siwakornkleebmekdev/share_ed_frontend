@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router';
 import { FileText, Download, Heart, Share2, Tag, ChevronLeft, ChevronRight, Calendar, Eye, EyeOff, Bookmark, X, Edit3, Trash2, Send, MessageSquare, AlignLeft, ImageIcon, Flag } from 'lucide-react';
 import { postService } from '@/services/post.service';
@@ -12,6 +12,70 @@ import { supabase } from '@/utils/supabase';
 import { sanitizePostContent } from '@/utils/sanitizePostContent';
 import { resolveProfileFrame } from '@/utils/profileFrame';
 import AvatarWithFrame from '@/components/profile/AvatarWithFrame';
+import { subscribeSocketEvent } from '@/utils/socket';
+
+function PostDetailsSkeleton() {
+  return (
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 animate-pulse">
+      <div className="flex items-center justify-between mb-6">
+        <div className="h-5 w-32 rounded-lg bg-slate-200" />
+        <div className="flex items-center gap-2">
+          <div className="h-9 w-24 rounded-xl bg-slate-200" />
+          <div className="h-9 w-24 rounded-xl bg-slate-200" />
+        </div>
+      </div>
+
+      <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 overflow-hidden">
+        <div className="w-full aspect-video sm:aspect-[2.4/1] bg-slate-200 relative">
+          <div className="absolute top-4 left-4 flex gap-2">
+            <div className="h-6 w-20 rounded-full bg-white/60" />
+            <div className="h-6 w-24 rounded-full bg-white/60" />
+          </div>
+        </div>
+
+        <div className="p-6 sm:p-10 space-y-8">
+          <div>
+            <div className="h-8 sm:h-10 w-3/4 rounded-xl bg-slate-200 mb-4" />
+            <div className="flex flex-wrap items-center justify-between gap-4 py-4 border-y border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="h-14 w-14 rounded-full bg-slate-200 shrink-0" />
+                <div className="space-y-2">
+                  <div className="h-4 w-32 rounded bg-slate-200" />
+                  <div className="h-3 w-20 rounded bg-slate-100" />
+                </div>
+              </div>
+              <div className="flex items-center gap-6">
+                <div className="h-4 w-28 rounded bg-slate-100" />
+                <div className="h-4 w-20 rounded bg-slate-100" />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div className="h-6 w-32 rounded bg-slate-200" />
+            <div className="h-24 rounded-2xl bg-slate-50 border border-slate-100" />
+          </div>
+
+          <div className="space-y-3">
+            <div className="h-6 w-44 rounded bg-slate-200" />
+            <div className="h-4 w-full rounded bg-slate-100" />
+            <div className="h-4 w-11/12 rounded bg-slate-100" />
+            <div className="h-4 w-4/5 rounded bg-slate-100" />
+            <div className="h-4 w-2/3 rounded bg-slate-100" />
+          </div>
+
+          <div className="flex items-center justify-between pt-6 border-t border-slate-100">
+            <div className="flex gap-3">
+              <div className="h-10 w-24 rounded-xl bg-slate-100" />
+              <div className="h-10 w-24 rounded-xl bg-slate-100" />
+            </div>
+            <div className="h-10 w-24 rounded-xl bg-slate-100" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const COMMENTS_PER_PAGE = 5;
 const REPORT_REASONS = [
@@ -127,6 +191,33 @@ export default function PostDetails() {
       }
     }
   }, [id, user?.id, user?.user_id, isAuthenticated]);
+
+  // เวลามีการอัปเดตหรือเปลี่ยนสถานะของโพสต์ ให้รีข้อมูลอัตโนมัติ
+  useEffect(() => {
+    if (!id) return;
+    const unsubReviewed = subscribeSocketEvent('report_reviewed', (payload = {}) => {
+      const postId = payload.postId || payload.post_id;
+      if (postId && String(postId) === String(id)) {
+        postService.getPostById(id).then(updated => {
+          if (updated) setPost(updated);
+        }).catch(() => {});
+      }
+    });
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        postService.getPostById(id).then(updated => {
+          if (updated) setPost(updated);
+        }).catch(() => {});
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      unsubReviewed();
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [id]);
 
   // Subscribe to Supabase Realtime Broadcast for comments
   useEffect(() => {
@@ -354,7 +445,7 @@ export default function PostDetails() {
             text: (isAdmin && !isAuthor) ? 'แอดมินได้ทำการลบโพสต์เรียบร้อยแล้ว' : 'โพสต์และไฟล์ที่เกี่ยวข้องถูกลบถาวรแล้ว',
             confirmButtonColor: '#3b82f6'
           });
-          navigate('/home');
+          window.location.href = '/home';
         } else {
           throw new Error(response?.message || 'เกิดข้อผิดพลาดในการลบโพสต์');
         }
@@ -456,7 +547,7 @@ export default function PostDetails() {
   };
 
   if (isLoading) {
-    return <div className="text-center py-20 text-slate-500 font-medium">กำลังโหลดข้อมูล...</div>;
+    return <PostDetailsSkeleton />;
   }
 
   if (!post) {
