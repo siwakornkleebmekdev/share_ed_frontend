@@ -15,7 +15,6 @@ import useAuthStore from "@/store/authStore";
 import useAchievementStore from "@/store/achievementStore";
 import { profileService } from "@/services/profile.service";
 import { DEFAULT_THEME } from "./themeConstants";
-import ProfilePreview from "@/components/settings/ProfilePreview";
 import FrameDecorationModal from "@/components/settings/FrameDecorationModal";
 import AvatarWithFrame from "@/components/profile/AvatarWithFrame";
 import { supabase } from "@/utils/supabase";
@@ -300,30 +299,6 @@ export default function SettingsProfile() {
     }
   };
 
-  // Merge unsaved local edits (avatar/wallpaper uploads, frame equip is
-  // already live in `user` via handleEquipFrame) into the user object the
-  // preview reads, so it reflects everything on this page in real time.
-  const previewUser = {
-    ...user,
-    avatar_url: media.avatar?.url || user?.avatar_url,
-    user_metadata: {
-      ...user?.user_metadata,
-      wallpaper_url: media.wallpaper?.remove
-        ? null
-        : (media.wallpaper?.url || user?.user_metadata?.wallpaper_url),
-      banner_url: media.banner?.remove
-        ? null
-        : (media.banner?.url || user?.user_metadata?.banner_url),
-    },
-  };
-  const previewFormData = {
-    theme_settings: formData.theme_settings,
-    username: formData.username,
-    nickname: formData.username,
-    bio: formData.bio,
-    tags: formData.tags,
-  };
-
   return (
     <div className="max-w-6xl">
       <div className="flex items-center justify-between mb-8">
@@ -341,7 +316,7 @@ export default function SettingsProfile() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8 items-start">
+      <div>
         <form
           id="settings-profile-form"
           onSubmit={handleSubmit}
@@ -452,6 +427,9 @@ export default function SettingsProfile() {
                     )}
                   </div>
                 </div>
+                <p className="text-xs leading-relaxed text-slate-500">
+                  แนะนำภาพหรือวิดีโอ MP4 แนวนอนขนาด 1920 × 1080 พิกเซล (16:9) วางรายละเอียดสำคัญไว้กลางภาพ เพราะหน้าจอแต่ละขนาดอาจตัดขอบภาพออก · ไฟล์ไม่เกิน 25 MB
+                </p>
                 {claimedWallpapers.length > 0 && (
                   <div>
                     <p className="text-xs font-semibold text-slate-500 mb-2">
@@ -532,6 +510,9 @@ export default function SettingsProfile() {
                     )}
                   </div>
                 </div>
+                <p className="text-xs leading-relaxed text-slate-500">
+                  แนะนำภาพขนาด 1440 × 300 พิกเซล (ประมาณ 4.8:1) สำหรับแบนเนอร์บนหน้าจอใหญ่ วางข้อความหรือจุดสำคัญไว้กลางภาพ เพราะบนมือถือภาพจะถูกตัดด้านข้าง และขอบล่างของแบนเนอร์จะไล่จาง · ไฟล์ไม่เกิน 8 MB
+                </p>
               </div>
             </div>
           </div>
@@ -601,9 +582,6 @@ export default function SettingsProfile() {
           </div>
         </form>
 
-        <div className="hidden lg:block sticky top-10">
-          <ProfilePreview user={previewUser} formData={previewFormData} />
-        </div>
       </div>
 
       <FrameDecorationModal

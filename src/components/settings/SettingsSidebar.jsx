@@ -3,7 +3,6 @@ import {
   BookOpen,
   LayoutDashboard,
   User,
-  Palette,
   Puzzle,
   Settings,
   Undo2,
@@ -20,7 +19,6 @@ const NAV_GROUPS = [
     label: "ปรับแต่ง",
     items: [
       { to: "/settings/profile", label: "โปรไฟล์", icon: User },
-      { to: "/settings/appearance", label: "รูปลักษณ์", icon: Palette },
       { to: "/settings/widgets", label: "วิดเจ็ต", icon: Puzzle },
     ],
   },

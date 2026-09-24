@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Search, Pencil, Trash2, Plus, Gift } from "lucide-react";
+import { Search, Trash2, Plus, Gift } from "lucide-react";
 import toast from "react-hot-toast";
 import Swal from "sweetalert2";
 import {
@@ -18,7 +18,6 @@ export default function AchievementManagement() {
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [busyId, setBusyId] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingAchievement, setEditingAchievement] = useState(null);
 
   const fetchAchievements = async () => {
     setIsLoading(true);
@@ -52,24 +51,13 @@ export default function AchievementManagement() {
   }, [achievements, search, typeFilter]);
 
   const openCreateModal = () => {
-    setEditingAchievement(null);
-    setIsModalOpen(true);
-  };
-
-  const openEditModal = (achievement) => {
-    setEditingAchievement(achievement);
     setIsModalOpen(true);
   };
 
   const handleModalConfirm = async (payload) => {
     try {
-      if (editingAchievement) {
-        await achievementService.updateAchievement(editingAchievement.id, payload);
-        toast.success("บันทึกความสำเร็จเข้าสู่ระบบสำเร็จ");
-      } else {
-        await achievementService.createAchievement(payload);
-        toast.success("เพิ่มความสำเร็จสำเร็จ");
-      }
+      await achievementService.createAchievement(payload);
+      toast.success("เพิ่มความสำเร็จสำเร็จ");
       useAchievementStore.getState().invalidateMilestones();
       await fetchAchievements();
       return true;
@@ -124,7 +112,7 @@ export default function AchievementManagement() {
         <div>
           <h1 className="admin-page-title">จัดการความสำเร็จ</h1>
           <p className="admin-page-subtitle">
-            สร้าง แก้ไข และลบภารกิจ/ความสำเร็จที่ผู้ใช้งานสามารถปลดล็อกได้
+            สร้างและลบภารกิจ/ความสำเร็จที่ผู้ใช้งานสามารถปลดล็อกได้
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
@@ -194,7 +182,7 @@ export default function AchievementManagement() {
                   const typeInfo = getMilestoneTypeInfo(rawType);
 
                   return (
-                    <tr key={a.id} className="admin-table-row" onClick={() => openEditModal(a)}>
+                    <tr key={a.id} className="admin-table-row">
                       <td>
                         <div className="flex items-center gap-2">
                           <p className="font-bold text-slate-800">{a.title}</p>
@@ -219,9 +207,6 @@ export default function AchievementManagement() {
                             }`}
                           >
                             {typeInfo?.shortLabel || rawType}
-                          </span>
-                          <span className="text-[10px] text-slate-400 font-mono tracking-tight">
-                            {rawType}
                           </span>
                         </div>
                       </td>
@@ -278,14 +263,6 @@ export default function AchievementManagement() {
                     <td onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-end gap-2">
                         <button
-                          onClick={() => openEditModal(a)}
-                          disabled={busyId === a.id}
-                          title="แก้ไข"
-                          className="admin-icon-btn text-slate-500 hover:bg-slate-100"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </button>
-                        <button
                           onClick={() => handleDelete(a)}
                           disabled={busyId === a.id}
                           title="ลบ"
@@ -307,7 +284,6 @@ export default function AchievementManagement() {
       <AchievementFormModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        initialData={editingAchievement}
         onConfirm={handleModalConfirm}
       />
 
