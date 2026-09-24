@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router';
 import { FileText, Download, Heart, Share2, Tag, ChevronLeft, ChevronRight, Calendar, Eye, EyeOff, Bookmark, X, Edit3, Trash2, Send, MessageSquare, AlignLeft, ImageIcon, Flag } from 'lucide-react';
 import { postService } from '@/services/post.service';
 import { profileService } from '@/services/profile.service';
+import { moderationService } from '@/services/moderation.service';
 import useAuthStore from '@/store/authStore';
 import useAchievementStore from '@/store/achievementStore';
 import toast from 'react-hot-toast';
@@ -179,6 +180,9 @@ export default function PostDetails() {
     String(currentUserId) === String(postAuthorId)
   );
   const isSuspendedPost = String(post?.postStatus || post?.post_status).toUpperCase() === 'UNACTIVED';
+  const role = String(user?.role || '').toUpperCase();
+  const isAdmin = role === 'ADMIN';
+  const canDeletePost = Boolean(isAuthor || isAdmin);
 
   const authorUsername = isAuthor
     ? (user?.username || authorProfile?.username || post?.author?.username || 'ผู้ใช้งาน')
@@ -311,7 +315,7 @@ export default function PostDetails() {
 
   const handleDelete = async () => {
     const result = await Swal.fire({
-      title: `คุณต้องการลบโพสต์ "${post?.title}" ใช่หรือไม่?`,
+      title: (isAdmin && !isAuthor) ? `ยืนยันการลบโพสต์ "${post?.title}" ในฐานะแอดมิน?` : `คุณต้องการลบโพสต์ "${post?.title}" ใช่หรือไม่?`,
       text: 'โพสต์และไฟล์ที่เกี่ยวข้องจะถูกลบถาวรและไม่สามารถกู้คืนได้',
       icon: 'warning',
       showCancelButton: true,
@@ -331,14 +335,23 @@ export default function PostDetails() {
           }
         });
 
-        const response = await postService.deletePost(id);
+        let response;
+        try {
+          response = await postService.deletePost(id);
+        } catch (delError) {
+          if (isAdmin) {
+            response = await moderationService.reviewPost(id, 'DELETE');
+          } else {
+            throw delError;
+          }
+        }
         Swal.close();
 
-        if (response && (response.success || response.status === 200)) {
+        if (response && (response.success || response.status === 200 || response.message || response.data)) {
           await Swal.fire({
             icon: 'success',
             title: 'ลบสำเร็จ!',
-            text: 'โพสต์และไฟล์ที่เกี่ยวข้องถูกลบถาวรแล้ว',
+            text: (isAdmin && !isAuthor) ? 'แอดมินได้ทำการลบโพสต์เรียบร้อยแล้ว' : 'โพสต์และไฟล์ที่เกี่ยวข้องถูกลบถาวรแล้ว',
             confirmButtonColor: '#3b82f6'
           });
           navigate('/home');
@@ -470,7 +483,7 @@ export default function PostDetails() {
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
 
-      {isSuspendedPost && isAuthor && (
+      {isSuspendedPost && (isAuthor || isAdmin) && (
         <div role="status" className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm font-semibold text-amber-800">
           โพสต์นี้ถูกระงับอยู่ คุณยังดูเนื้อหาได้ แต่ผู้ใช้อื่นจะเปิดโพสต์นี้ไม่ได้
         </div>
@@ -482,7 +495,7 @@ export default function PostDetails() {
           <ChevronLeft className="h-5 w-5" /> กลับไปหน้าหลัก
         </Link>
         <div className="flex items-center gap-2">
-          {!isAuthor && (
+          {!isAuthor && !isAdmin && (
             <button
               type="button"
               onClick={handleOpenReport}
@@ -495,18 +508,20 @@ export default function PostDetails() {
             </button>
           )}
           {isAuthor && (
-            <>
+
               <Link to={`/post/edit/${post.id}`} className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-primary border border-blue-100 rounded-xl text-sm font-bold shadow-sm transition-all">
                 <Edit3 className="h-4 w-4" /> แก้ไขโพสต์
               </Link>
+          )}
+          {canDeletePost && (
               <button
                 onClick={handleDelete}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-100 rounded-xl text-sm font-bold shadow-sm transition-all cursor-pointer"
-                title="ลบโพสต์"
+                title={isAdmin && !isAuthor ? "ลบโพสต์ (ผู้ดูแลระบบ)" : "ลบโพสต์"}
               >
-                <Trash2 className="h-4 w-4" /> ลบโพสต์
+                <Trash2 className="h-4 w-4" /> {isAdmin && !isAuthor ? 'ลบโพสต์ (Admin)' : 'ลบโพสต์'}
               </button>
-            </>
+
           )}
         </div>
       </div>
@@ -733,7 +748,7 @@ export default function PostDetails() {
                         <span className="font-bold text-slate-900 text-sm">{comment.user?.username || 'ผู้ใช้งาน'}</span>
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-slate-400 font-medium">{comment.createdAt}</span>
-                          {(isAuthenticated && currentUserId && (String(comment.user?.id) === String(currentUserId) || String(comment.user_id) === String(currentUserId))) && (
+                          {(isAuthenticated && currentUserId && (String(comment.user?.id) === String(currentUserId) || String(comment.user_id) === String(currentUserId) || isAdmin)) && (
                             <button
                               type="button"
                               onClick={() => handleDeleteComment(comment.id)}

@@ -35,7 +35,7 @@ export default function PostConsole() {
     const copy = {
       APPROVE: ["ยืนยันว่าโพสต์นี้ปลอดภัย?", "รายงานทั้งหมดจะถูกล้างและโพสต์จะกลับมาเผยแพร่", "อนุมัติและปิดรายงาน", "อนุมัติโพสต์แล้ว", "#16a34a"],
       SUSPEND: ["ระงับโพสต์นี้ชั่วคราว?", "ผู้ใช้งานทั่วไปจะไม่สามารถเข้าถึงโพสต์ระหว่างรอตรวจสอบต่อได้", "ระงับโพสต์", "ระงับโพสต์แล้ว", "#d97706"],
-      DELETE: ["ลบโพสต์นี้ถาวร?", "โพสต์และไฟล์ทั้งหมดจะถูกลบทันทีและไม่สามารถกู้คืนได้", "ลบถาวร", "ลบโพสต์ถาวรแล้ว", "#e11d48"],
+      DELETE: ["ลบโพสต์นี้โดยตรง?", "โพสต์และไฟล์ทั้งหมดจะถูกลบทันทีอย่างถาวรและไม่สามารถกู้คืนได้", "ลบโพสต์โดยตรง", "ลบโพสต์ถาวรแล้ว", "#e11d48"],
     }[action];
     const confirmation = await Swal.fire({
       icon: "warning", title: copy[0], text: copy[1], showCancelButton: true,
@@ -90,7 +90,7 @@ export default function PostConsole() {
                   <div className="flex-1 p-5 sm:p-6">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0"><div className="mb-2 flex flex-wrap items-center gap-2"><span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-600"><AlertTriangle className="h-3.5 w-3.5" /> {getReportCount(post)} รายงาน</span><span className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusClass}`}>{STATUS_LABELS[status] || status}</span></div><h2 className="truncate text-xl font-extrabold text-slate-900">{post.title || "โพสต์ไม่มีชื่อ"}</h2><p className="mt-1 text-sm text-slate-500">โดย {post.author?.username || post.author?.email || "ไม่พบข้อมูลเจ้าของโพสต์"}</p></div>
-                      {status === "ACTIVE" && <Link to={`/post/${encodeURIComponent(post.id)}`} className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-600"><Eye className="h-4 w-4" /> ดูโพสต์</Link>}
+                      <Link to={`/post/${encodeURIComponent(post.id)}`} className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-600 hover:border-primary hover:text-primary hover:bg-slate-50 transition-all"><Eye className="h-4 w-4" /> ดูโพสต์</Link>
                     </div>
                     <div className="mt-5 grid gap-4 border-y border-slate-100 py-4 md:grid-cols-2">
                       <div><p className="mb-2 text-xs font-bold uppercase text-slate-400">เหตุผลที่ถูกรายงาน</p><div className="flex flex-wrap gap-2">{reasons.length ? reasons.map((reason) => <span key={reason} className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs text-slate-700">{reason}</span>) : <span className="text-sm text-slate-400">ไม่ระบุเหตุผล</span>}</div></div>
@@ -98,9 +98,9 @@ export default function PostConsole() {
                     </div>
                     {post.content && <details className="mt-4 rounded-xl bg-slate-50 px-4 py-3"><summary className="cursor-pointer text-sm font-bold text-slate-700">ดูเนื้อหาโพสต์ในหน้าตรวจสอบ</summary><div className="post-details-content mt-3 max-h-72 overflow-y-auto border-t border-slate-200 pt-3 text-sm leading-7 text-slate-600" dangerouslySetInnerHTML={{ __html: sanitizePostContent(post.content) }} /></details>}
                     <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
-                      {status === "ACTIVE" && <button type="button" onClick={() => handleAction(post, "SUSPEND")} disabled={isReviewing} className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-bold text-amber-700 disabled:opacity-50">ระงับชั่วคราว</button>}
-                      <button type="button" onClick={() => handleAction(post, "APPROVE")} disabled={isReviewing} className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-bold text-emerald-700 disabled:opacity-50">อนุมัติและปิดรายงาน</button>
-                      <button type="button" onClick={() => handleAction(post, "DELETE")} disabled={isReviewing} className="inline-flex items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"><Trash2 className="h-4 w-4" /> ลบถาวร</button>
+                      {status === "ACTIVE" && <button type="button" onClick={() => handleAction(post, "SUSPEND")} disabled={isReviewing} className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-bold text-amber-700 hover:bg-amber-100 transition-colors disabled:opacity-50 cursor-pointer">ระงับชั่วคราว</button>}
+                      <button type="button" onClick={() => handleAction(post, "APPROVE")} disabled={isReviewing} className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-bold text-emerald-700 hover:bg-emerald-100 transition-colors disabled:opacity-50 cursor-pointer">อนุมัติและปิดรายงาน</button>
+                      <button type="button" onClick={() => handleAction(post, "DELETE")} disabled={isReviewing} className="inline-flex items-center justify-center gap-2 rounded-xl bg-rose-600 hover:bg-rose-700 px-4 py-2.5 text-sm font-bold text-white transition-colors disabled:opacity-50 cursor-pointer"><Trash2 className="h-4 w-4" /> ลบโพสต์โดยตรง</button>
                     </div>
                   </div>
                 </div>

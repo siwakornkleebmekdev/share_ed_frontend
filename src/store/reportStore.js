@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { moderationService } from "@/services/moderation.service";
+import { postService } from "@/services/post.service";
 import { subscribeSocketEvent } from "@/utils/socket";
 import useAuthStore from "./authStore";
 
@@ -58,7 +59,16 @@ const useReportStore = create((set, get) => ({
   reviewPost: async (postId, action) => {
     set({ isReviewing: true, error: null });
     try {
-      const result = await moderationService.reviewPost(postId, action);
+      let result;
+      if (action === "DELETE") {
+        try {
+          result = await postService.deletePost(postId);
+        } catch (directErr) {
+          result = await moderationService.reviewPost(postId, action);
+        }
+      } else {
+        result = await moderationService.reviewPost(postId, action);
+      }
       set((state) => ({
         reports: action === "SUSPEND"
           ? state.reports.map((post) =>
@@ -78,6 +88,10 @@ const useReportStore = create((set, get) => ({
       });
       throw error;
     }
+  },
+
+  deletePostDirectly: async (postId) => {
+    return get().reviewPost(postId, "DELETE");
   },
 
   startRealtime: () => {
