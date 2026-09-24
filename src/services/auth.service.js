@@ -77,7 +77,6 @@ export const authService = {
     });
 
     if (!signInError && sessionData?.session?.access_token) {
-      localStorage.setItem('access_token', sessionData.session.access_token);
       return sessionData;
     }
 
@@ -90,9 +89,6 @@ export const authService = {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error || !data?.session?.access_token) throw error || new Error('ไม่พบ session หลังเข้าสู่ระบบ');
-      // Kept temporarily for old code paths. API requests read the current
-      // Supabase session directly and never treat this value as authoritative.
-      localStorage.setItem('access_token', data.session.access_token);
       return data;
     } catch (loginError) {
       const msg = loginError?.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
@@ -108,15 +104,12 @@ export const authService = {
 
   // Get current user details
   getMe: async () => {
+    localStorage.removeItem('profile_frame_id');
     const { data: { session }, error } = await supabase.auth.getSession();
     if (!error && session?.user) {
       const user = session.user;
-      const meta = user.user_metadata || {};
-      const cachedFrameId =
-        meta.profile_frame_id ||
-        localStorage.getItem(`profile_frame_id_${user.id}`) ||
-        localStorage.getItem("profile_frame_id") ||
-        null;
+      const meta = { ...(user.user_metadata || {}) };
+      delete meta.profile_frame_id;
       const cachedWallpaper =
         meta.wallpaper_url ||
         localStorage.getItem(`wallpaper_url_${user.id}`) ||
@@ -136,7 +129,6 @@ export const authService = {
         bio: meta.bio,
         user_metadata: {
           ...meta,
-          profile_frame_id: cachedFrameId,
           wallpaper_url: cachedWallpaper,
         }
       };
@@ -151,12 +143,6 @@ export const authService = {
           supabaseUser.user_metadata = {
             ...meta,
             ...(backendUser.user_metadata || {}),
-            profile_frame_id:
-              backendUser.user_metadata?.profile_frame_id ||
-              backendUser.current_frame_id ||
-              cachedFrameId ||
-              meta.profile_frame_id ||
-              null,
             wallpaper_url:
               backendUser.user_metadata?.wallpaper_url ||
               backendUser.wallpaper ||
@@ -178,12 +164,6 @@ export const authService = {
       const dbUser = response.data?.data || response.data?.user || response.data;
       if (dbUser) {
         const userId = dbUser.id || dbUser.user_id;
-        const cachedFrameId =
-          dbUser.user_metadata?.profile_frame_id ||
-          dbUser.current_frame_id ||
-          (userId ? localStorage.getItem(`profile_frame_id_${userId}`) : null) ||
-          localStorage.getItem("profile_frame_id") ||
-          null;
         const cachedWallpaper =
           dbUser.user_metadata?.wallpaper_url ||
           dbUser.wallpaper ||
@@ -193,12 +173,12 @@ export const authService = {
 
         dbUser.user_metadata = {
           ...(dbUser.user_metadata || {}),
-          profile_frame_id: cachedFrameId,
           wallpaper_url: cachedWallpaper,
         };
+        delete dbUser.user_metadata.profile_frame_id;
       }
       return response.data;
-    } catch (e) {
+    } catch {
       return null;
     }
   },
@@ -216,6 +196,7 @@ export const authService = {
     try {
       localStorage.removeItem('access_token');
       localStorage.removeItem('login_timestamp');
+      localStorage.removeItem('profile_frame_id');
       sessionStorage.clear();
     } catch (e) {
       console.error('Storage clear error:', e);

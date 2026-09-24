@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import {
   Upload,
   Image as ImageIcon,
@@ -49,11 +49,10 @@ const generateGradientFile = (filename, width, height, color1, color2) => {
 
 export default function SettingsProfile() {
   const { user, login } = useAuthStore();
-  const { milestones, fetchMilestones } = useAchievementStore();
+  const { milestones: storedMilestones, ownerId, fetchMilestones } = useAchievementStore();
   const [isSaving, setIsSaving] = useState(false);
   const [tagInput, setTagInput] = useState("");
   const [isFrameModalOpen, setIsFrameModalOpen] = useState(false);
-  const frameRequestVersion = useRef(0);
 
   const [formData, setFormData] = useState({
     username: "",
@@ -72,19 +71,13 @@ export default function SettingsProfile() {
     fetchMilestones();
   }, [fetchMilestones]);
 
-  const allMilestones = milestones;
+  const currentUserId = user?.id || user?.user_id || null;
+  const allMilestones = ownerId === currentUserId ? storedMilestones : [];
 
   const frameMilestones = allMilestones.filter((m) => m.reward?.type === "FRAME");
-  const currentUserId = user?.id || user?.user_id;
   const rawEquippedFrameId = user && 'current_frame_id' in user
     ? user.current_frame_id
-    : (
-    user?.current_frame_id ||
-    user?.profile_frame_id ||
-    user?.user_metadata?.profile_frame_id ||
-    (currentUserId ? localStorage.getItem(`profile_frame_id_${currentUserId}`) : null) ||
-    localStorage.getItem("profile_frame_id") ||
-    null);
+    : null;
 
   const foundFrame = allMilestones.find(
     (m) =>
@@ -106,22 +99,8 @@ export default function SettingsProfile() {
     user?.avatar_url ||
     `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.display_name || user?.username || "User")}&background=1e293b&color=38bdf8`;
 
-  // Equipping a claimed reward applies immediately (own toast, own API call)
-  // rather than going through the big form's "บันทึกข้อมูล" button — same
-  // instant-apply pattern the Achievements page already uses for claiming.
-  const applyFrameLocally = (frameId, frame) => {
-    const userId = user?.id || user?.user_id;
-    if (frameId) {
-      if (userId) localStorage.setItem(`profile_frame_id_${userId}`, frameId);
-      localStorage.setItem('profile_frame_id', frameId);
-    } else {
-      if (userId) localStorage.removeItem(`profile_frame_id_${userId}`);
-      localStorage.removeItem('profile_frame_id');
-    }
-    login({ ...user, current_frame_id: frameId, profile_frame_id: frameId, current_frame: frame,
-      user_metadata: { ...user?.user_metadata, profile_frame_id: frameId } });
-  };
-
+  // Equipping a claimed reward is independent from the main profile form, but
+  // the UI changes only after the backend confirms the database update.
   const handleEquipFrame = async (frameId) => {
     try {
       const selectedMilestone = allMilestones.find(
@@ -132,31 +111,15 @@ export default function SettingsProfile() {
       if (frameId && selectedMilestone?.status !== "CLAIMED") {
         throw new Error("กรอบนี้ยังไม่ได้ปลดล็อกในบัญชีของคุณ");
       }
-      const previousFrameId = user?.current_frame_id || user?.profile_frame_id || user?.user_metadata?.profile_frame_id || null;
-      const previousFrame = user?.current_frame || null;
-      const requestVersion = ++frameRequestVersion.current;
-      applyFrameLocally(frameId, frameId ? selectedMilestone?.reward_item || selectedMilestone?.reward : null);
-      const toastId = toast.success(frameId ? 'เปลี่ยนกรอบโปรไฟล์แล้ว' : 'นำกรอบโปรไฟล์ออกแล้ว');
-      const [authResult, equipResult] = await Promise.allSettled([
-        supabase.auth.updateUser({ data: { profile_frame_id: frameId || null } }),
-        profileService.equipItem(frameId || null, 'FRAME'),
-      ]);
-      if (requestVersion !== frameRequestVersion.current) return;
-      if (equipResult.status === 'rejected' || equipResult.value?.success === false) {
-        toast.dismiss(toastId);
-        applyFrameLocally(previousFrameId, previousFrame);
-        try {
-          const rollbackResult = await supabase.auth.updateUser({ data: { profile_frame_id: previousFrameId } });
-          if (rollbackResult.error) console.warn('Unable to restore frame metadata:', rollbackResult.error);
-        }
-        catch (rollbackError) { console.warn('Unable to restore frame metadata:', rollbackError); }
-        toast.error('ไม่สามารถบันทึกกรอบได้ ระบบคืนค่ากรอบเดิมแล้ว');
-        return;
+      const equipResult = await profileService.equipItem(frameId || null, 'FRAME');
+      if (equipResult?.success === false) {
+        throw new Error(equipResult.error?.message || 'ไม่สามารถบันทึกกรอบโปรไฟล์ได้');
       }
-      if (authResult.status === 'rejected' || authResult.value?.error) console.warn('Unable to sync frame metadata:', authResult.status === 'rejected' ? authResult.reason : authResult.value.error);
+      login({ ...user, ...(equipResult?.data || {}) });
+      toast.success(frameId ? 'เปลี่ยนกรอบโปรไฟล์แล้ว' : 'นำกรอบโปรไฟล์ออกแล้ว');
     } catch (error) {
       console.error("Error equipping frame:", error);
-      toast.error(error.response?.data?.message || "ไม่สามารถเปลี่ยนกรอบโปรไฟล์ได้ กรุณาลองใหม่");
+      toast.error(error.response?.data?.message || error.message || "ไม่สามารถเปลี่ยนกรอบโปรไฟล์ได้ กรุณาลองใหม่");
     }
   };
 
@@ -311,7 +274,6 @@ export default function SettingsProfile() {
             display_name: trimmedUsername,
             avatar_url: newAvatarUrl,
             theme_settings: formData.theme_settings,
-            profile_frame_id: equippedFrameId,
             wallpaper_url:
               resData.user_metadata?.wallpaper_url ||
               resData.wallpaper ||
@@ -346,7 +308,6 @@ export default function SettingsProfile() {
     avatar_url: media.avatar?.url || user?.avatar_url,
     user_metadata: {
       ...user?.user_metadata,
-      profile_frame_id: equippedFrameId,
       wallpaper_url: media.wallpaper?.remove
         ? null
         : (media.wallpaper?.url || user?.user_metadata?.wallpaper_url),

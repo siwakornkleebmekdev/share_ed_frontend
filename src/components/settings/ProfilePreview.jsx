@@ -26,14 +26,7 @@ export default function ProfilePreview({ user, formData }) {
   const wallpaperUrl = user?.user_metadata?.wallpaper_url;
   const bannerUrl = user?.user_metadata?.banner_url;
   const avatarUrl = user?.avatar_url;
-  const currentUserId = user?.id || user?.user_id;
-  const frameId = user && 'current_frame_id' in user ? user.current_frame_id : (
-    user?.current_frame_id ||
-    user?.profile_frame_id ||
-    user?.user_metadata?.profile_frame_id ||
-    (currentUserId ? localStorage.getItem(`profile_frame_id_${currentUserId}`) : null) ||
-    localStorage.getItem("profile_frame_id") ||
-    null);
+  const frameId = user?.current_frame_id || null;
   const hasFrame = !!frameId;
   const equippedFrame = milestones.find(
     (m) =>

@@ -1,4 +1,5 @@
 import api from '../utils/api.js';
+import { supabase } from '../utils/supabase.js';
 import { categoryService } from './category.service.js';
 
 // ดึงชื่อไฟล์จาก URL (รองรับทั้ง URL ปกติและ Cloudinary URL ที่มี URL encoding)
@@ -398,12 +399,14 @@ export const postService = {
 // user is signed in, merge their persisted bookmarks into the formatted posts
 // so a refresh/navigation does not reset every bookmark icon to false.
 async function mergeBookmarkStatus(posts) {
-  const token = localStorage.getItem('access_token');
-  if (!token || token === 'undefined' || token === 'null' || !posts.length) {
+  if (!posts.length) {
     return posts;
   }
 
   try {
+    const { data, error } = await supabase.auth.getSession();
+    if (error || !data?.session) return posts;
+
     const response = await api.get('/bookmarks');
     const bookmarks = response.data?.success && Array.isArray(response.data?.data)
       ? response.data.data
@@ -512,7 +515,7 @@ export function formatSinglePostData(post) {
   const hashtags = post.tags?.map(t => typeof t === 'string' ? t : (t.tag?.tag_name || t.name)) || [];
   const images = post.media?.filter(m => m.media_type === 'IMAGE').map(m => m.media_url) || [];
   const authorId = post.author?.id || post.author?.user_id || post.author_id || post.user_id || post.userId;
-  const authorFrameId = post.author?.current_frame_id || post.author?.profile_frame_id || post.author?.frame_id || post.author_frame_id || post.current_frame_id || null;
+  const authorFrameId = post.author?.current_frame_id || post.author_frame_id || post.current_frame_id || null;
   const authorFrame = post.author?.current_frame || post.author_frame || post.authorFrame || null;
   const categoryName = resolveCategoryName(post);
 
