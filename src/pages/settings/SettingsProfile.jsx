@@ -393,12 +393,15 @@ export default function SettingsProfile() {
               อัปโหลดรูป และเลือกรูปทรง avatar
             </p>
             <div className="flex items-center gap-5 pt-2">
+              {/* ซ่อนขอบรูปเมื่อมีกรอบตกแต่ง เพื่อไม่ให้เห็นวงขาวซ้อนใต้ภาพกรอบ */}
               <AvatarWithFrame
                 avatarSrc={media.avatar?.url || user?.avatar_url}
                 frameSrc={equippedFrame?.reward?.previewUrl || user?.current_frame?.image_url || user?.current_frame?.previewUrl}
                 frameAlt={equippedFrame?.reward?.name || ''}
                 sizeClass="h-24 w-24"
-                className="border-4 border-slate-50 bg-slate-100 shadow-sm"
+                className={equippedFrame?.reward?.previewUrl || user?.current_frame?.image_url || user?.current_frame?.previewUrl
+                  ? "bg-slate-100 shadow-sm"
+                  : "border-4 border-slate-50 bg-slate-100 shadow-sm"}
                 avatarFallback={<div className="flex h-full w-full items-center justify-center text-slate-400"><ImageIcon className="h-8 w-8" /></div>}
               />
               <div className="flex flex-col gap-2">

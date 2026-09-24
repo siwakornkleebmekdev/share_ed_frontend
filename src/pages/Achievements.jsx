@@ -379,9 +379,9 @@ export default function Achievements() {
                         <div className="absolute -inset-3 rounded-full bg-amber-400/50 blur-lg animate-pulse -z-10" />
                       )}
 
-                      {/* Circular Avatar Container */}
+                      {/* รูปโปรไฟล์เป็นวงกลม และซ่อนวงขอบเมื่อรางวัลเป็นกรอบตกแต่ง */}
                       <div
-                        className={`relative h-20 w-20 rounded-full ring-4 shadow-xl flex items-center justify-center ${
+                        className={`relative h-20 w-20 rounded-full shadow-xl flex items-center justify-center ${isFrameReward ? '' : 'ring-4'} ${
                           isReady
                             ? 'ring-amber-400 bg-amber-50 shadow-amber-500/25'
                             : isClaimed
@@ -421,12 +421,12 @@ export default function Achievements() {
                           </div>
                         )}
 
-                        {/* Profile Frame: Larger than the circle profile picture and sitting outside without overflow clipping */}
+                        {/* ขยายกรอบเป็น 125% ให้ตรงกับหน้าที่ใช้ AvatarWithFrame และไม่ตัดส่วนที่ล้นวงกลม */}
                         {isFrameReward && milestone.reward?.previewUrl && (
                           <img
                             src={milestone.reward.previewUrl}
                             alt={milestone.reward.name}
-                            className={`absolute -inset-[18px] w-[calc(100%+36px)] h-[calc(100%+36px)] max-w-none pointer-events-none object-contain drop-shadow-xl z-10 select-none transition-all duration-300 ${
+                            className={`absolute inset-0 h-full w-full scale-125 max-w-none pointer-events-none object-contain drop-shadow-xl z-10 select-none transition-all duration-300 ${
                               isLocked ? 'grayscale opacity-50' : isReady ? 'animate-pulse' : ''
                             }`}
                           />
