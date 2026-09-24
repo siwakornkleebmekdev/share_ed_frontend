@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Mail, Lock } from 'lucide-react';
-import { Link, useNavigate } from 'react-router';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import toast from 'react-hot-toast';
 import useAuthStore from '@/store/authStore';
 import { authService } from '@/services/auth.service';
@@ -11,9 +11,23 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
+  const [searchParams, setSearchParams] = useSearchParams();
+  const hasShownExpiredToast = useRef(false);
 
   const loginAction = useAuthStore((state) => state.login);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (searchParams.get('expired') === 'true' && !hasShownExpiredToast.current) {
+      hasShownExpiredToast.current = true;
+      toast.error('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่อีกครั้ง', {
+        id: 'session-expired-toast',
+      });
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('expired');
+      setSearchParams(newParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const handleLogin = async (e) => {
     e.preventDefault();

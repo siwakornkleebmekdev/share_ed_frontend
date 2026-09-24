@@ -8,6 +8,7 @@ import SettingsLayout from "./layouts/SettingsLayout";
 import AdminLayout from "./layouts/AdminLayout";
 import { authService } from "./services/auth.service";
 import { supabase } from "./utils/supabase";
+import { handleTokenExpiration } from "./utils/api";
 
 const LandingPage = lazy(() => import("./pages/LandingPage"));
 const Home = lazy(() => import("./pages/Home"));
@@ -228,10 +229,18 @@ function App() {
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT") {
         sessionVersion.current += 1;
+        const wasAuthenticated = useAuthStore.getState().isAuthenticated;
+        const isManual = typeof sessionStorage !== "undefined" && sessionStorage.getItem("manual_logout");
         logoutAction();
         setInitializing(false);
         setRoleLoading(false);
+        if (wasAuthenticated && !isManual) {
+          handleTokenExpiration();
+        }
       } else if (session) {
+        if (typeof sessionStorage !== "undefined") {
+          sessionStorage.removeItem("manual_logout");
+        }
         const currentUser = useAuthStore.getState().user;
         // ป้องกันการรีโหลดหน้า/กระพริบ เมื่อสลับแท็บแล้ว Supabase ยิง event ซ้ำ
         if (!currentUser || currentUser.id !== session.user.id) {
