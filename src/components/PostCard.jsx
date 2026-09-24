@@ -25,6 +25,7 @@ function getAuthorProfile(userId) {
   return authorProfileRequests.get(key);
 }
 
+
 export default function PostCard({ post, viewMode, rank = null, dark = false, onBookmarkChange, authorOverride = null }) {
   const [isLiked, setIsLiked] = useState(Boolean(post.isLiked || post.is_liked));
   const [isBookmarked, setIsBookmarked] = useState(Boolean(post.isBookmarked || post.is_bookmarked));

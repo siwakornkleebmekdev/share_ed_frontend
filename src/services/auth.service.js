@@ -158,7 +158,12 @@ export const authService = {
       return { success: true, data: supabaseUser };
     }
 
-    // Fallback: Check backend /auth/me
+    // Fallback: Check backend /auth/me only if a stored token exists
+    const fallbackToken = localStorage.getItem('access_token');
+    if (!fallbackToken || fallbackToken === 'undefined' || fallbackToken === 'null') {
+      return null;
+    }
+
     try {
       const response = await api.get('/auth/me');
       const dbUser = response.data?.data || response.data?.user || response.data;

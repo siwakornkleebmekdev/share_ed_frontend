@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { moderationService } from "@/services/moderation.service";
 import { subscribeSocketEvent } from "@/utils/socket";
+import useAuthStore from "./authStore";
 
 const CACHE_TTL_MS = 10_000;
 let reportsFlight = null;
@@ -20,6 +21,13 @@ const useReportStore = create((set, get) => ({
   pendingCount: () => get().reports.length,
 
   fetchReports: async ({ force = false } = {}) => {
+    const auth = useAuthStore.getState();
+    const role = String(auth.user?.role || "").toUpperCase();
+    if (!auth.isAuthenticated || !["ADMIN", "MODERATOR"].includes(role)) {
+      set({ reports: [], isLoading: false });
+      return [];
+    }
+
     const state = get();
     if (!force && state.lastFetchedAt && Date.now() - state.lastFetchedAt < CACHE_TTL_MS) {
       return state.reports;
