@@ -8,6 +8,7 @@ import { WIDGET_PLATFORMS, createWidget, getPlatformConfig } from './widgetConst
 import { DEFAULT_THEME } from './themeConstants';
 import WidgetCard from '@/components/settings/WidgetCard';
 import WidgetModal from '@/components/settings/WidgetModal';
+import { getWidgetUrlError } from '@/utils/widgetUrl';
 
 export default function SettingsWidgets() {
   const { user, login } = useAuthStore();
@@ -44,6 +45,12 @@ export default function SettingsWidgets() {
   };
 
   const handleSaveWidget = (platformId, { url, options }) => {
+    // ตรวจอีกครั้งก่อนส่งไปเก็บในข้อมูลผู้ใช้ เผื่อมีทางเรียกบันทึกนอกฟอร์ม
+    const urlError = getWidgetUrlError(platformId, url);
+    if (urlError) {
+      toast.error(urlError);
+      return;
+    }
     const next = widgets.some((w) => w.platformId === platformId)
       ? widgets.map((w) => (w.platformId === platformId ? { ...w, url, options } : w))
       : [...widgets, createWidget(platformId, { url, options })];
@@ -99,7 +106,7 @@ export default function SettingsWidgets() {
               if (!platform) return null;
               return (
                 <div key={widget.id} className="relative group">
-                  <WidgetCard platform={platform} url={widget.url} options={widget.options} cardTheme={cardTheme} />
+                  <WidgetCard platform={platform} url={widget.url} cardTheme={cardTheme} />
                   <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button onClick={() => setModalPlatformId(widget.platformId)} className="p-1.5 rounded-lg bg-white/90 text-slate-600 hover:text-primary shadow-sm">
                       <Pencil className="h-3.5 w-3.5" />

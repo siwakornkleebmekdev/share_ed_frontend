@@ -1,7 +1,7 @@
 import { SiFacebook, SiInstagram, SiDiscord, SiYoutube } from "react-icons/si";
 
-// One widget per platform. Widgets are purely styled link cards — no
-// external data is fetched from any of these platforms.
+// วิดเจ็ตเป็นลิงก์ของแต่ละแพลตฟอร์ม ไม่ดึงข้อมูลจากบริการภายนอก
+// นำตัวเลือกตกแต่งเฉพาะแพลตฟอร์มออกแล้ว จึงเก็บเพียงข้อมูลที่ใช้สร้างลิงก์
 export const WIDGET_PLATFORMS = [
   {
     id: "facebook",
@@ -9,9 +9,6 @@ export const WIDGET_PLATFORMS = [
     icon: SiFacebook,
     brandColor: "#1877F2",
     urlPlaceholder: "https://facebook.com/yourpage",
-    extraOptionKey: "showPageName",
-    extraOptionLabel: "แสดงชื่อเพจ",
-    extraOptionDesc: "แสดงชื่อเพจ Facebook บนการ์ดวิดเจ็ต",
   },
   {
     id: "instagram",
@@ -19,9 +16,6 @@ export const WIDGET_PLATFORMS = [
     icon: SiInstagram,
     brandColor: "#E4405F",
     urlPlaceholder: "https://instagram.com/yourprofile",
-    extraOptionKey: "largeButton",
-    extraOptionLabel: "แสดงเป็นปุ่มขนาดใหญ่",
-    extraOptionDesc: "ขยายการ์ดให้เต็มความกว้าง เด่นชัดขึ้น",
   },
   {
     id: "discord",
@@ -29,9 +23,6 @@ export const WIDGET_PLATFORMS = [
     icon: SiDiscord,
     brandColor: "#5865F2",
     urlPlaceholder: "https://discord.gg/yourinvite",
-    extraOptionKey: "compactLayout",
-    extraOptionLabel: "เลย์เอาต์กะทัดรัด",
-    extraOptionDesc: "ย่อขนาดการ์ดให้กระชับขึ้น",
   },
   {
     id: "youtube",
@@ -39,20 +30,12 @@ export const WIDGET_PLATFORMS = [
     icon: SiYoutube,
     brandColor: "#FF0000",
     urlPlaceholder: "https://youtube.com/@yourchannel",
-    extraOptionKey: "bannerStyle",
-    extraOptionLabel: "พื้นหลังแบบแบนเนอร์",
-    extraOptionDesc: "แสดงพื้นหลังไล่สีแบบแบนเนอร์วิดีโอ",
   },
 ];
 
 export const DEFAULT_WIDGET_OPTIONS = {
+  // ตัวเลือกนี้ยังใช้กำหนดว่าจะแสดงไอคอนลิงก์บนหน้าโปรไฟล์หรือไม่
   insideProfileCard: true,
-  useCardStyle: false,
-  showPageName: false,
-  largeButton: false,
-  secondStyle: false,
-  compactLayout: false,
-  bannerStyle: false,
 };
 
 export function createWidget(platformId, { url = "", options = {} } = {}) {
@@ -60,7 +43,8 @@ export function createWidget(platformId, { url = "", options = {} } = {}) {
     id: platformId,
     platformId,
     url,
-    options: { ...DEFAULT_WIDGET_OPTIONS, ...options },
+    // ไม่บันทึกค่าตกแต่งที่ถูกนำออก แม้ข้อมูลเดิมจะยังมีค่าเหล่านั้นอยู่
+    options: { insideProfileCard: options.insideProfileCard !== false },
   };
 }
 
