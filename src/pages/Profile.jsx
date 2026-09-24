@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useSearchParams, useParams } from "react-router";
 import {
   Image as ImageIcon,
@@ -19,6 +19,8 @@ import {
   UserCheck,
   UserX,
   Loader2,
+  Eye,
+  Heart,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import PostCard from "@/components/PostCard";
@@ -339,7 +341,26 @@ export default function Profile() {
   const displayName = sanitizeProfileName(rawDisplayName) || "ผู้ใช้งาน";
 
   // Public profile headers must never expose an account email address.
-  const displaySubtitle = profileUsername ? `@${profileUsername}` : "";
+  // Username displayed without '@'
+  const displaySubtitle = profileUsername ? `${profileUsername}` : "";
+
+  // คำนวณยอดวิวรวม และถูกใจรวมจากโพสต์ทั้งหมดของผู้ใช้งาน
+  const totalViews = useMemo(() => {
+    if (isOtherUser && typeof otherProfile?.totalViews === "number") return otherProfile.totalViews;
+    if (!isOtherUser && typeof ownProfile?.totalViews === "number") return ownProfile.totalViews;
+    return myPosts.reduce((sum, p) => sum + (Number(p.views ?? p.view_count ?? p.views_count ?? p.viewsCount ?? 0) || 0), 0);
+  }, [isOtherUser, otherProfile, ownProfile, myPosts]);
+
+  const totalLikes = useMemo(() => {
+    if (isOtherUser && typeof otherProfile?.totalLikes === "number") return otherProfile.totalLikes;
+    if (!isOtherUser && typeof ownProfile?.totalLikes === "number") return ownProfile.totalLikes;
+    return myPosts.reduce((sum, p) => {
+      const count = Array.isArray(p.likes)
+        ? p.likes.length
+        : (p.likes_count ?? p.like_count ?? p.likesCount ?? p._count?.likes ?? 0);
+      return sum + (Number(count) || 0);
+    }, 0);
+  }, [isOtherUser, otherProfile, ownProfile, myPosts]);
 
   const displayAvatar = isOtherUser
     ? otherProfile?.profile_image ||
@@ -521,7 +542,10 @@ export default function Profile() {
                 {displayName}
               </h1>
               {displaySubtitle && (
-                <p className={`font-medium text-lg mt-1 ${subTextClass}`}>
+                <p
+                  className="font-semibold text-lg mt-1 text-black"
+                  style={{ color: "#000000" }}
+                >
                   {displaySubtitle}
                 </p>
               )}
@@ -561,6 +585,24 @@ export default function Profile() {
                     กำลังติดตาม
                   </span>
                 </button>
+                <div className="flex items-baseline gap-2" title="ยอดวิวรวมทั้งหมด">
+                  <span className={`text-xl font-extrabold ${headingClass}`}>
+                    {totalViews.toLocaleString()}
+                  </span>
+                  <span className={`text-sm font-medium flex items-center gap-1 ${mutedTextClass}`}>
+                    <Eye className="h-3.5 w-3.5 text-blue-500" />
+                    ยอดวิวรวม
+                  </span>
+                </div>
+                <div className="flex items-baseline gap-2" title="ถูกใจรวมทั้งหมด">
+                  <span className={`text-xl font-extrabold ${headingClass}`}>
+                    {totalLikes.toLocaleString()}
+                  </span>
+                  <span className={`text-sm font-medium flex items-center gap-1 ${mutedTextClass}`}>
+                    <Heart className="h-3.5 w-3.5 text-rose-500 fill-rose-500/20" />
+                    ถูกใจรวม
+                  </span>
+                </div>
               </div>
 
               <div

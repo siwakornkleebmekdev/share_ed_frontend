@@ -1,3 +1,4 @@
+import { Link } from 'react-router';
 import { BookOpen, MessageCircle, Info, Shield, Users } from 'lucide-react';
 import useHeroThemeStore from "@/store/heroThemeStore";
 import { getGlassColor, rgbToRgba } from "@/utils/colorUtils";
@@ -40,7 +41,7 @@ export default function Footer() {
                 <MessageCircle className="h-4 w-4" />
               </div>
               <div className="flex flex-col">
-                <a href="#" className={`font-bold transition-colors leading-tight ${linkClass}`}>ติดต่อแอดมิน</a>
+                <a href="mailto:share_ed@gmail.com" className={`font-bold transition-colors leading-tight ${linkClass}`}>ติดต่อแอดมิน</a>
                 <span className={`text-xs ${textClass}`}>share_ed@gmail.com</span>
               </div>
             </div>
@@ -51,7 +52,7 @@ export default function Footer() {
                 <Info className="h-4 w-4" />
               </div>
               <div className="flex flex-col">
-                <a href="#" className={`font-bold transition-colors leading-tight ${linkClass}`}>เกี่ยวกับเรา</a>
+                <Link to="/about" className={`font-bold transition-colors leading-tight ${linkClass}`}>เกี่ยวกับเรา</Link>
               </div>
             </div>
 
