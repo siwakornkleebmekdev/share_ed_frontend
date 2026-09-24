@@ -21,7 +21,7 @@ function hasAnimationChunk(bytes) {
 
 /**
  * เตรียมไฟล์รูปภาพของรางวัลก่อนอัปโหลด (รองรับ APNG ภาพเคลื่อนไหว)
- * - การทำงาน: สแกนโครงสร้างไบต์ของภาพ PNG เพื่อตรวจจับแอนิเมชัน หากพบจะตั้งชื่อและระบุ MIME type เป็น image/apng
+ * - การทำงาน: สแกนโครงสร้างไบต์ของภาพ PNG เพื่อตรวจจับแอนิเมชัน แล้วส่งเป็น PNG โดยคงข้อมูลทุกเฟรมไว้
  * - อิงจาก: มาตรฐานไฟล์ภาพเคลื่อนไหว Animated PNG (APNG)
  * - เชื่อมโยงกับ: achievement.service.js ใน resolvePayloadReward() และ createRewardItem()
  */
@@ -37,6 +37,8 @@ export async function prepareRewardImageFile(file) {
   }
   if (!isAnimated) return file;
 
-  const name = file.name.replace(/\.(?:a?png)$/i, ".apng");
-  return new File([bytes], name, { type: "image/apng", lastModified: file.lastModified });
+  // APNG ใช้โครงสร้างไฟล์ PNG จึงคงข้อมูลทุกเฟรมไว้ตามเดิม
+  // และใช้ชื่อไฟล์กับ MIME type แบบ PNG เพื่อให้ระบบอัปโหลดและจัดเก็บรองรับได้
+  const name = file.name.replace(/\.(?:a?png)$/i, ".png");
+  return new File([bytes], name, { type: "image/png", lastModified: file.lastModified });
 }
