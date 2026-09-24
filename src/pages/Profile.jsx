@@ -314,52 +314,65 @@ export default function Profile() {
     }
   };
 
-  // ข้อมูลที่ใช้แสดงผลใน UI
-  const displayName = isOtherUser
-    ? otherProfile?.nickname || otherProfile?.username || "ผู้ใช้งาน"
-    : user?.display_name ||
-      user?.username ||
-      user?.user_metadata?.full_name ||
-      user?.name ||
-      "ผู้ใช้งาน";
+  // ข้อมูลที่ใช้แสดงผลใน UI (กรองอีเมลออกอย่างเด็ดขาด)
+  const sanitizeProfileName = (name) => {
+    if (!name || typeof name !== "string") return "";
+    const trimmed = name.trim();
+    return trimmed.includes("@") ? trimmed.split("@")[0] : trimmed;
+  };
 
-  const displaySubtitle = isOtherUser
-    ? otherProfile?.username ? `@${otherProfile.username}` : ""
-    : user?.email || (user?.username ? `@${user.username}` : "");
+  const rawUsername = isOtherUser
+    ? otherProfile?.username
+    : ownProfile?.username || user?.username;
+  const profileUsername = sanitizeProfileName(rawUsername);
+
+  const rawDisplayName = isOtherUser
+    ? otherProfile?.nickname || profileUsername
+    : ownProfile?.nickname ||
+      user?.nickname ||
+      user?.display_name ||
+      profileUsername ||
+      user?.user_metadata?.full_name ||
+      user?.name;
+
+  const displayName = sanitizeProfileName(rawDisplayName) || "ผู้ใช้งาน";
+
+  // Public profile headers must never expose an account email address.
+  const displaySubtitle = profileUsername ? `@${profileUsername}` : "";
 
   const displayAvatar = isOtherUser
     ? otherProfile?.profile_image ||
       `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=1e293b&color=38bdf8&size=200`
-    : user?.avatar_url ||
+    : ownProfile?.profile_image || user?.avatar_url ||
       `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=1e293b&color=38bdf8&size=200`;
 
   const bannerUrl = isOtherUser
     ? otherProfile?.profile_banner || otherProfile?.banner_url
-    : user?.user_metadata?.banner_url;
+    : ownProfile?.profile_banner || user?.user_metadata?.banner_url;
 
   const displayEducationLevel = isOtherUser
     ? otherProfile?.education_level
-    : user?.education_level;
+    : ownProfile?.education_level || user?.education_level;
 
   const displayOccupation = isOtherUser
     ? otherProfile?.occupation
-    : user?.user_metadata?.occupation;
+    : ownProfile?.occupation || user?.user_metadata?.occupation;
 
   const displayLocation = isOtherUser
     ? otherProfile?.location
-    : user?.user_metadata?.location;
+    : ownProfile?.location || user?.user_metadata?.location;
 
   const displayInstagram = isOtherUser
     ? otherProfile?.social_links?.instagram || otherProfile?.instagram_url
-    : user?.user_metadata?.instagram_url;
+    : ownProfile?.social_links?.instagram || user?.user_metadata?.instagram_url;
 
   const displayFacebook = isOtherUser
     ? otherProfile?.social_links?.facebook || otherProfile?.facebook_url
-    : user?.user_metadata?.facebook_url;
+    : ownProfile?.social_links?.facebook || user?.user_metadata?.facebook_url;
 
   const displayBio = isOtherUser
     ? otherProfile?.bio || "ยังไม่มีคำอธิบายตัวเอง..."
-    : user?.bio || "ยังไม่มีคำอธิบายตัวเอง...";
+    : ownProfile?.bio || user?.bio || "ยังไม่มีคำอธิบายตัวเอง...";
 
   // กรอบรูป
   const ownProfileWithCachedFrame = isOtherUser
@@ -412,7 +425,7 @@ export default function Profile() {
         )}
         <div className="relative z-10 max-w-md w-full text-center bg-slate-900/70 backdrop-blur-xl border border-white/10 rounded-3xl p-10 shadow-2xl">
           <DoorOpen className="h-10 w-10 text-primary mx-auto mb-4" />
-          <h2 className="text-2xl font-extrabold text-black mb-3">
+          <h2 className="text-2xl font-extrabold text-white mb-3">
             {displayName}
           </h2>
           <p className="text-slate-300 mb-8">
@@ -490,13 +503,13 @@ export default function Profile() {
               />
             </div>
           )}
-          <div className="flex flex-col sm:flex-row gap-8 items-start sm:items-end">
-            <div className="relative">
+          <div className="flex flex-col items-center gap-6 text-center sm:flex-row sm:items-end sm:gap-8 sm:text-left">
+            <div className="relative shrink-0">
               {/* เมื่อสวมกรอบตกแต่ง ให้ซ่อนขอบขาวของรูปโปรไฟล์ที่อาจโผล่ผ่านช่องว่างของกรอบ */}
               <AvatarWithFrame avatarSrc={displayAvatar} frameSrc={framePreviewUrl} avatarAlt="Avatar" sizeClass="h-32 w-32 sm:h-40 sm:w-40" className={framePreviewUrl ? "shadow-2xl" : `border-4 shadow-2xl ${avatarBorderClass}`} />
             </div>
 
-            <div className="flex-1 pb-2">
+            <div className="w-full flex-1 pb-2">
               <h1
                 className="text-3xl font-extrabold"
                 style={{
@@ -512,7 +525,7 @@ export default function Profile() {
                 </p>
               )}
 
-              <div className="flex items-center gap-7 mt-3 mb-3">
+              <div className="mt-4 mb-4 flex flex-wrap items-center justify-center gap-x-7 gap-y-2 sm:justify-start">
                 <div className="flex items-baseline gap-2">
                   <span className={`text-xl font-extrabold ${headingClass}`}>
                     {myPosts.length}
@@ -550,7 +563,7 @@ export default function Profile() {
               </div>
 
               <div
-                className={`flex flex-wrap gap-4 text-sm font-semibold ${mutedTextClass}`}
+                className={`flex flex-wrap justify-center gap-3 text-sm font-semibold sm:justify-start ${mutedTextClass}`}
               >
                 <div className="flex items-center gap-1.5">
                   <GraduationCap className="h-4 w-4 text-primary" />{" "}
@@ -592,14 +605,15 @@ export default function Profile() {
                 )}
               </div>
 
-              {/* Widgets (สำหรับโปรไฟล์ตัวเอง) */}
-              {!isOtherUser && (() => {
-                const profileWidgets = (
-                  user?.user_metadata?.widgets || []
-                ).filter((w) => w.options?.insideProfileCard !== false);
-                if (profileWidgets.length === 0) return null;
+              {/* Widgets */}
+              {(() => {
+                const widgetsList = isOtherUser
+                  ? otherProfile?.widgets || otherProfile?.user_metadata?.widgets || []
+                  : ownProfile?.widgets || ownProfile?.user_metadata?.widgets || user?.user_metadata?.widgets || [];
+                const profileWidgets = widgetsList.filter((w) => w.options?.insideProfileCard !== false);
+                if (!profileWidgets.length) return null;
                 return (
-                  <div className="flex flex-wrap gap-2 mt-3">
+                  <div className="flex flex-wrap gap-2 mt-3 justify-center sm:justify-start">
                     {profileWidgets.map((w) => {
                       const platform = getPlatformConfig(w.platformId);
                       if (!platform) return null;
@@ -622,22 +636,28 @@ export default function Profile() {
                 );
               })()}
 
-              {!isOtherUser && user?.user_metadata?.tags?.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-4">
-                  {user.user_metadata.tags.map((tag, i) => (
-                    <span
-                      key={i}
-                      className={`px-2.5 py-1 border rounded-full text-xs font-bold ${tagPillClass}`}
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
+              {(() => {
+                const tagsList = isOtherUser
+                  ? otherProfile?.tags || otherProfile?.user_metadata?.tags || []
+                  : ownProfile?.tags || ownProfile?.user_metadata?.tags || user?.user_metadata?.tags || [];
+                if (!tagsList.length) return null;
+                return (
+                  <div className="flex flex-wrap gap-2 mt-4 justify-center sm:justify-start">
+                    {tagsList.map((tag, i) => (
+                      <span
+                        key={i}
+                        className={`px-2.5 py-1 border rounded-full text-xs font-bold ${tagPillClass}`}
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Action Buttons: ติดตาม (คนอื่น) หรือ แก้ไขโปรไฟล์ (ตัวเอง) */}
-            <div className="flex gap-4 w-full sm:w-auto pb-2">
+            <div className="flex w-full gap-4 pb-2 sm:w-auto">
               {isOtherUser ? (
                 <button
                   onClick={handleToggleFollow}

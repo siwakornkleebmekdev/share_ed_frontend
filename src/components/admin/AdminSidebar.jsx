@@ -38,10 +38,11 @@ export default function AdminSidebar() {
   const reportCount = pendingCount();
 
   useEffect(() => {
+    if (!user || !["ADMIN", "MODERATOR"].includes(role)) return;
     startRealtime();
     fetchReports({ force: true }).catch(() => { });
     return () => stopRealtime();
-  }, [fetchReports, startRealtime, stopRealtime]);
+  }, [user, role, fetchReports, startRealtime, stopRealtime]);
 
   const handleLogout = async () => {
     try {
