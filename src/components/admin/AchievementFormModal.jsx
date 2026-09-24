@@ -4,15 +4,13 @@ import toast from "react-hot-toast";
 import {
   MILESTONE_TYPES,
   MILESTONE_TYPE_MAP,
-  MILESTONE_TYPE_ALIASES,
   getMilestoneTypeInfo,
 } from "@/services/achievement.service";
-import { getValidImageUrl, convertSvgToPngFile } from "@/utils/imageUtils";
+import { convertSvgToPngFile } from "@/utils/imageUtils";
 
-// Modal เพิ่ม/แก้ไขความสำเร็จ (milestone) — โครงสร้างเดียวกับ WidgetModal.jsx
+// Modal เพิ่มความสำเร็จ (milestone) — โครงสร้างเดียวกับ WidgetModal.jsx
 // (มี overlay, ปิดได้ด้วยการคลิก backdrop, พักข้อมูลไว้ใน local state)
-// ใช้ modal เดียวทำได้ทั้งเพิ่ม (initialData: null) และแก้ไข (initialData: ข้อมูลความสำเร็จ)
-export default function AchievementFormModal({ isOpen, onClose, initialData, onConfirm }) {
+export default function AchievementFormModal({ isOpen, onClose, onConfirm }) {
   const [title, setTitle] = useState("");
   const [targetValue, setTargetValue] = useState("");
   const [selectedTypeKey, setSelectedTypeKey] = useState("FOLLOWERS_COUNT");
@@ -24,17 +22,12 @@ export default function AchievementFormModal({ isOpen, onClose, initialData, onC
   const [newImagePreview, setNewImagePreview] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const isEdit = !!initialData;
-
   useEffect(() => {
     if (!isOpen) return;
 
-    setTitle(initialData?.title ? String(initialData.title).slice(0, 100) : "");
-    setTargetValue(initialData?.target_value !== undefined ? String(initialData.target_value) : "");
-
-    const rawType = initialData?.milestone_type || initialData?.achievement_type || "FOLLOWERS_COUNT";
-    const resolved = MILESTONE_TYPE_ALIASES[rawType] || rawType;
-    setSelectedTypeKey(resolved);
+    setTitle("");
+    setTargetValue("");
+    setSelectedTypeKey("FOLLOWERS_COUNT");
 
     setItemName("");
     setItemType("FRAME");
@@ -42,20 +35,17 @@ export default function AchievementFormModal({ isOpen, onClose, initialData, onC
     setIsActive(true);
     setImageFile(null);
     setNewImagePreview(null);
-  }, [isOpen, initialData]);
+  }, [isOpen]);
 
   const effectiveMilestoneType = selectedTypeKey;
   const currentTypeInfo = getMilestoneTypeInfo(effectiveMilestoneType);
   const description = MILESTONE_TYPE_MAP[effectiveMilestoneType]?.achievementDescription
-    || initialData?.description
     || currentTypeInfo?.description
     || "";
 
   if (!isOpen) return null;
 
   const targetValueNum = Number(targetValue);
-  const existingRewardId = initialData?.reward_item_id || initialData?.reward_item?.id;
-  const hasNewReward = Boolean(itemName.trim() || imageFile);
   const isValid =
     title.trim() &&
     title.length <= 100 &&
@@ -65,7 +55,7 @@ export default function AchievementFormModal({ isOpen, onClose, initialData, onC
     Number.isInteger(targetValueNum) &&
     targetValueNum > 0 &&
     effectiveMilestoneType &&
-    (existingRewardId && !hasNewReward ? true : Boolean(itemName.trim() && imageFile));
+    Boolean(itemName.trim() && imageFile);
 
   const handleSubmit = async () => {
     if (!isValid || isSubmitting) return;
@@ -78,15 +68,11 @@ export default function AchievementFormModal({ isOpen, onClose, initialData, onC
       achievement_type: effectiveMilestoneType,
     };
 
-    if (existingRewardId && !hasNewReward) {
-      payload.reward_item_id = existingRewardId;
-    } else {
-      payload.item_name = itemName.trim();
-      payload.item_type = itemType;
-      payload.item_description = itemDescription.trim() || undefined;
-      payload.is_active = isActive;
-      payload.imageFile = imageFile;
-    }
+    payload.item_name = itemName.trim();
+    payload.item_type = itemType;
+    payload.item_description = itemDescription.trim() || undefined;
+    payload.is_active = isActive;
+    payload.imageFile = imageFile;
 
     setIsSubmitting(true);
     try {
@@ -108,7 +94,7 @@ export default function AchievementFormModal({ isOpen, onClose, initialData, onC
       >
         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 shrink-0">
           <h2 className="font-bold text-slate-800 text-lg">
-            {isEdit ? "แก้ไข" : "เพิ่ม"}ความสำเร็จ
+            เพิ่มความสำเร็จ
           </h2>
           <button
             onClick={onClose}
@@ -186,7 +172,6 @@ export default function AchievementFormModal({ isOpen, onClose, initialData, onC
                     {t.label}
                   </option>
                 ))}
-                {!MILESTONE_TYPE_MAP[selectedTypeKey] && <option value={selectedTypeKey}>{selectedTypeKey} (ประเภทเดิม)</option>}
               </select>
             </div>
           </div>
@@ -210,21 +195,6 @@ export default function AchievementFormModal({ isOpen, onClose, initialData, onC
 
           <div className="pt-2 border-t border-slate-100">
             <label className="block text-sm font-semibold text-slate-600 mb-2">รางวัล</label>
-            {existingRewardId && initialData?.reward_item && (
-              <div className="flex items-center gap-3 p-3 mb-3 rounded-xl bg-slate-50 border border-slate-200">
-                {getValidImageUrl(initialData.reward_item.image_url) && (
-                  <img
-                    src={getValidImageUrl(initialData.reward_item.image_url)}
-                    alt=""
-                    className="h-12 w-12 rounded-full object-contain"
-                  />
-                )}
-                <div>
-                  <p className="text-sm font-semibold text-slate-700">{initialData.reward_item.item_name}</p>
-                  <p className="text-xs text-slate-500">รางวัลปัจจุบัน · อัปโหลดรูปใหม่เพื่อเปลี่ยนรางวัล</p>
-                </div>
-              </div>
-            )}
             <div className="space-y-3">
                 <input
                   type="text"
@@ -366,7 +336,7 @@ export default function AchievementFormModal({ isOpen, onClose, initialData, onC
             onClick={handleSubmit}
             className="w-full px-6 py-2.5 rounded-xl font-bold text-sm text-white bg-primary hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-all"
           >
-            {isSubmitting ? "กำลังบันทึก..." : isEdit ? "บันทึกการเปลี่ยนแปลง" : "+ เพิ่มความสำเร็จ"}
+            {isSubmitting ? "กำลังบันทึก..." : "+ เพิ่มความสำเร็จ"}
           </button>
         </div>
       </div>

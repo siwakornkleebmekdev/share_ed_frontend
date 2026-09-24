@@ -23,7 +23,6 @@ const Notifications = lazy(() => import("./pages/Notifications"));
 const Achievements = lazy(() => import("./pages/Achievements"));
 const PostDetails = lazy(() => import("./pages/PostDetails"));
 const SettingsProfile = lazy(() => import("./pages/settings/SettingsProfile"));
-const SettingsAppearance = lazy(() => import("./pages/settings/SettingsAppearance"));
 const SettingsWidgets = lazy(() => import("./pages/settings/SettingsWidgets"));
 const SettingsAccount = lazy(() => import("./pages/settings/SettingsAccount"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
@@ -353,7 +352,7 @@ function App() {
           }
         >
           <Route path="profile" element={<SettingsProfile />} />
-          <Route path="appearance" element={<SettingsAppearance />} />
+          <Route path="appearance" element={<Navigate to="/settings/profile" replace />} />
           <Route path="widgets" element={<SettingsWidgets />} />
           <Route path="account" element={<SettingsAccount />} />
         </Route>
