@@ -200,6 +200,8 @@ const sorted = (items) => [...new Map(items.filter(Boolean).map(n => [n.id, n]))
 
 export function createNotificationStore(service, realtime) {
   let epoch = 0, revision = 0, flight = null, cleanup = () => {};
+  let lastFetchTime = 0;
+  const FETCH_COOLDOWN_MS = 10_000;
   return create((set, get) => {
     const mutate = async (operation, apply) => {
       if (get().isMutating) return false;
@@ -222,9 +224,15 @@ export function createNotificationStore(service, realtime) {
     return {
       notifications: [], isLoading: false, isMutating: false, error: null,
       unreadCount: () => get().notifications.filter(n => !n.isRead).length,
-      fetchNotifications: () => {
+      fetchNotifications: (options = {}) => {
+        const force = typeof options === 'object' && options?.force === true;
+        const now = Date.now();
+        if (!force && now - lastFetchTime < FETCH_COOLDOWN_MS) {
+          return flight || Promise.resolve();
+        }
         if (flight) return flight;
         if (get().isMutating) return Promise.resolve();
+        lastFetchTime = now;
         const session = epoch, version = revision;
         set({ isLoading: true });
         const request = (async () => {
