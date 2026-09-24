@@ -115,6 +115,7 @@ export function localizeNotificationContent(n, type) {
     'achievementName', 'achievement_name', 'milestoneName', 'milestone_name',
     'rewardName', 'reward_name', 'itemName', 'item_name',
   ]) || getNestedValue(achievementSources.slice(sources.length), ['title', 'name', 'item_name']);
+  const backendMessage = getNestedValue(sources, ['message', 'content']);
   const actor = actorName || 'ผู้ใช้คนหนึ่ง';
   const post = postTitle ? ` “${postTitle}”` : 'ของคุณ';
 
@@ -136,8 +137,6 @@ export function localizeNotificationContent(n, type) {
         ? `คุณปลดล็อกความสำเร็จ “${achievementTitle}” เรียบร้อยแล้ว เข้าไปรับรางวัลได้เลย`
         : 'คุณปลดล็อกความสำเร็จใหม่เรียบร้อยแล้ว เข้าไปรับรางวัลได้เลย'),
   };
-  const backendMessage = getNestedValue(sources, ['message', 'content']);
-
   return {
     title: THAI_TITLES[type] || 'การแจ้งเตือน',
     message:
