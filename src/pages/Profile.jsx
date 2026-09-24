@@ -492,7 +492,8 @@ export default function Profile() {
           )}
           <div className="flex flex-col sm:flex-row gap-8 items-start sm:items-end">
             <div className="relative">
-              <AvatarWithFrame avatarSrc={displayAvatar} frameSrc={framePreviewUrl} avatarAlt="Avatar" sizeClass="h-32 w-32 sm:h-40 sm:w-40" className={`border-4 shadow-2xl ${avatarBorderClass}`} />
+              {/* เมื่อสวมกรอบตกแต่ง ให้ซ่อนขอบขาวของรูปโปรไฟล์ที่อาจโผล่ผ่านช่องว่างของกรอบ */}
+              <AvatarWithFrame avatarSrc={displayAvatar} frameSrc={framePreviewUrl} avatarAlt="Avatar" sizeClass="h-32 w-32 sm:h-40 sm:w-40" className={framePreviewUrl ? "shadow-2xl" : `border-4 shadow-2xl ${avatarBorderClass}`} />
             </div>
 
             <div className="flex-1 pb-2">

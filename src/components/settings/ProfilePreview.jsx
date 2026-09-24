@@ -54,12 +54,13 @@ export default function ProfilePreview({ user, formData }) {
   };
 
   const avatarBlock = (size) => (
+    // ซ่อนขอบรูปในภาพตัวอย่างเมื่อมีกรอบตกแต่ง เพื่อให้เห็นเฉพาะงานกรอบจริง
     <AvatarWithFrame
       avatarSrc={avatarUrl}
       frameSrc={hasFrame ? frameUrl : null}
       frameAlt={equippedFrame?.reward?.name || ''}
       sizeClass={size}
-      className="border-2 border-white/50 bg-slate-200"
+      className={hasFrame ? "bg-slate-200" : "border-2 border-white/50 bg-slate-200"}
       avatarFallback={<div className="flex h-full w-full items-center justify-center font-black text-xl text-slate-500">{(formData.nickname || 'U').charAt(0).toUpperCase()}</div>}
     />
   );
