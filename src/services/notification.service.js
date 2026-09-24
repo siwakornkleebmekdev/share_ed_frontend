@@ -34,7 +34,17 @@ const withAuthenticatedSession = async request => {
 };
 
 export const notificationService = {
-  getNotifications: async () => checked(await withAuthenticatedSession(config => api.get('/notifications', config))),
+  getNotifications: async () => {
+    try {
+      return checked(await withAuthenticatedSession(config => api.get('/notifications', config)));
+    } catch (error) {
+      if (error?.response?.status >= 500) {
+        console.warn('Backend notification service error (500), returning fallback empty list:', error.message);
+        return { success: true, data: [] };
+      }
+      throw error;
+    }
+  },
   markAsRead: async id => checked(await withAuthenticatedSession(config => api.patch(`/notifications/${encodeURIComponent(id)}/read`, undefined, config))),
   markAllAsRead: async () => checked(await withAuthenticatedSession(config => api.patch('/notifications/read-all', undefined, config))),
   deleteNotification: async id => checked(await withAuthenticatedSession(config => api.delete(`/notifications/${encodeURIComponent(id)}`, config))),
