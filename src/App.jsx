@@ -22,7 +22,6 @@ const Profile = lazy(() => import("./pages/Profile"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const Achievements = lazy(() => import("./pages/Achievements"));
 const PostDetails = lazy(() => import("./pages/PostDetails"));
-const RecoverPosts = lazy(() => import("./pages/RecoverPosts"));
 const SettingsProfile = lazy(() => import("./pages/settings/SettingsProfile"));
 const SettingsAppearance = lazy(() => import("./pages/settings/SettingsAppearance"));
 const SettingsWidgets = lazy(() => import("./pages/settings/SettingsWidgets"));
@@ -328,14 +327,6 @@ function App() {
             }
           />
           <Route
-            path="/recover-posts"
-            element={
-              <ProtectedRoute>
-                <RecoverPosts />
-              </ProtectedRoute>
-            }
-          />
-          <Route
             path="/achievements"
             element={
               <ProtectedRoute>
@@ -379,8 +370,8 @@ function App() {
           <Route path="users" element={<AdminRoute><UserManagement /></AdminRoute>} />
           <Route path="users/:id" element={<AdminRoute><UserDetails /></AdminRoute>} />
           <Route path="achievements" element={<AdminRoute><AchievementManagement /></AdminRoute>} />
-          <Route path="posts" element={<PostConsole view="posts" />} />
-          <Route path="reports" element={<PostConsole view="reports" />} />
+          <Route path="posts" element={<Navigate to="/admin/reports" replace />} />
+          <Route path="reports" element={<PostConsole />} />
         </Route>
       </Routes>
       </Suspense>

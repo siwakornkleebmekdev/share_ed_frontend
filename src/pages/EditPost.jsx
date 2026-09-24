@@ -429,7 +429,7 @@ export default function EditPost() {
   const handleDelete = async () => {
     const result = await Swal.fire({
       title: 'คุณต้องการลบโพสต์นี้ใช่หรือไม่?',
-      text: 'การดำเนินการนี้จะทำการลบโพสต์แบบ Soft Delete (ซ่อนโพสต์ชั่วคราว)',
+      text: 'โพสต์และไฟล์ที่เกี่ยวข้องจะถูกลบถาวรและไม่สามารถกู้คืนได้',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#ef4444',

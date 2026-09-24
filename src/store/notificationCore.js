@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-const POST_TYPES = new Set(['LIKE', 'NEW_LIKE', 'COMMENT', 'NEW_COMMENT', 'NEW_POST', 'BOOKMARK', 'BOOKMARK_REMOVED', 'POST_SUSPENDED', 'POST_RESTORED', 'POST_REMOVED', 'POST_REPORTED']);
+const POST_TYPES = new Set(['LIKE', 'NEW_LIKE', 'COMMENT', 'NEW_COMMENT', 'NEW_POST', 'BOOKMARK', 'BOOKMARK_REMOVED', 'POST_SUSPENDED', 'POST_REMOVED', 'POST_REPORTED']);
 const FOLLOW_TYPES = new Set(['FOLLOW', 'NEW_FOLLOWER']);
 const THAI_TEXT = /[\u0E00-\u0E7F]/;
 const THAI_TITLES = {
@@ -15,7 +15,6 @@ const THAI_TITLES = {
   BOOKMARK: 'มีคนบันทึกโพสต์ของคุณ',
   BOOKMARK_REMOVED: 'มีคนยกเลิกการบันทึกโพสต์ของคุณ',
   POST_SUSPENDED: 'โพสต์ของคุณถูกระงับ',
-  POST_RESTORED: 'โพสต์ของคุณได้รับการคืนสถานะ',
   POST_REMOVED: 'โพสต์ของคุณถูกลบ',
   POST_REPORTED: 'มีโพสต์ถูกรายงาน',
   ACHIEVEMENT_COMPLETED: 'ปลดล็อกความสำเร็จใหม่!',

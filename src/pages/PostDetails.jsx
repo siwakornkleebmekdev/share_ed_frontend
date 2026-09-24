@@ -55,42 +55,14 @@ export default function PostDetails() {
   const [post, setPost] = useState(null);
   const [authorProfile, setAuthorProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isDeletedPost, setIsDeletedPost] = useState(false);
-  const [isDeletedPostOwner, setIsDeletedPostOwner] = useState(false);
-
-  useEffect(() => {
-    if (!isDeletedPost) return undefined;
-
-    const redirectTimer = window.setTimeout(() => {
-      navigate('/home', { replace: true });
-    }, 2000);
-
-    return () => window.clearTimeout(redirectTimer);
-  }, [isDeletedPost, navigate]);
 
   useEffect(() => {
     const fetchPost = async () => {
       try {
-        setIsDeletedPost(false);
-        setIsDeletedPostOwner(false);
         if (!post || String(post.id) !== String(id)) {
           setIsLoading(true);
         }
         const data = await postService.getPostById(id);
-
-        if (String(data?.postStatus || data?.post_status).toUpperCase() === 'DELETED') {
-          const viewerId = user?.id || user?.user_id;
-          const deletedPostAuthorId = data?.authorId || data?.author_id || data?.user_id || data?.author?.id;
-
-          setPost(null);
-          setIsDeletedPostOwner(Boolean(
-            viewerId &&
-            deletedPostAuthorId &&
-            String(viewerId) === String(deletedPostAuthorId)
-          ));
-          setIsDeletedPost(true);
-          return;
-        }
 
         setPost(data);
         if (data) {
@@ -120,14 +92,7 @@ export default function PostDetails() {
         }
       } catch (error) {
         console.error('Error loading post details:', error);
-        const errorMessage = error?.response?.data?.message || error?.message || '';
-        const deletedResponse = error?.response?.status === 410 || /ถูกลบ|deleted/i.test(errorMessage);
-
         setPost(null);
-        // Other members receive a 404 for a deleted post, without its author
-        // data, so this branch must use the non-owner wording.
-        setIsDeletedPostOwner(false);
-        setIsDeletedPost(deletedResponse);
       } finally {
         setIsLoading(false);
       }
@@ -347,7 +312,7 @@ export default function PostDetails() {
   const handleDelete = async () => {
     const result = await Swal.fire({
       title: `คุณต้องการลบโพสต์ "${post?.title}" ใช่หรือไม่?`,
-      text: 'โพสต์จะถูกซ่อน และคุณสามารถกู้คืนได้ภายใน 5 นาทีหลังลบ',
+      text: 'โพสต์และไฟล์ที่เกี่ยวข้องจะถูกลบถาวรและไม่สามารถกู้คืนได้',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#ef4444',
@@ -373,10 +338,10 @@ export default function PostDetails() {
           await Swal.fire({
             icon: 'success',
             title: 'ลบสำเร็จ!',
-            text: 'โพสต์ถูกลบแล้ว คุณสามารถกู้คืนได้ภายใน 5 นาที',
+            text: 'โพสต์และไฟล์ที่เกี่ยวข้องถูกลบถาวรแล้ว',
             confirmButtonColor: '#3b82f6'
           });
-          navigate('/recover-posts');
+          navigate('/home');
         } else {
           throw new Error(response?.message || 'เกิดข้อผิดพลาดในการลบโพสต์');
         }
@@ -479,29 +444,6 @@ export default function PostDetails() {
 
   if (isLoading) {
     return <div className="text-center py-20 text-slate-500 font-medium">กำลังโหลดข้อมูล...</div>;
-  }
-
-  if (isDeletedPost) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center px-4 py-16" role="status" aria-live="polite">
-        <div className="w-full max-w-lg rounded-3xl border border-red-100 bg-white p-8 sm:p-10 text-center shadow-xl shadow-red-100/50">
-          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-red-50 text-red-500">
-            <Trash2 className="h-8 w-8" aria-hidden="true" />
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">
-            {isDeletedPostOwner ? 'โพสต์ของคุณถูกลบไปแล้ว' : 'โพสต์นี้ถูกลบไปแล้ว'}
-          </h1>
-          <p className="mt-3 text-slate-500">กำลังพาคุณกลับไปหน้า Home ภายใน 2 วินาที...</p>
-          <Link
-            to="/home"
-            replace
-            className="mt-6 inline-flex items-center justify-center rounded-xl bg-primary px-5 py-2.5 font-semibold text-white transition-opacity hover:opacity-90"
-          >
-            กลับหน้า Home
-          </Link>
-        </div>
-      </div>
-    );
   }
 
   if (!post) {

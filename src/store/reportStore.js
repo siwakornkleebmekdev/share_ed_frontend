@@ -6,11 +6,8 @@ const CACHE_TTL_MS = 10_000;
 let reportsFlight = null;
 let realtimeCleanup = () => {};
 
-const isPendingPost = (post) =>
-  String(post?.post_status || post?.postStatus || "").toUpperCase() !== "DELETED";
 const isConsolePost = (post) =>
-  String(post?.post_status || post?.postStatus || "").toUpperCase() === "DELETED"
-  || (post?._count?.reports ?? post?.reports?.length ?? 0) >= 10;
+  (post?._count?.reports ?? post?.reports?.length ?? 0) >= 10;
 
 const useReportStore = create((set, get) => ({
   reports: [],
@@ -19,8 +16,8 @@ const useReportStore = create((set, get) => ({
   error: null,
   lastFetchedAt: 0,
 
-  pendingReports: () => get().reports.filter(isPendingPost),
-  pendingCount: () => get().reports.filter(isPendingPost).length,
+  pendingReports: () => get().reports,
+  pendingCount: () => get().reports.length,
 
   fetchReports: async ({ force = false } = {}) => {
     const state = get();
@@ -61,18 +58,7 @@ const useReportStore = create((set, get) => ({
                 ? { ...post, post_status: "UNACTIVED" }
                 : post,
             )
-          : action === "SOFT_DELETE"
-            ? state.reports.map((post) =>
-                String(post.id) === String(postId)
-                  ? {
-                      ...post,
-                      post_status: "DELETED",
-                      updated_at: new Date().toISOString(),
-                      recoverable_until: result.recoverableUntil,
-                    }
-                  : post,
-              )
-            : state.reports.filter((post) => String(post.id) !== String(postId)),
+          : state.reports.filter((post) => String(post.id) !== String(postId)),
         isReviewing: false,
         lastFetchedAt: Date.now(),
       }));
@@ -111,10 +97,6 @@ const useReportStore = create((set, get) => ({
       const postId = payload.postId || payload.post_id;
       const action = String(payload.action || "").toUpperCase();
       if (!postId) return;
-      if (action === "SOFT_DELETE" && !get().reports.some((post) => String(post.id) === String(postId))) {
-        get().fetchReports({ force: true }).catch(() => {});
-        return;
-      }
       set((state) => ({
         reports: action === "SUSPEND"
           ? state.reports.map((post) =>
@@ -122,18 +104,7 @@ const useReportStore = create((set, get) => ({
                 ? { ...post, post_status: "UNACTIVED" }
                 : post,
             )
-          : action === "SOFT_DELETE"
-            ? state.reports.map((post) =>
-                String(post.id) === String(postId)
-                  ? {
-                      ...post,
-                      post_status: "DELETED",
-                      updated_at: new Date().toISOString(),
-                      recoverable_until: payload.recoverableUntil || payload.recoverable_until,
-                    }
-                  : post,
-              )
-            : state.reports.filter((post) => String(post.id) !== String(postId)),
+          : state.reports.filter((post) => String(post.id) !== String(postId)),
         lastFetchedAt: Date.now(),
       }));
     });
