@@ -36,7 +36,14 @@ const useAchievementStore = create((set, get) => ({
       return;
     }
 
-    const state = get();
+    let state = get();
+    if (state.ownerId !== userId) {
+      milestonesRequestId++;
+      milestonesFlight = null;
+      milestonesFlightOwner = null;
+      set({ milestones: [], isLoading: false, error: null, ownerId: userId, lastFetchedAt: 0 });
+      state = get();
+    }
     if (
       !force &&
       state.ownerId === userId &&

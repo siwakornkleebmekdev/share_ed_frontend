@@ -38,12 +38,8 @@ api.interceptors.request.use(
     try {
       const { data, error } = await supabase.auth.getSession();
       if (!error) token = data?.session?.access_token || null;
-      if (token) localStorage.setItem('access_token', token);
-      else localStorage.removeItem('access_token');
     } catch {
-      // Storage can be unavailable in restricted browser contexts. In that
-      // case only, retain compatibility with the last known token.
-      token = localStorage.getItem('access_token');
+      token = null;
     }
     if (token && token !== 'undefined' && token !== 'null') {
       if (config.headers && typeof config.headers.set === 'function') {

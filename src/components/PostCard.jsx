@@ -65,11 +65,9 @@ export default function PostCard({ post, viewMode, rank = null, dark = false, on
       post.current_frame;
     const suppliedFrameId =
       authorOverride?.current_frame_id ||
-      authorOverride?.profile_frame_id ||
       post.author_frame_id ||
       post.authorFrameId ||
       post.author?.current_frame_id ||
-      post.author?.profile_frame_id ||
       post.current_frame_id;
 
     setFetchedAuthorProfile(null);
@@ -98,28 +96,21 @@ export default function PostCard({ post, viewMode, rank = null, dark = false, on
   const authorFrameId = isCurrentUser && 'current_frame_id' in user
     ? user.current_frame_id
     : authorOverride?.current_frame_id ||
-    authorOverride?.profile_frame_id ||
     post.author_frame_id ||
     post.authorFrameId ||
     post.author?.current_frame_id ||
-    post.author?.profile_frame_id ||
-    post.author?.frame_id ||
     post.current_frame_id ||
     fetchedAuthorProfile?.current_frame_id ||
-    fetchedAuthorProfile?.profile_frame_id ||
-    fetchedAuthorProfile?.user_metadata?.profile_frame_id ||
-    (authorId ? localStorage.getItem(`profile_frame_id_${authorId}`) : null);
+    null;
 
   const serverFrame = isCurrentUser && 'current_frame_id' in user
     ? user.current_frame
     : authorOverride?.current_frame ||
-    authorOverride?.profile_frame ||
     post.authorFrame ||
     post.author_frame ||
     post.author?.current_frame ||
     post.current_frame ||
-    fetchedAuthorProfile?.current_frame ||
-    fetchedAuthorProfile?.profile_frame;
+    fetchedAuthorProfile?.current_frame;
 
   const authorFrameUrl = isCurrentUser && !authorFrameId ? null : (
     serverFrame?.image_url ||

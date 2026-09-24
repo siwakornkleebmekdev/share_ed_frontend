@@ -369,7 +369,6 @@ export default function Profile() {
         ...ownProfile,
         current_frame_id: user && 'current_frame_id' in user ? user.current_frame_id : ownProfile?.current_frame_id ?? null,
         current_frame: user?.current_frame_id == null ? null : (user?.current_frame || ownProfile?.current_frame),
-        profile_frame_id: user && 'profile_frame_id' in user ? user.profile_frame_id : ownProfile?.profile_frame_id ?? null,
         user_metadata: user?.user_metadata,
       };
   const {

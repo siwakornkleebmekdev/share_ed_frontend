@@ -14,11 +14,10 @@ import {
 import toast from 'react-hot-toast';
 import useAchievementStore from '@/store/achievementStore';
 import useAuthStore from '@/store/authStore';
-import { supabase } from '@/utils/supabase';
 import { profileService } from '@/services/profile.service';
 
 export default function Achievements() {
-  const { milestones, isLoading, error, fetchMilestones, claimReward } = useAchievementStore();
+  const { milestones: storedMilestones, ownerId, isLoading, error, fetchMilestones, claimReward } = useAchievementStore();
   const { user } = useAuthStore();
   const [filterTab, setFilterTab] = useState('ALL'); // 'ALL' | 'READY' | 'CLAIMED' | 'LOCKED'
   const [claimingId, setClaimingId] = useState(null);
@@ -32,14 +31,12 @@ export default function Achievements() {
       user?.display_name || user?.username || 'User'
     )}&background=1e293b&color=38bdf8`;
 
-  const currentUserId = user?.id || user?.user_id;
-  const currentEquippedFrameId =
-    user?.current_frame_id ||
-    user?.profile_frame_id ||
-    user?.user_metadata?.profile_frame_id ||
-    (currentUserId ? localStorage.getItem(`profile_frame_id_${currentUserId}`) : null) ||
-    localStorage.getItem('profile_frame_id') ||
-    null;
+  const currentUserId = user?.id || user?.user_id || null;
+  const milestones = useMemo(
+    () => ownerId === currentUserId ? storedMilestones : [],
+    [ownerId, currentUserId, storedMilestones],
+  );
+  const currentEquippedFrameId = user?.current_frame_id || null;
 
   useEffect(() => {
     fetchMilestones({ force: true });
@@ -67,42 +64,17 @@ export default function Achievements() {
   const handleEquipFrame = async (milestone) => {
     const frameId = milestone.reward_item_id || milestone.reward_item?.id || milestone.reward?.id;
     if (milestone.status !== 'CLAIMED' || !frameId) return;
-    const userId = user?.id || user?.user_id;
     setEquippingId(frameId);
-    const previousFrameId = user?.current_frame_id || user?.profile_frame_id || user?.user_metadata?.profile_frame_id || null;
-    const previousFrame = user?.current_frame || null;
-    const applyLocally = (id, frame) => {
-      if (id) {
-        if (userId) localStorage.setItem(`profile_frame_id_${userId}`, id);
-        localStorage.setItem('profile_frame_id', id);
-      } else {
-        if (userId) localStorage.removeItem(`profile_frame_id_${userId}`);
-        localStorage.removeItem('profile_frame_id');
-      }
-      useAuthStore.getState().login({ ...user, current_frame_id: id, profile_frame_id: id, current_frame: frame,
-        user_metadata: { ...user?.user_metadata, profile_frame_id: id } });
-    };
     try {
-      applyLocally(frameId, milestone.reward_item || milestone.reward);
-      const toastId = toast.success(`✨ เปลี่ยนไปใช้ "${milestone.reward.name}" เรียบร้อย!`);
-      const [authResult, equipResult] = await Promise.allSettled([
-        supabase.auth.updateUser({ data: { profile_frame_id: frameId } }),
-        profileService.equipItem(frameId, 'FRAME'),
-      ]);
-      if (equipResult.status === 'rejected' || equipResult.value?.success === false) {
-        toast.dismiss(toastId);
-        applyLocally(previousFrameId, previousFrame);
-        try {
-          const restore = await supabase.auth.updateUser({ data: { profile_frame_id: previousFrameId } });
-          if (restore.error) console.warn('Unable to restore frame metadata:', restore.error);
-        } catch (restoreError) { console.warn('Unable to restore frame metadata:', restoreError); }
-        toast.error('ไม่สามารถบันทึกกรอบได้ ระบบคืนค่ากรอบเดิมแล้ว');
-      } else if (authResult.status === 'rejected' || authResult.value?.error) {
-        console.warn('Unable to sync frame metadata:', authResult.status === 'rejected' ? authResult.reason : authResult.value.error);
+      const equipResult = await profileService.equipItem(frameId, 'FRAME');
+      if (equipResult?.success === false) {
+        throw new Error(equipResult.error?.message || 'ไม่สามารถบันทึกกรอบโปรไฟล์ได้');
       }
+      useAuthStore.getState().login({ ...user, ...(equipResult?.data || {}) });
+      toast.success(`✨ เปลี่ยนไปใช้ "${milestone.reward.name}" เรียบร้อย!`);
     } catch (err) {
       console.error('Error equipping frame:', err);
-      toast.error('ไม่สามารถเปลี่ยนกรอบรูปได้');
+      toast.error(err.message || 'ไม่สามารถเปลี่ยนกรอบรูปได้');
     } finally {
       setEquippingId(null);
     }

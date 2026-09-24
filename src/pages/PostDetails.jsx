@@ -231,7 +231,6 @@ export default function PostDetails() {
     ...post?.author,
     ...(isAuthor ? user : {}),
     ...authorProfile,
-    profile_frame_id: isAuthor && user && 'current_frame_id' in user ? user.current_frame_id : authorProfile?.profile_frame_id,
     user_metadata: isAuthor ? user?.user_metadata : authorProfile?.user_metadata,
     current_frame_id: (isAuthor && user && 'current_frame_id' in user) ? user.current_frame_id : authorProfile?.current_frame_id
       || post?.author_frame_id

@@ -18,8 +18,11 @@ const useAuthStore = create((set) => ({
     try {
       localStorage.removeItem("access_token");
       localStorage.removeItem("login_timestamp");
+      // Legacy global frame state is intentionally discarded. The equipped
+      // frame is account-specific and is loaded from the backend after login.
+      localStorage.removeItem("profile_frame_id");
       sessionStorage.clear();
-    } catch (e) {}
+    } catch {}
     set({ isAuthenticated: false, user: null, isRoleLoading: false });
   },
 }));

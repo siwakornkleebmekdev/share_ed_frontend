@@ -1,4 +1,5 @@
 import api from "../utils/api";
+import { supabase } from "../utils/supabase";
 
 export const profileService = {
   // ดึงรายการโพสต์ของฉัน (สถานะเผยแพร่ ACTIVE)
@@ -324,12 +325,14 @@ function mapMilestoneToAchievement(m) {
 import { resolveCategoryName } from './post.service';
 
 async function mergeProfileBookmarkStatus(posts) {
-  const token = localStorage.getItem("access_token");
-  if (!token || token === "undefined" || token === "null" || !posts.length) {
+  if (!posts.length) {
     return posts;
   }
 
   try {
+    const { data, error } = await supabase.auth.getSession();
+    if (error || !data?.session) return posts;
+
     const response = await api.get("/bookmarks");
     const bookmarks = response.data?.success && Array.isArray(response.data?.data)
       ? response.data.data

@@ -7,13 +7,10 @@ export function resolveProfileFrame(profile, milestones = []) {
     profile?.currentFrame ||
     profile?.equipped_frame ||
     profile?.equippedFrame ||
-    profile?.profile_frame ||
     null;
   const selectedFrameId =
     profile?.current_frame_id ||
     profile?.currentFrameId ||
-    profile?.profile_frame_id ||
-    profile?.user_metadata?.profile_frame_id ||
     null;
   const embeddedFrameId =
     frame?.id ||

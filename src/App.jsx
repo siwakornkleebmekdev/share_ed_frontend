@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from "react-router";
-import toast, { Toaster } from "react-hot-toast";
+import { Toaster } from "react-hot-toast";
 import { lazy, Suspense, useEffect, useRef } from "react";
 import useAuthStore from "./store/authStore";
 import useNotificationStore from "./store/notificationStore";
@@ -39,67 +39,6 @@ const RouteLoader = () => (
     <p className="text-sm text-slate-500 font-medium">กำลังโหลดหน้า...</p>
   </div>
 );
-
-// Helper to decode JWT token payload safely
-const getUserFromToken = (token) => {
-  if (!token || typeof token !== "string") return null;
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 3) return null;
-    const base64Url = parts[1];
-    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split("")
-        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-        .join(""),
-    );
-    const payload = JSON.parse(jsonPayload);
-
-    // Check if token expired
-    if (payload.exp && Date.now() >= payload.exp * 1000) {
-      return null;
-    }
-
-    const meta = payload.user_metadata || payload.app_metadata || {};
-    const userId = payload.sub || payload.id || payload.user_id;
-
-    return {
-      id: userId,
-      user_id: userId,
-      email: payload.email || meta.email || "",
-      name:
-        meta.display_name ||
-        meta.full_name ||
-        meta.name ||
-        meta.username ||
-        payload.email?.split("@")[0] ||
-        "ผู้ใช้งาน",
-      avatar: meta.avatar_url || payload.avatar,
-      display_name:
-        meta.display_name ||
-        meta.full_name ||
-        meta.name ||
-        meta.username ||
-        payload.email?.split("@")[0] ||
-        "ผู้ใช้งาน",
-      username:
-        meta.username ||
-        meta.display_name ||
-        meta.full_name ||
-        payload.email?.split("@")[0] ||
-        "ผู้ใช้งาน",
-      education_level:
-        meta.education_level || payload.education_level || "HIGH_SCHOOL",
-      age: meta.age || payload.age || 0,
-      bio: meta.bio || payload.bio || "ยังไม่ได้ระบุ",
-      user_metadata: meta,
-    };
-  } catch (e) {
-    console.error("Error decoding token:", e);
-    return null;
-  }
-};
 
 // Route Guardian Component
 const ProtectedRoute = ({ children }) => {
@@ -177,18 +116,21 @@ function App() {
   const setRoleLoading = useAuthStore((state) => state.setRoleLoading);
   const { connectRealtime, disconnectRealtime, fetchNotifications } = useNotificationStore();
   const prevUserId = useRef(null);
+  const sessionVersion = useRef(0);
 
   useEffect(() => {
+    // Remove the token mirror left by older builds. Supabase owns session
+    // persistence and every authenticated transport reads from that session.
+    localStorage.removeItem("access_token");
+
     const handleSession = async (session) => {
+      const version = ++sessionVersion.current;
       // 1. If Supabase session is active, update login state
       if (session && session.user) {
-        const meta = session.user.user_metadata || {};
+        const meta = { ...(session.user.user_metadata || {}) };
+        delete meta.profile_frame_id;
+        localStorage.removeItem("profile_frame_id");
         const userId = session.user.id;
-        const cachedFrameId =
-          meta.profile_frame_id ||
-          localStorage.getItem(`profile_frame_id_${userId}`) ||
-          localStorage.getItem("profile_frame_id") ||
-          null;
         const cachedWallpaper =
           meta.wallpaper_url ||
           localStorage.getItem(`wallpaper_url_${userId}`) ||
@@ -196,9 +138,6 @@ function App() {
           null;
 
         const userEmail = session.user.email;
-        if (session.access_token) {
-          localStorage.setItem("access_token", session.access_token);
-        }
 
         const baseUser = {
           ...session.user,
@@ -224,7 +163,6 @@ function App() {
           bio: meta.bio || "ยังไม่ได้ระบุ",
           user_metadata: {
             ...meta,
-            profile_frame_id: cachedFrameId,
             wallpaper_url: cachedWallpaper,
           },
         };
@@ -235,6 +173,7 @@ function App() {
         // fetch and merge that in the background (see authService.getMe).
         try {
           const res = await authService.getMe();
+          if (version !== sessionVersion.current) return;
           const dbUser = res?.data || res?.user || (res?.id ? res : null);
           
           if (dbUser) {
@@ -246,11 +185,6 @@ function App() {
               user_metadata: {
                 ...baseUser.user_metadata,
                 ...dbUser.user_metadata,
-                profile_frame_id:
-                  dbUser.user_metadata?.profile_frame_id ||
-                  dbUser.current_frame_id ||
-                  baseUser.user_metadata?.profile_frame_id ||
-                  cachedFrameId,
                 wallpaper_url:
                   dbUser.user_metadata?.wallpaper_url ||
                   dbUser.wallpaper ||
@@ -262,80 +196,15 @@ function App() {
         } catch (e) {
           console.log("Background role sync notice:", e);
         } finally {
-          setInitializing(false);
-          setRoleLoading(false);
+          if (version === sessionVersion.current) {
+            setInitializing(false);
+            setRoleLoading(false);
+          }
         }
         return;
       }
 
-      // 2. If Supabase session is empty, check localStorage access_token
-      const savedToken = localStorage.getItem("access_token");
-      if (savedToken && savedToken !== "undefined" && savedToken !== "null") {
-        const tokenUser = getUserFromToken(savedToken);
-        if (tokenUser) {
-          const userId = tokenUser.id || tokenUser.user_id;
-          const cachedFrameId =
-            tokenUser.user_metadata?.profile_frame_id ||
-            localStorage.getItem(`profile_frame_id_${userId}`) ||
-            localStorage.getItem("profile_frame_id") ||
-            null;
-          const cachedWallpaper =
-            tokenUser.user_metadata?.wallpaper_url ||
-            localStorage.getItem(`wallpaper_url_${userId}`) ||
-            localStorage.getItem("wallpaper_url") ||
-            null;
-
-          const baseTokenUser = {
-            ...tokenUser,
-            user_metadata: {
-              ...tokenUser.user_metadata,
-              profile_frame_id: cachedFrameId,
-              wallpaper_url: cachedWallpaper,
-            },
-          };
-
-          // Token is valid and not expired -> keep user logged in!
-          loginAction(baseTokenUser);
-
-          // Asynchronously attempt to refresh user profile from server
-          try {
-            const res = await authService.getMe();
-            const dbUser = res?.data || res?.user || (res?.id ? res : null);
-            if (dbUser) {
-              const finalUserId =
-                dbUser.id || dbUser._id || dbUser.user_id || userId;
-              loginAction({
-                ...baseTokenUser,
-                ...dbUser,
-                id: finalUserId,
-                user_id: finalUserId,
-                user_metadata: {
-                  ...baseTokenUser.user_metadata,
-                  ...dbUser.user_metadata,
-                  profile_frame_id:
-                    dbUser.user_metadata?.profile_frame_id ||
-                    dbUser.current_frame_id ||
-                    baseTokenUser.user_metadata?.profile_frame_id ||
-                    cachedFrameId,
-                  wallpaper_url:
-                    dbUser.user_metadata?.wallpaper_url ||
-                    dbUser.wallpaper ||
-                    baseTokenUser.user_metadata?.wallpaper_url ||
-                    cachedWallpaper,
-                },
-              });
-            }
-          } catch (e) {
-            console.log("Background getMe check notice:", e);
-          } finally {
-            setInitializing(false);
-            setRoleLoading(false);
-          }
-          return;
-        }
-      }
-
-      // 3. Token is missing or expired -> log out cleanly
+      // Supabase is the browser-session authority.
       logoutAction();
       setInitializing(false);
       setRoleLoading(false);
@@ -348,13 +217,8 @@ function App() {
         handleSession(session);
       })
       .catch(() => {
-        const savedToken = localStorage.getItem("access_token");
-        const tokenUser = getUserFromToken(savedToken);
-        if (tokenUser) {
-          loginAction(tokenUser);
-        } else {
-          logoutAction();
-        }
+        sessionVersion.current += 1;
+        logoutAction();
         setInitializing(false);
         setRoleLoading(false);
       });
@@ -364,6 +228,7 @@ function App() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT") {
+        sessionVersion.current += 1;
         logoutAction();
         setInitializing(false);
         setRoleLoading(false);
@@ -372,9 +237,6 @@ function App() {
         // ป้องกันการรีโหลดหน้า/กระพริบ เมื่อสลับแท็บแล้ว Supabase ยิง event ซ้ำ
         if (!currentUser || currentUser.id !== session.user.id) {
           handleSession(session);
-        } else if (session.access_token) {
-          // อัปเดตเฉพาะ Token เงียบๆ ไม่ต้องโหลดโปรไฟล์ใหม่
-          localStorage.setItem("access_token", session.access_token);
         }
       }
     });
