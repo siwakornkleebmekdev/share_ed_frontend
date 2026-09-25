@@ -1,15 +1,20 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { UploadCloud, File, X, GraduationCap, Tag, AlignLeft, BookOpen, PenTool, Save, Image as ImageIcon, Plus, Eye, FileText, ChevronLeft, Trash2 } from 'lucide-react';
+import { UploadCloud, File, X, GraduationCap, Tag, AlignLeft, BookOpen, PenTool, Save, Image as ImageIcon, Plus, Eye, FileText, ChevronLeft, Trash2, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import ContentEditor from '@/components/posts/ContentEditor';
 import { postService, resolveCategoryName } from '@/services/post.service';
 import { categoryService, isValidCategoryUuid } from '@/services/category.service';
-import { uploadFileToSupabase } from '@/utils/storage';
 import useAuthStore from '@/store/authStore';
 import { getDefaultDraftCoverFile } from '@/utils/draftCover';
 import api from '../utils/api';
+import {
+  validatePdfFile,
+  translateUploadError,
+  formatFileSize,
+  MAX_PDF_SIZE_LABEL,
+} from '@/constants/uploadConstants';
 
 const SUGGESTED_TAGS = ['#AI', '#เรียนรู้ไปด้วยกัน', '#เตรียมสอบ', '#TCAS67', '#สรุปย่อ', '#แชร์ความรู้', '#เด็กซิ่ว', '#สรุปชีท'];
 
@@ -21,6 +26,9 @@ export default function EditPost() {
   // Loading states
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [originalStatus, setOriginalStatus] = useState(null);
+  const [isPdfUploading, setIsPdfUploading] = useState(false);
+  const submitting = useRef(false);
+  const uploadAbortController = useRef(null);
 
   // Existing assets from DB
   const [existingCoverImage, setExistingCoverImage] = useState(null);
@@ -252,22 +260,23 @@ export default function EditPost() {
     const file = e.target.files[0];
     if (!file) return;
 
-    const fileExtension = file.name ? file.name.split('.').pop().toLowerCase() : '';
-    const fileType = file.type ? file.type.toLowerCase() : '';
-
-    if (fileType !== 'application/pdf' && fileExtension !== 'pdf') {
-      toast.error('สามารถอัปโหลดไฟล์ .pdf เท่านั้น');
+    const validation = validatePdfFile(file);
+    if (!validation.valid) {
+      toast.error(validation.error);
       e.target.value = '';
       return;
     }
 
-    if (file.size > 20 * 1024 * 1024) {
-      toast.error('ไฟล์ PDF ต้องมีขนาดไม่เกิน 20 MB');
-      e.target.value = '';
-      return;
+    if (existingPdf && existingPdf.id) {
+      setRemoveMediaIds(prev => prev.includes(existingPdf.id) ? prev : [...prev, existingPdf.id]);
     }
     setPdfFile(file);
     setExistingPdf(null);
+    e.target.value = '';
+  };
+
+  const cancelPdfUpload = () => {
+    uploadAbortController.current?.abort();
   };
 
   const handleImagesUpload = (e) => {
@@ -333,6 +342,19 @@ export default function EditPost() {
       setPreviewFile({ type, url: fileOrUrl });
     } else if (fileOrUrl instanceof File || fileOrUrl instanceof Blob) {
       setPreviewFile({ type, url: URL.createObjectURL(fileOrUrl), isBlob: true });
+    }
+  };
+
+  const handlePreviewPdf = async () => {
+    if (pdfFile) {
+      openPreview(pdfFile, 'pdf');
+    } else if (existingPdf) {
+      try {
+        const downloadUrl = await postService.getPostMediaDownloadUrl(id, existingPdf.id);
+        setPreviewFile({ type: 'pdf', url: downloadUrl });
+      } catch (err) {
+        toast.error(translateUploadError(err, 'ไม่สามารถเปิดดูไฟล์ PDF ได้'));
+      }
     }
   };
 
@@ -478,6 +500,7 @@ export default function EditPost() {
   };
 
   const handleSubmit = async (status = 'ACTIVE') => {
+    if (submitting.current || isPdfUploading) return;
     setFieldErrors({});
     const newErrors = {};
     const isDraft = status === 'DRAFT';
@@ -508,14 +531,20 @@ export default function EditPost() {
       return;
     }
 
+    submitting.current = true;
+    if (pdfFile) setIsPdfUploading(true);
+    const uploadController = new AbortController();
+    uploadAbortController.current = uploadController;
+    const savingToastId = toast.loading(pdfFile ? 'กำลังอัปโหลด PDF...' : 'กำลังบันทึกโพสต์...');
     try {
-      Swal.fire({
-        title: 'กำลังบันทึกข้อมูลโพสต์...',
-        allowOutsideClick: false,
-        didOpen: () => {
-          Swal.showLoading();
-        }
-      });
+      // 1. If user selected a new PDF, upload directly to Supabase Storage via signed URL
+      let pdfMetadata = null;
+      if (pdfFile) {
+        pdfMetadata = await postService.uploadPdfToSupabase(pdfFile, {
+          signal: uploadController.signal,
+        });
+        setIsPdfUploading(false);
+      }
 
       const formData = new FormData();
       formData.append('title', title.trim() || 'Untitled draft');
@@ -546,37 +575,19 @@ export default function EditPost() {
 
       if (coverImage) {
         formData.append('cover_image', coverImage);
-        try {
-          const coverUrl = await uploadFileToSupabase(coverImage, 'posts', 'covers');
-          if (coverUrl) formData.append('cover_image_url', coverUrl);
-        } catch (e) {
-          console.log('Cover upload to Supabase storage notice:', e);
-        }
       } else if (isDraft && !existingCoverImage) {
         formData.append('cover_image', await getDefaultDraftCoverFile());
       }
 
-      if (pdfFile) {
-        formData.append('media_files', pdfFile);
-        try {
-          const pdfUrl = await uploadFileToSupabase(pdfFile, 'posts', 'documents');
-          if (pdfUrl) formData.append('pdf_url', pdfUrl);
-        } catch (e) {
-          console.log('PDF upload to Supabase storage notice:', e);
-        }
+      // Supabase PDF metadata (direct upload)
+      if (pdfMetadata) {
+        formData.append('pdf_upload', JSON.stringify(pdfMetadata));
+        formData.append('upload_session_id', pdfMetadata.upload_session_id);
       }
 
       if (images && images.length > 0) {
-        const imageUrls = [];
         for (const img of images) {
           formData.append('media_files', img);
-          try {
-            const url = await uploadFileToSupabase(img, 'posts', 'images');
-            if (url) imageUrls.push(url);
-          } catch { }
-        }
-        if (imageUrls.length > 0) {
-          formData.append('image_urls', JSON.stringify(imageUrls));
         }
       }
 
@@ -606,13 +617,20 @@ export default function EditPost() {
     } catch (error) {
       Swal.close();
       console.error('Error updating post:', error);
-      const errMsg = error.response?.data?.message || error.message || 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้';
+      const errMsg = translateUploadError(error, error.response?.data?.message || error.message || 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
       Swal.fire({
         icon: 'error',
         title: 'เกิดข้อผิดพลาด',
         text: errMsg,
         confirmButtonColor: '#3b82f6'
       });
+    } finally {
+      toast.dismiss(savingToastId);
+      if (uploadAbortController.current === uploadController) {
+        uploadAbortController.current = null;
+      }
+      submitting.current = false;
+      setIsPdfUploading(false);
     }
   };
 
@@ -834,22 +852,28 @@ export default function EditPost() {
             <div>
               <label className="flex items-center justify-between text-base font-bold text-slate-800 mb-3">
                 <span>ไฟล์เอกสารประกอบ PDF (ถ้ามี)</span>
-                <span className="text-xs font-normal text-slate-500">ไม่เกิน 20 MB</span>
+                <span className="text-xs font-normal text-slate-500">{MAX_PDF_SIZE_LABEL}</span>
               </label>
 
-              {!pdfFile && !existingPdf ? (
+              {isPdfUploading ? (
+                <div className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-primary/40 bg-blue-50/50 rounded-2xl">
+                  <Loader2 className="h-8 w-8 text-primary animate-spin mb-2" />
+                  <span className="text-sm font-medium text-primary">กำลังอัปโหลด PDF...</span>
+                  <button type="button" onClick={cancelPdfUpload} className="mt-2 text-xs font-bold text-rose-600 hover:text-rose-700 cursor-pointer">
+                    ยกเลิกการอัปโหลด
+                  </button>
+                </div>
+              ) : !pdfFile && !existingPdf ? (
                 <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-300 rounded-2xl hover:border-primary hover:bg-slate-50 cursor-pointer transition-all">
                   <UploadCloud className="h-8 w-8 text-slate-400 mb-2" />
                   <span className="text-sm font-medium text-slate-500">อัปโหลดไฟล์ PDF ใหม่</span>
-                  <input type="file" className="hidden" accept=".pdf" onChange={handlePdfUpload} />
+                  <span className="text-xs text-slate-400 mt-0.5">{MAX_PDF_SIZE_LABEL}</span>
+                  <input type="file" className="hidden" accept=".pdf,application/pdf" onChange={handlePdfUpload} />
                 </label>
               ) : (
                 <div
                   className="flex items-center justify-between p-4 bg-blue-50 border border-blue-100 rounded-2xl group cursor-pointer hover:bg-blue-100/50 transition-colors"
-                  onClick={() => {
-                    if (pdfFile) openPreview(pdfFile, 'pdf');
-                    else setPreviewFile({ type: 'pdf', url: existingPdf.url });
-                  }}
+                  onClick={handlePreviewPdf}
                 >
                   <div className="flex items-center gap-4 truncate">
                     <File className="h-8 w-8 text-primary flex-shrink-0" />
@@ -858,20 +882,21 @@ export default function EditPost() {
                         {pdfFile ? pdfFile.name : existingPdf.name}
                       </p>
                       <p className="text-xs text-slate-500">
-                        {pdfFile ? `${(pdfFile.size / (1024 * 1024)).toFixed(2)} MB` : existingPdf.size || 'PDF'}
+                        {pdfFile ? formatFileSize(pdfFile.size) : existingPdf.size || 'PDF'}
                       </p>
                     </div>
                   </div>
                   <button
+                    type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       setPdfFile(null);
-                      setExistingPdf(null);
                       if (existingPdf && existingPdf.id) {
-                        setRemoveMediaIds(prev => [...prev, existingPdf.id]);
+                        setRemoveMediaIds(prev => prev.includes(existingPdf.id) ? prev : [...prev, existingPdf.id]);
                       }
+                      setExistingPdf(null);
                     }}
-                    className="p-2 bg-white text-slate-500 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-all flex-shrink-0 z-10 shadow-sm border border-slate-200 hover:border-rose-200"
+                    className="p-2 bg-white text-slate-500 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-all flex-shrink-0 z-10 shadow-sm border border-slate-200 hover:border-rose-200 cursor-pointer"
                     title="ลบไฟล์ PDF"
                   >
                     <X className="h-5 w-5" />
@@ -987,12 +1012,22 @@ export default function EditPost() {
           </div>
           <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
             {originalStatus === 'DRAFT' && (
-              <button onClick={() => handleSubmit('DRAFT')} className="w-full sm:w-auto px-6 py-4 rounded-xl font-bold text-primary bg-blue-50 border border-blue-100 hover:bg-blue-100 transition-colors flex items-center justify-center gap-2 cursor-pointer">
+              <button
+                type="button"
+                disabled={isPdfUploading || isContentUploading || submitting.current || isPageLoading}
+                onClick={() => handleSubmit('DRAFT')}
+                className="w-full sm:w-auto px-6 py-4 rounded-xl font-bold text-primary bg-blue-50 border border-blue-100 hover:bg-blue-100 transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 <Save className="h-5 w-5" />
                 บันทึกแบบร่าง
               </button>
             )}
-            <button onClick={() => handleSubmit('ACTIVE')} className="w-full sm:w-auto px-8 py-4 rounded-xl font-bold text-white bg-primary hover:bg-blue-600 transition-colors shadow-md hover:shadow-lg hover:-translate-y-0.5 cursor-pointer">
+            <button
+              type="button"
+              disabled={isPdfUploading || isContentUploading || submitting.current || isPageLoading}
+              onClick={() => handleSubmit('ACTIVE')}
+              className="w-full sm:w-auto px-8 py-4 rounded-xl font-bold text-white bg-primary hover:bg-blue-600 transition-colors shadow-md hover:shadow-lg hover:-translate-y-0.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               {originalStatus === 'DRAFT' ? 'บันทึกและโพสต์' : 'บันทึกการแก้ไข'}
             </button>
           </div>

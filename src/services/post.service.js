@@ -1,6 +1,11 @@
 import api from '../utils/api.js';
 import { supabase } from '../utils/supabase.js';
 import { categoryService } from './category.service.js';
+import {
+  validatePdfFile,
+  translateUploadError,
+  formatFileSize,
+} from '../constants/uploadConstants.js';
 
 // ดึงชื่อไฟล์จาก URL (รองรับทั้ง URL ปกติและ Cloudinary URL ที่มี URL encoding)
 function extractFileNameFromUrl(url) {
@@ -127,16 +132,137 @@ export const postService = {
     }
   },
 
-  getUploadSignatures: async (types) => {
+  getUploadSignatures: async (types, options = {}) => {
     const uniqueTypes = [...new Set(types)].filter(Boolean);
     try {
-      const response = await api.post('/posts/upload-signatures', { types: uniqueTypes });
+      const response = await api.post('/posts/upload-signatures', { types: uniqueTypes }, {
+        signal: options.signal,
+      });
       const data = response.data?.data;
       if (response.data?.success && data?.uploads && data?.sessionId) return data;
       throw new Error(response.data?.message || 'ไม่สามารถสร้าง Signature สำหรับอัปโหลดไฟล์ได้');
     } catch (error) {
       console.error('Error fetching upload signatures:', error);
       throw error;
+    }
+  },
+
+  // Get signed PDF upload parameters from backend for Supabase Storage
+  getSignedPdfUpload: async (sessionId = null, options = {}) => {
+    try {
+      const payload = sessionId ? { upload_session_id: sessionId } : {};
+      const response = await api.post('/posts/upload-signatures/pdf', payload, {
+        signal: options.signal,
+      });
+      if (response.data?.success && response.data?.data) {
+        return response.data.data;
+      }
+      throw new Error(response.data?.message || 'ไม่สามารถขอสิทธิ์อัปโหลด PDF ได้');
+    } catch (error) {
+      console.error('Error fetching signed PDF upload:', error);
+      const thaiMsg = translateUploadError(error, 'ไม่สามารถสร้าง URL สำหรับอัปโหลด PDF ได้');
+      const err = new Error(thaiMsg);
+      err.code = error.response?.data?.code || error.code || 'PDF_STORAGE_ERROR';
+      err.response = error.response;
+      throw err;
+    }
+  },
+
+  // Upload PDF directly to Supabase Storage via signed URL issued by backend
+  uploadPdfToSupabase: async (file, options = {}) => {
+    if (!file) throw new Error('กรุณาเลือกไฟล์ PDF');
+
+    // 1. Client-side validation before network request
+    const validation = validatePdfFile(file);
+    if (!validation.valid) {
+      const err = new Error(validation.error);
+      err.code = validation.code;
+      throw err;
+    }
+
+    const signal = options.signal;
+    const timeout = AbortSignal.timeout(120000);
+    const uploadSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
+
+    if (uploadSignal.aborted) {
+      const err = new Error('การอัปโหลดไฟล์ถูกยกเลิกหรือหมดเวลา');
+      err.code = 'ABORT_ERROR';
+      throw err;
+    }
+
+    // 2. Request backend for signed upload credentials (bucket, path, token, uploadSessionId)
+    const signedData = await postService.getSignedPdfUpload(options.sessionId, {
+      signal: uploadSignal,
+    });
+    if (!signedData?.bucket || !signedData?.path || !signedData?.token) {
+      const err = new Error('ข้อมูลสำหรับอัปโหลด PDF ไม่สมบูรณ์');
+      err.code = 'PDF_STORAGE_ERROR';
+      throw err;
+    }
+
+    // 3. Upload directly to Supabase Storage using uploadToSignedUrl
+    const uploadPromise = supabase.storage
+      .from(signedData.bucket)
+      .uploadToSignedUrl(signedData.path, signedData.token, file, {
+        contentType: 'application/pdf',
+        upsert: true,
+      });
+
+    const abortPromise = new Promise((_, reject) => {
+      uploadSignal.addEventListener('abort', () => {
+        const err = new Error('การอัปโหลดไฟล์ถูกยกเลิกหรือหมดเวลา');
+        err.code = 'ABORT_ERROR';
+        reject(err);
+      });
+    });
+
+    let result;
+    try {
+      result = await Promise.race([uploadPromise, abortPromise]);
+    } catch (err) {
+      console.error('Supabase upload exception:', err);
+      const thaiMsg = translateUploadError(err, 'ไม่สามารถอัปโหลด PDF ได้');
+      const e = new Error(thaiMsg);
+      e.code = err.code || 'PDF_STORAGE_ERROR';
+      throw e;
+    }
+
+    if (result?.error) {
+      console.error('Supabase upload error:', result.error);
+      const thaiMsg = translateUploadError(result.error, 'ไม่สามารถอัปโหลด PDF ได้');
+      const err = new Error(thaiMsg);
+      err.code = result.error.code || 'PDF_STORAGE_ERROR';
+      throw err;
+    }
+
+    // 4. Return metadata to send to backend upon post create/update
+    return {
+      provider: 'SUPABASE',
+      bucket: signedData.bucket,
+      path: signedData.path,
+      upload_session_id: signedData.uploadSessionId,
+      original_name: file.name,
+    };
+  },
+
+  // Get authorized signed download URL for post PDF media
+  getPostMediaDownloadUrl: async (postId, mediaId) => {
+    try {
+      const response = await api.get(`/posts/${postId}/media/${mediaId}/download`, {
+        params: { redirect: 'false' },
+        headers: { Accept: 'application/json' },
+      });
+      if (response.data?.success && response.data?.data) {
+        return response.data.data.downloadUrl || response.data.data.url;
+      }
+      throw new Error(response.data?.message || 'ไม่พบ URL สำหรับดาวน์โหลดเอกสาร');
+    } catch (error) {
+      console.error('Error fetching download URL:', error);
+      const thaiMsg = translateUploadError(error, 'ไม่สามารถดาวน์โหลดไฟล์ได้');
+      const err = new Error(thaiMsg);
+      err.code = error.response?.data?.code || error.code || 'DOWNLOAD_FAILED';
+      err.response = error.response;
+      throw err;
     }
   },
 
@@ -169,51 +295,78 @@ export const postService = {
     }
   },
 
-  // One backend request for credentials, then at most four provider uploads at once.
-  uploadPostFilesDirect: async ({ coverImage, pdfFile = null, images = [] }) => {
+  // One backend request for credentials, then Cloudinary uploads for cover/images and Supabase Storage for PDF
+  uploadPostFilesDirect: async ({ coverImage, pdfFile = null, images = [], signal }) => {
     if (!coverImage) throw new Error('กรุณาอัปโหลดรูปภาพหน้าปก');
     const imageFiles = Array.from(images || []);
     if (imageFiles.length + (pdfFile ? 1 : 0) > 15) throw new Error('แนบไฟล์ได้สูงสุด 15 ไฟล์');
-    const allFiles = [coverImage, ...(pdfFile ? [pdfFile] : []), ...imageFiles];
-    if (new Set(allFiles).size !== allFiles.length) throw new Error('ไม่สามารถแนบไฟล์ซ้ำได้');
-    for (const file of allFiles) {
-      const maxBytes = file === pdfFile ? 20 * 1024 * 1024 : 2 * 1024 * 1024;
-      if (!file.size || file.size > maxBytes) throw new Error('ไฟล์ว่างหรือมีขนาดเกินกำหนด');
-      if (file.type && !(file === pdfFile ? ['application/pdf'] : ['image/jpeg','image/png','image/webp']).includes(file.type)) {
-        throw new Error('ชนิดไฟล์ไม่รองรับ');
+
+    if (pdfFile) {
+      const pdfVal = validatePdfFile(pdfFile);
+      if (!pdfVal.valid) {
+        const err = new Error(pdfVal.error);
+        err.code = pdfVal.code;
+        throw err;
       }
     }
-    if (allFiles.reduce((total,file)=>total+file.size,0) > 50*1024*1024) throw new Error('ขนาดไฟล์รวมเกิน 50 MB');
-    const types = ['cover'];
-    if (pdfFile) types.push('pdf');
-    if (imageFiles.length > 0) types.push('media');
 
-    const { uploads: signatures, sessionId, expiresAt } = await postService.getUploadSignatures(types);
+    const allImages = [coverImage, ...imageFiles];
+    if (new Set(allImages).size !== allImages.length) throw new Error('ไม่สามารถแนบไฟล์รูปภาพซ้ำได้');
+    for (const file of allImages) {
+      const maxBytes = 2 * 1024 * 1024;
+      if (!file.size || file.size > maxBytes) throw new Error('รูปภาพต้องมีขนาดไม่เกิน 2 MB');
+      if (file.type && !['image/jpeg', 'image/png', 'image/jpg', 'image/webp'].includes(file.type)) {
+        throw new Error('ชนิดไฟล์รูปภาพไม่รองรับ');
+      }
+    }
+
+    // 1. Only request Cloudinary upload signatures for cover & media images
+    const cloudinaryTypes = ['cover'];
+    if (imageFiles.length > 0) cloudinaryTypes.push('media');
+
+    const { uploads: signatures, sessionId, expiresAt } = await postService.getUploadSignatures(cloudinaryTypes, { signal });
     const tasks = [{ kind: 'cover', file: coverImage }];
-    if (pdfFile) tasks.push({ kind: 'pdf', file: pdfFile });
     tasks.push(...imageFiles.map(file => ({ kind: 'media', file })));
 
-    const completed = [];
-    let uploaded;
+    const completedCloudinary = [];
+    let uploadedCloudinary;
     try {
-      uploaded = await mapWithConcurrency(tasks, DIRECT_UPLOAD_CONCURRENCY, async (task, _index, signal) => {
-        const asset = await uploadWithSignature(task.file, signatures[task.kind], signal);
-        completed.push(asset);
+      uploadedCloudinary = await mapWithConcurrency(tasks, DIRECT_UPLOAD_CONCURRENCY, async (task, _index, workerSignal) => {
+        const requestSignal = signal
+          ? AbortSignal.any([signal, workerSignal])
+          : workerSignal;
+        const asset = await uploadWithSignature(task.file, signatures[task.kind], requestSignal);
+        completedCloudinary.push(asset);
         return asset;
       });
     } catch (error) {
-      await postService.cleanupDirectUploads(completed);
+      await postService.cleanupDirectUploads(completedCloudinary);
       throw error;
     }
+
+    // 2. Upload PDF directly to Supabase Storage if provided
+    let pdfUploadMetadata = null;
+    if (pdfFile) {
+      try {
+        pdfUploadMetadata = await postService.uploadPdfToSupabase(pdfFile, { sessionId, signal });
+      } catch (pdfError) {
+        // If PDF upload fails, clean up finished Cloudinary uploads and abort
+        await postService.cleanupDirectUploads(completedCloudinary);
+        throw pdfError;
+      }
+    }
+
     return {
-      coverUpload: uploaded[0],
-      mediaUploads: uploaded.slice(1),
+      coverUpload: uploadedCloudinary[0],
+      mediaUploads: uploadedCloudinary.slice(1),
+      pdfUpload: pdfUploadMetadata,
       uploadSessionId: sessionId,
       uploadSessionExpiresAt: expiresAt,
     };
   },
 
   cleanupDirectUploads: async (assets) => {
+    if (!Array.isArray(assets) || assets.length === 0) return;
     const results = await Promise.allSettled(assets.filter(asset => asset?.delete_token).map(async asset => {
       const body = new FormData();
       body.append('token', asset.delete_token);
@@ -234,7 +387,11 @@ export const postService = {
       return response.data;
     } catch (error) {
       console.error('Error creating post:', error);
-      throw error;
+      const thaiMsg = translateUploadError(error, error.response?.data?.message || 'เกิดข้อผิดพลาดในการสร้างโพสต์');
+      const err = new Error(thaiMsg);
+      err.code = error.response?.data?.code || error.code;
+      err.response = error.response;
+      throw err;
     }
   },
 
@@ -245,7 +402,11 @@ export const postService = {
       return response.data;
     } catch (error) {
       console.error(`Error updating post ${id}:`, error);
-      throw error;
+      const thaiMsg = translateUploadError(error, error.response?.data?.message || 'เกิดข้อผิดพลาดในการแก้ไขโพสต์');
+      const err = new Error(thaiMsg);
+      err.code = error.response?.data?.code || error.code;
+      err.response = error.response;
+      throw err;
     }
   },
 
@@ -560,9 +721,12 @@ export function formatSinglePostData(post) {
     current_frame_id: authorFrameId,
     pdf: pdfMedia ? {
       id: pdfMedia.id,
+      mediaId: pdfMedia.id,
+      postId: post.id,
       name: pdfMedia.original_name || extractFileNameFromUrl(pdfMedia.media_url),
-      url: pdfMedia.media_url,
-      size: 'PDF'
+      url: pdfMedia.download_url || pdfMedia.media_url,
+      storage_provider: pdfMedia.storage_provider || (pdfMedia.media_url?.includes('cloudinary') ? 'CLOUDINARY' : 'SUPABASE'),
+      size: pdfMedia.file_size ? formatFileSize(pdfMedia.file_size) : 'PDF'
     } : null,
     author: {
       id: authorId,
