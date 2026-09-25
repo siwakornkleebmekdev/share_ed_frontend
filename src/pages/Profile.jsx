@@ -230,7 +230,7 @@ export default function Profile() {
   // Keep the current user's profile on the stable id-based public URL.
   useEffect(() => {
     if (!userId && currentUserId) {
-      navigate(`/profile/${encodeURIComponent(currentUserId)}`, { replace: true });
+      navigate(`/profile/${encodeURIComponent(currentUserId)}${window.location.search}`, { replace: true });
     }
   }, [userId, currentUserId, navigate]);
 
@@ -345,13 +345,20 @@ export default function Profile() {
           const targetId = user?.user_id || user?.id;
           if (!targetId) return;
 
+          const draftsRequest = profileService.getDrafts(targetId);
+          const postsRequest = profileService.getMyPosts(targetId);
+          const bookmarksRequest = profileService.getBookmarks(targetId);
+          const profileRequest = profileService.getUserProfile(targetId).catch(() => null);
+
+          // Show the draft list as soon as it arrives; other profile sections
+          // should not hold up the destination after saving a draft.
+          if (searchParams.get('tab') === 'drafts') {
+            setDrafts(await draftsRequest);
+            setIsLoading(false);
+          }
+
           const [fetchedPosts, fetchedDrafts, fetchedBookmarks, fetchedOwnProfile] =
-            await Promise.all([
-              profileService.getMyPosts(targetId),
-              profileService.getDrafts(targetId),
-              profileService.getBookmarks(targetId),
-              profileService.getUserProfile(targetId).catch(() => null),
-            ]);
+            await Promise.all([postsRequest, draftsRequest, bookmarksRequest, profileRequest]);
 
           setMyPosts(fetchedPosts);
           setDrafts(fetchedDrafts);

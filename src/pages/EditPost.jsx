@@ -20,6 +20,7 @@ export default function EditPost() {
 
   // Loading states
   const [isPageLoading, setIsPageLoading] = useState(true);
+  const [originalStatus, setOriginalStatus] = useState(null);
 
   // Existing assets from DB
   const [existingCoverImage, setExistingCoverImage] = useState(null);
@@ -132,6 +133,7 @@ export default function EditPost() {
         }
 
         // Populate fields
+        setOriginalStatus(post.post_status || post.status || 'ACTIVE');
         setTitle(post.title || '');
         setSummary(post.summary || post.description || '');
         setContent(post.content || post.details || '');
@@ -517,7 +519,9 @@ export default function EditPost() {
 
       const formData = new FormData();
       formData.append('title', title.trim() || 'Untitled draft');
-      formData.append('summary', summary.trim());
+      // The update API validates supplied fields even for drafts. Omit an empty
+      // summary so saving a draft can keep its existing value without requiring it.
+      if (!isDraft || summary.trim()) formData.append('summary', summary.trim());
       formData.append('content', content || '<p></p>');
 
       // Resolve valid category UUID from selected category
@@ -982,12 +986,14 @@ export default function EditPost() {
             </button>
           </div>
           <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-            <button onClick={() => handleSubmit('DRAFT')} className="w-full sm:w-auto px-6 py-4 rounded-xl font-bold text-primary bg-blue-50 border border-blue-100 hover:bg-blue-100 transition-colors flex items-center justify-center gap-2 cursor-pointer">
-              <Save className="h-5 w-5" />
-              บันทึกเป็นแบบร่าง
-            </button>
+            {originalStatus === 'DRAFT' && (
+              <button onClick={() => handleSubmit('DRAFT')} className="w-full sm:w-auto px-6 py-4 rounded-xl font-bold text-primary bg-blue-50 border border-blue-100 hover:bg-blue-100 transition-colors flex items-center justify-center gap-2 cursor-pointer">
+                <Save className="h-5 w-5" />
+                บันทึกแบบร่าง
+              </button>
+            )}
             <button onClick={() => handleSubmit('ACTIVE')} className="w-full sm:w-auto px-8 py-4 rounded-xl font-bold text-white bg-primary hover:bg-blue-600 transition-colors shadow-md hover:shadow-lg hover:-translate-y-0.5 cursor-pointer">
-              บันทึกและโพสต์
+              {originalStatus === 'DRAFT' ? 'บันทึกและโพสต์' : 'บันทึกการแก้ไข'}
             </button>
           </div>
         </div>
