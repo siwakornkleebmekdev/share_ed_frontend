@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { supabase } from './supabase.js';
-import useAuthStore from '../store/authStore';
+import useAuthStore from '../store/authStore.js';
 
 let isLoggingOut = false;
 export const handleTokenExpiration = async () => {
@@ -40,6 +40,14 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+const createMissingSessionError = (config) => {
+  const error = new Error('กรุณาเข้าสู่ระบบก่อนดำเนินการ');
+  error.name = 'AuthSessionMissingError';
+  error.code = 'AUTH_SESSION_MISSING';
+  error.config = config;
+  return error;
+};
 
 // Request Interceptor: Attach token automatically
 api.interceptors.request.use(
@@ -87,18 +95,7 @@ api.interceptors.request.use(
       token = null;
     }
 
-    // Secondary fallback: check local storage token
-    if (!token) {
-      try {
-        const local = localStorage.getItem('access_token');
-        if (local && local !== 'undefined' && local !== 'null') {
-          token = local;
-        }
-      } catch {}
-    }
-
-    if (token && token !== 'undefined' && token !== 'null') {
-      try { localStorage.setItem('access_token', token); } catch {}
+    if (token) {
       if (config.headers && typeof config.headers.set === 'function') {
         config.headers.set('Authorization', `Bearer ${token}`);
       } else {
@@ -106,6 +103,8 @@ api.interceptors.request.use(
         config.headers['Authorization'] = `Bearer ${token}`;
         config.headers.Authorization = `Bearer ${token}`;
       }
+    } else if (config.requiresAuth !== false) {
+      return Promise.reject(createMissingSessionError(config));
     }
     return config;
   },
@@ -128,7 +127,6 @@ api.interceptors.response.use(
           const { data, error: refreshErr } = await supabase.auth.refreshSession();
           if (!refreshErr && data?.session?.access_token) {
             const newToken = data.session.access_token;
-            try { localStorage.setItem('access_token', newToken); } catch {}
             if (originalRequest.headers && typeof originalRequest.headers.set === 'function') {
               originalRequest.headers.set('Authorization', `Bearer ${newToken}`);
             } else {
@@ -147,7 +145,6 @@ api.interceptors.response.use(
       // The token/session is expired or invalid -> trigger immediate logout
       const hadAuth =
         useAuthStore.getState().isAuthenticated ||
-        !!localStorage.getItem('access_token') ||
         !!(originalRequest?.headers?.Authorization || originalRequest?.headers?.authorization);
 
       if (hadAuth) {

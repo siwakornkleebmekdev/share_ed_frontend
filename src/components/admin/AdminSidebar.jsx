@@ -23,7 +23,7 @@ const NAV_GROUPS = [
   {
     label: "จัดการ",
     items: [
-      { to: "/admin/reports", label: "จัดการรีพอร์ต", icon: ShieldAlert, roles: ["ADMIN", "MODERATOR"], showReportCount: true },
+      { to: "/admin/reports", label: "จัดการรีพอร์ต", icon: ShieldAlert, roles: ["ADMIN"], showReportCount: true },
       { to: "/admin/users", label: "จัดการผู้ใช้งาน", icon: Users, roles: ["ADMIN"] },
       { to: "/admin/achievements", label: "จัดการความสำเร็จ", icon: Award, roles: ["ADMIN"] },
     ],
@@ -38,7 +38,7 @@ export default function AdminSidebar() {
   const reportCount = pendingCount();
 
   useEffect(() => {
-    if (!user || !["ADMIN", "MODERATOR"].includes(role)) return;
+    if (!user || role !== "ADMIN") return;
     startRealtime();
     fetchReports({ force: true }).catch(() => { });
     return () => stopRealtime();

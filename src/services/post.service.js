@@ -85,7 +85,7 @@ export const postService = {
   // Fetch all posts (Active/Published)
   getAllPosts: async (params = {}) => {
     try {
-      const response = await api.get('/posts', { params });
+      const response = await api.get('/posts', { params, requiresAuth: false });
       if (response.data.success) {
         const posts = response.data.data.map(formatPostData);
         return await mergeBookmarkStatus(posts);
@@ -487,7 +487,7 @@ export const postService = {
   // Get comments by post ID
   getComments: async (postId) => {
     try {
-      const response = await api.get(`/comment/post/${postId}`);
+      const response = await api.get(`/comment/post/${postId}`, { requiresAuth: false });
       return response.data;
     } catch (error) {
       console.error(`Error fetching comments for post ${postId}:`, error);
@@ -520,7 +520,7 @@ export const postService = {
   // Get System Stats (total users, total posts)
   getSystemStats: async () => {
     try {
-      const response = await api.get('/system/stats');
+      const response = await api.get('/system/stats', { requiresAuth: false });
       if (response.data.success && (response.data.data?.totalSharers || response.data.data?.totalUsers)) {
         return response.data.data;
       }

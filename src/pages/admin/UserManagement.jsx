@@ -5,7 +5,7 @@ import toast from "react-hot-toast";
 import Swal from "sweetalert2";
 import { adminService } from "@/services/admin.service";
 
-const ROLE_OPTIONS = ["MEMBER", "MODERATOR", "ADMIN"];
+const ROLE_OPTIONS = ["MEMBER", "ADMIN"];
 
 const STATUS_BADGE_CLASS = {
   ACTIVE: "admin-badge-active",
@@ -57,7 +57,7 @@ export default function UserManagement() {
     });
   }, [users, search, roleFilter, statusFilter]);
 
-  // เปลี่ยน role ของผู้ใช้ (MEMBER/MODERATOR/ADMIN) — ต้องยืนยันก่อนทุกครั้ง
+  // เปลี่ยน role ของผู้ใช้ (MEMBER/ADMIN) — ต้องยืนยันก่อนทุกครั้ง
   const handleRoleChange = async (targetUser, nextRole) => {
     if (nextRole === targetUser.role) return;
     const result = await Swal.fire({

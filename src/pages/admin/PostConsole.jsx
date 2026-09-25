@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, CheckCircle2, Clock3, Eye, FileWarning, Search, ShieldAlert, Trash2 } from "lucide-react";
-import { Link } from "react-router";
+import { AlertTriangle, CheckCircle2, ChevronDown, Clock3, Eye, FileWarning, Search, ShieldAlert, Trash2 } from "lucide-react";
+import { Link, useSearchParams } from "react-router";
 import Swal from "sweetalert2";
 import toast from "react-hot-toast";
 import useReportStore from "@/store/reportStore";
-import { REPORT_THRESHOLD } from "@/constants/moderation";
 import { sanitizePostContent } from "@/utils/sanitizePostContent";
 import { subscribeSocketEvent } from "@/utils/socket";
 
@@ -64,8 +63,15 @@ function PostConsoleSkeleton() {
 
 export default function PostConsole() {
   const { reports, fetchReports, reviewPost, isLoading, isReviewing, error } = useReportStore();
+  const [searchParams] = useSearchParams();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [expandedPostId, setExpandedPostId] = useState(null);
+
+  useEffect(() => {
+    const selectedPostId = searchParams.get("post");
+    if (selectedPostId) setExpandedPostId(selectedPostId);
+  }, [searchParams]);
 
   useEffect(() => {
     fetchReports({ force: true }).catch(() => {});
@@ -135,7 +141,7 @@ export default function PostConsole() {
           <div>
             <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-rose-500/15 px-3 py-1 text-sm font-bold text-rose-300"><ShieldAlert className="h-4 w-4" /> Report Console</div>
             <h1 className="text-2xl font-extrabold sm:text-3xl">จัดการรีพอร์ต</h1>
-            <p className="mt-2 text-sm text-slate-300">ตรวจสอบโพสต์ที่ได้รับรายงานครบ {REPORT_THRESHOLD} ครั้ง</p>
+            <p className="mt-2 text-sm text-slate-300">ทุกรีพอร์ตรอการตรวจสอบและตัดสินใจโดย Admin</p>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-2xl bg-white/10 px-5 py-4 text-center"><p className="text-3xl font-extrabold text-rose-300">{reports.length}</p><p className="mt-1 text-xs text-slate-300">โพสต์รอตรวจสอบ</p></div>
@@ -153,14 +159,21 @@ export default function PostConsole() {
       {isLoading && reports.length === 0 ? (
         <PostConsoleSkeleton />
       ) : filteredReports.length === 0 ? (
-        <div className="flex min-h-64 flex-col items-center justify-center rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm"><CheckCircle2 className="mb-4 h-14 w-14 text-emerald-500" /><h2 className="text-xl font-extrabold text-slate-800">ไม่มีรีพอร์ตที่รอตรวจสอบ</h2><p className="mt-2 text-sm text-slate-500">โพสต์จะปรากฏเมื่อได้รับรายงานครบ {REPORT_THRESHOLD} ครั้ง</p></div>
+        <div className="flex min-h-64 flex-col items-center justify-center rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm"><CheckCircle2 className="mb-4 h-14 w-14 text-emerald-500" /><h2 className="text-xl font-extrabold text-slate-800">ไม่มีรีพอร์ตที่รอตรวจสอบ</h2><p className="mt-2 text-sm text-slate-500">โพสต์จะปรากฏที่นี่ทันทีเมื่อได้รับรายงาน</p></div>
       ) : (
         <div className="space-y-4">
           {filteredReports.map((post) => {
             const status = String(post.post_status || post.postStatus || "ACTIVE").toUpperCase();
-            const reasons = [...new Set((post.reports || []).map((report) => report.reason).filter(Boolean))];
+            const reportItems = post.reports || [];
+            const reasonCounts = reportItems.reduce((result, report) => {
+              const reason = report.reason?.trim() || "ไม่ระบุเหตุผล";
+              result[reason] = (result[reason] || 0) + 1;
+              return result;
+            }, {});
+            const reasons = Object.entries(reasonCounts).sort((a, b) => b[1] - a[1]);
             const coverImage = post.cover_image || post.coverImage || post.cover_image_url;
             const statusClass = status === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700";
+            const isExpanded = String(expandedPostId) === String(post.id);
             return (
               <article key={post.id} className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
                 <div className="flex flex-col lg:flex-row">
@@ -171,9 +184,43 @@ export default function PostConsole() {
                       <Link to={`/post/${encodeURIComponent(post.id)}`} className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-600 hover:border-primary hover:text-primary hover:bg-slate-50 transition-all"><Eye className="h-4 w-4" /> ดูโพสต์</Link>
                     </div>
                     <div className="mt-5 grid gap-4 border-y border-slate-100 py-4 md:grid-cols-2">
-                      <div><p className="mb-2 text-xs font-bold uppercase text-slate-400">เหตุผลที่ถูกรายงาน</p><div className="flex flex-wrap gap-2">{reasons.length ? reasons.map((reason) => <span key={reason} className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs text-slate-700">{reason}</span>) : <span className="text-sm text-slate-400">ไม่ระบุเหตุผล</span>}</div></div>
-                      <div><p className="mb-2 text-xs font-bold uppercase text-slate-400">รายงานล่าสุด</p><p className="flex items-center gap-2 text-sm text-slate-600"><Clock3 className="h-4 w-4 text-slate-400" />{formatDate(post.reports?.at(-1)?.created_at || post.updated_at)}</p></div>
+                      <div><p className="mb-2 text-xs font-bold uppercase text-slate-400">สรุปการรายงาน</p><p className="text-sm font-semibold text-slate-700">{getReportCount(post)} ครั้ง · {reasons.length} เหตุผล</p></div>
+                      <div><p className="mb-2 text-xs font-bold uppercase text-slate-400">รายงานล่าสุด</p><p className="flex items-center gap-2 text-sm text-slate-600"><Clock3 className="h-4 w-4 text-slate-400" />{formatDate(reportItems[0]?.created_at || post.updated_at)}</p></div>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => setExpandedPostId(isExpanded ? null : post.id)}
+                      aria-expanded={isExpanded}
+                      className="mt-4 flex w-full items-center justify-between rounded-xl bg-slate-50 px-4 py-3 text-left text-sm font-bold text-slate-700 transition-colors hover:bg-slate-100 cursor-pointer"
+                    >
+                      <span>{isExpanded ? "ซ่อนรายละเอียดเหตุผล" : `ดูเหตุผลที่รายงาน (${getReportCount(post)})`}</span>
+                      <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                    </button>
+                    {isExpanded && (
+                      <div className="mt-3 space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <div>
+                          <p className="mb-2 text-xs font-bold uppercase text-slate-400">เหตุผลแยกตามจำนวน</p>
+                          <div className="flex flex-wrap gap-2">
+                            {reasons.map(([reason, count]) => (
+                              <span key={reason} className="rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm">
+                                {reason} <span className="ml-1 text-rose-600">{count}</span>
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white">
+                          {reportItems.map((report, index) => (
+                            <div key={report.id || `${post.id}-${index}`} className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                              <div>
+                                <p className="text-sm font-semibold text-slate-800">{report.reason || "ไม่ระบุเหตุผล"}</p>
+                                <p className="mt-0.5 text-xs text-slate-400">รายงานโดย {report.user?.username || "ผู้ใช้งาน"}</p>
+                              </div>
+                              <span className="text-xs text-slate-400">{formatDate(report.created_at)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     {post.content && <details className="mt-4 rounded-xl bg-slate-50 px-4 py-3"><summary className="cursor-pointer text-sm font-bold text-slate-700">ดูเนื้อหาโพสต์ในหน้าตรวจสอบ</summary><div className="post-details-content mt-3 max-h-72 overflow-y-auto border-t border-slate-200 pt-3 text-sm leading-7 text-slate-600" dangerouslySetInnerHTML={{ __html: sanitizePostContent(post.content) }} /></details>}
                     <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
                       {status === "ACTIVE" && <button type="button" onClick={() => handleAction(post, "SUSPEND")} disabled={isReviewing} className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-bold text-amber-700 hover:bg-amber-100 transition-colors disabled:opacity-50 cursor-pointer">ระงับชั่วคราว</button>}

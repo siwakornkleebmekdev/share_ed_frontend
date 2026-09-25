@@ -49,7 +49,7 @@ export const categoryService = {
   getAllCategories: async () => {
     try {
       // 1. Try Backend API first (GET /api/v1/categories)
-      const response = await api.get('/categories');
+      const response = await api.get('/categories', { requiresAuth: false });
       if (response.data && response.data.success && Array.isArray(response.data.data) && response.data.data.length > 0) {
         return response.data.data.map(cat => ({
           id: cat.id || cat.category_id,

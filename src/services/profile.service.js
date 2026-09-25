@@ -212,7 +212,9 @@ export const profileService = {
   // ดึงข้อมูลโปรไฟล์สาธารณะด้วย User ID (GET /users/:id)
   getUserProfile: async (userId) => {
     try {
-      const response = await api.get(`/users/${encodeURIComponent(userId)}`);
+      const response = await api.get(`/users/${encodeURIComponent(userId)}`, {
+        requiresAuth: false,
+      });
       return response.data?.data || response.data;
     } catch (error) {
       console.error(`Error fetching profile for user ${userId}:`, error);
@@ -224,7 +226,7 @@ export const profileService = {
   getUserPosts: async (userId) => {
     try {
       try {
-        const response = await api.get(`/posts/user/${userId}`);
+        const response = await api.get(`/posts/user/${userId}`, { requiresAuth: false });
         if (response.data?.success && Array.isArray(response.data?.data)) {
           return await mergeProfileBookmarkStatus(
             formatPosts(response.data.data.filter((p) => p.post_status === "ACTIVE")),
@@ -233,7 +235,7 @@ export const profileService = {
       } catch (_) {}
 
       // สำรอง: ดึงโพสต์ที่เผยแพร่แล้วและกรองตาม Author ID
-      const response = await api.get("/posts");
+      const response = await api.get("/posts", { requiresAuth: false });
       if (response.data?.success && Array.isArray(response.data?.data)) {
         const userPosts = response.data.data.filter(
           (p) => String(p.author_id || p.author?.id || p.user_id) === String(userId) && p.post_status === "ACTIVE"
@@ -272,7 +274,9 @@ export const profileService = {
   // Fetch Followers of a user (GET /follow/:userId/followers)
   getFollowers: async (userId) => {
     try {
-      const response = await api.get(`/follow/${encodeURIComponent(userId)}/followers`);
+      const response = await api.get(`/follow/${encodeURIComponent(userId)}/followers`, {
+        requiresAuth: false,
+      });
       return response.data?.data || [];
     } catch (error) {
       console.error(`Error fetching followers for ${userId}:`, error);
@@ -283,7 +287,9 @@ export const profileService = {
   // Fetch Following of a user (GET /follow/:userId/following)
   getFollowing: async (userId) => {
     try {
-      const response = await api.get(`/follow/${encodeURIComponent(userId)}/following`);
+      const response = await api.get(`/follow/${encodeURIComponent(userId)}/following`, {
+        requiresAuth: false,
+      });
       return response.data?.data || [];
     } catch (error) {
       console.error(`Error fetching following for ${userId}:`, error);
