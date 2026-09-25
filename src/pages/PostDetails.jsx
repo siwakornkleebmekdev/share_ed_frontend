@@ -335,7 +335,7 @@ export default function PostDetails() {
 
   const authorRole = authorProfile?.role === 'ADMIN'
     ? 'แอดมิน'
-    : (authorProfile?.role === 'MODERATOR' ? 'ผู้ดูแลระบบ' : (post?.author?.role || 'Contributor'));
+    : 'Contributor';
 
   const authorFrameProfile = {
     ...post?.author,

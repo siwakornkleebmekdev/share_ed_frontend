@@ -94,20 +94,7 @@ const AdminRoute = ({ children }) => {
   return children;
 };
 
-const ReviewerRoute = ({ children }) => {
-  const { isAuthenticated, isInitializing, isRoleLoading, user } = useAuthStore();
-  const role = String(user?.role || "").toUpperCase();
-
-  if (isInitializing || (isAuthenticated && isRoleLoading)) return <RouteLoader />;
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
-  if (!["ADMIN", "MODERATOR"].includes(role)) return <Navigate to="/home" replace />;
-  return children;
-};
-
-const AdminIndex = () => {
-  const role = String(useAuthStore((state) => state.user?.role) || "").toUpperCase();
-  return role === "ADMIN" ? <AdminDashboard /> : <Navigate to="/admin/reports" replace />;
-};
+const AdminIndex = () => <AdminDashboard />;
 
 function App() {
   const loginAction = useAuthStore((state) => state.login);
@@ -355,9 +342,9 @@ function App() {
           <Route
             path="/report-console"
             element={
-              <ReviewerRoute>
+              <AdminRoute>
                 <Navigate to="/admin/reports" replace />
-              </ReviewerRoute>
+              </AdminRoute>
             }
           />
         </Route>
@@ -379,9 +366,9 @@ function App() {
         <Route
           path="/admin"
           element={
-            <ReviewerRoute>
+            <AdminRoute>
               <AdminLayout />
-            </ReviewerRoute>
+            </AdminRoute>
           }
         >
           <Route index element={<AdminIndex />} />

@@ -50,7 +50,7 @@ export const authService = {
         education_level: education_level || 'HIGH_SCHOOL',
         age: age || 0,
         bio: bio || 'ยังไม่ได้ระบุ'
-      });
+      }, { requiresAuth: false });
       registeredUser = regRes.data?.data || regRes.data?.user || null;
       if (regRes.data?.requires_email_verification) {
         return {
@@ -123,7 +123,11 @@ export const authService = {
       throw new Error('กรุณากรอกอีเมลให้ถูกต้อง');
     }
     try {
-      const response = await api.post('/auth/resend-verification', { email: normalizedEmail });
+      const response = await api.post(
+        '/auth/resend-verification',
+        { email: normalizedEmail },
+        { requiresAuth: false },
+      );
       return response.data;
     } catch (error) {
       const code = error?.response?.data?.code;
@@ -213,34 +217,7 @@ export const authService = {
       return { success: true, data: supabaseUser };
     }
 
-    // Fallback: Check backend /auth/me only if a stored token exists
-    const fallbackToken = localStorage.getItem('access_token');
-    if (!fallbackToken || fallbackToken === 'undefined' || fallbackToken === 'null') {
-      return null;
-    }
-
-    try {
-      const response = await api.get('/auth/me');
-      const dbUser = response.data?.data || response.data?.user || response.data;
-      if (dbUser) {
-        const userId = dbUser.id || dbUser.user_id;
-        const cachedWallpaper =
-          dbUser.user_metadata?.wallpaper_url ||
-          dbUser.wallpaper ||
-          (userId ? localStorage.getItem(`wallpaper_url_${userId}`) : null) ||
-          localStorage.getItem("wallpaper_url") ||
-          null;
-
-        dbUser.user_metadata = {
-          ...(dbUser.user_metadata || {}),
-          wallpaper_url: cachedWallpaper,
-        };
-        delete dbUser.user_metadata.profile_frame_id;
-      }
-      return response.data;
-    } catch {
-      return null;
-    }
+    return null;
   },
 
   // Logout user

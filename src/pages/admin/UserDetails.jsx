@@ -6,7 +6,7 @@ import Swal from "sweetalert2";
 import { adminService } from "@/services/admin.service";
 import { mapEducationLevel } from "@/services/profile.service";
 
-const ROLE_OPTIONS = ["MEMBER", "MODERATOR", "ADMIN"];
+const ROLE_OPTIONS = ["MEMBER", "ADMIN"];
 
 const STATUS_BADGE_CLASS = {
   ACTIVE: "admin-badge-active",

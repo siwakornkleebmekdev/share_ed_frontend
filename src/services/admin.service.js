@@ -12,7 +12,7 @@ export const adminService = {
     }
   },
 
-  // Change a user's role to MEMBER, MODERATOR, or ADMIN
+  // Change a user's role to MEMBER or ADMIN
   updateUserRole: async (userId, role) => {
     try {
       const response = await api.patch(`/admin/users/${userId}/role`, { role });
