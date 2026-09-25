@@ -4,6 +4,7 @@ import { Link } from "react-router";
 import Swal from "sweetalert2";
 import toast from "react-hot-toast";
 import useReportStore from "@/store/reportStore";
+import { REPORT_THRESHOLD } from "@/constants/moderation";
 import { sanitizePostContent } from "@/utils/sanitizePostContent";
 import { subscribeSocketEvent } from "@/utils/socket";
 
@@ -134,7 +135,7 @@ export default function PostConsole() {
           <div>
             <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-rose-500/15 px-3 py-1 text-sm font-bold text-rose-300"><ShieldAlert className="h-4 w-4" /> Report Console</div>
             <h1 className="text-2xl font-extrabold sm:text-3xl">จัดการรีพอร์ต</h1>
-            <p className="mt-2 text-sm text-slate-300">ตรวจสอบโพสต์ที่ได้รับรายงานครบ 10 ครั้ง</p>
+            <p className="mt-2 text-sm text-slate-300">ตรวจสอบโพสต์ที่ได้รับรายงานครบ {REPORT_THRESHOLD} ครั้ง</p>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-2xl bg-white/10 px-5 py-4 text-center"><p className="text-3xl font-extrabold text-rose-300">{reports.length}</p><p className="mt-1 text-xs text-slate-300">โพสต์รอตรวจสอบ</p></div>
@@ -152,7 +153,7 @@ export default function PostConsole() {
       {isLoading && reports.length === 0 ? (
         <PostConsoleSkeleton />
       ) : filteredReports.length === 0 ? (
-        <div className="flex min-h-64 flex-col items-center justify-center rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm"><CheckCircle2 className="mb-4 h-14 w-14 text-emerald-500" /><h2 className="text-xl font-extrabold text-slate-800">ไม่มีรีพอร์ตที่รอตรวจสอบ</h2><p className="mt-2 text-sm text-slate-500">โพสต์จะปรากฏเมื่อได้รับรายงานครบ 10 ครั้ง</p></div>
+        <div className="flex min-h-64 flex-col items-center justify-center rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm"><CheckCircle2 className="mb-4 h-14 w-14 text-emerald-500" /><h2 className="text-xl font-extrabold text-slate-800">ไม่มีรีพอร์ตที่รอตรวจสอบ</h2><p className="mt-2 text-sm text-slate-500">โพสต์จะปรากฏเมื่อได้รับรายงานครบ {REPORT_THRESHOLD} ครั้ง</p></div>
       ) : (
         <div className="space-y-4">
           {filteredReports.map((post) => {

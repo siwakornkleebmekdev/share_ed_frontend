@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { moderationService } from "@/services/moderation.service";
 import { postService } from "@/services/post.service";
 import { subscribeSocketEvent } from "@/utils/socket";
+import { REPORT_THRESHOLD } from "@/constants/moderation";
 import useAuthStore from "./authStore";
 
 const CACHE_TTL_MS = 10_000;
@@ -9,7 +10,7 @@ let reportsFlight = null;
 let realtimeCleanup = () => {};
 
 const isConsolePost = (post) =>
-  (post?._count?.reports ?? post?.reports?.length ?? 0) >= 10;
+  (post?._count?.reports ?? post?.reports?.length ?? 0) >= REPORT_THRESHOLD;
 
 const useReportStore = create((set, get) => ({
   reports: [],

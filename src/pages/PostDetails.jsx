@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router';
 import { FileText, Download, Heart, Share2, Tag, ChevronLeft, ChevronRight, Calendar, Eye, EyeOff, Bookmark, X, Edit3, Trash2, Send, MessageSquare, AlignLeft, ImageIcon, Flag } from 'lucide-react';
 import { postService } from '@/services/post.service';
@@ -95,6 +95,8 @@ export default function PostDetails() {
 
   const [previewImage, setPreviewImage] = useState(null);
   const [showPdfPreview, setShowPdfPreview] = useState(false);
+  const [pdfAccessUrl, setPdfAccessUrl] = useState(null);
+  const [isPdfLoading, setIsPdfLoading] = useState(false);
 
   // Comments state
   const [comments, setComments] = useState([]);
@@ -120,6 +122,54 @@ export default function PostDetails() {
   const [post, setPost] = useState(null);
   const [authorProfile, setAuthorProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    setShowPdfPreview(false);
+    setPdfAccessUrl(null);
+  }, [id]);
+
+  const requestFreshPdfUrl = async () => {
+    if (!post?.pdf?.mediaId) throw new Error('ไม่พบข้อมูลไฟล์ PDF');
+    return postService.getPostMediaDownloadUrl(post.id, post.pdf.mediaId);
+  };
+
+  const handleTogglePdfPreview = async () => {
+    if (showPdfPreview) {
+      setShowPdfPreview(false);
+      return;
+    }
+    if (isPdfLoading) return;
+    setIsPdfLoading(true);
+    try {
+      const signedUrl = await requestFreshPdfUrl();
+      setPdfAccessUrl(signedUrl);
+      setShowPdfPreview(true);
+    } catch (error) {
+      toast.error(error.message || 'ไม่สามารถเปิดดูไฟล์ PDF ได้');
+    } finally {
+      setIsPdfLoading(false);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    if (isPdfLoading) return;
+    setIsPdfLoading(true);
+    try {
+      const signedUrl = await requestFreshPdfUrl();
+      const anchor = document.createElement('a');
+      anchor.href = signedUrl;
+      anchor.target = '_blank';
+      anchor.rel = 'noopener noreferrer';
+      anchor.download = post.pdf.name || 'เอกสารประกอบการเรียน.pdf';
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+    } catch (error) {
+      toast.error(error.message || 'ไม่สามารถดาวน์โหลดไฟล์ได้');
+    } finally {
+      setIsPdfLoading(false);
+    }
+  };
 
   useEffect(() => {
     const fetchPost = async () => {
@@ -724,10 +774,11 @@ export default function PostDetails() {
                   <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto shrink-0">
                     <button
                       type="button"
-                      onClick={() => setShowPdfPreview(!showPdfPreview)}
-                      className="flex-1 sm:flex-none px-4 py-2.5 bg-white text-slate-700 border border-slate-200 rounded-xl font-bold shadow-sm hover:bg-slate-100 transition-all flex items-center justify-center gap-2 text-sm cursor-pointer"
+                      onClick={handleTogglePdfPreview}
+                      disabled={isPdfLoading}
+                      className="flex-1 sm:flex-none px-4 py-2.5 bg-white text-slate-700 border border-slate-200 rounded-xl font-bold shadow-sm hover:bg-slate-100 transition-all flex items-center justify-center gap-2 text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {showPdfPreview ? (
+                      {isPdfLoading ? 'กำลังขอสิทธิ์เข้าถึง...' : showPdfPreview ? (
                         <>
                           <EyeOff className="h-4 w-4 text-slate-500" /> ซ่อนตัวอย่าง
                         </>
@@ -738,26 +789,25 @@ export default function PostDetails() {
                       )}
                     </button>
 
-                    <a
-                      href={post.pdf.url}
-                      download={post.pdf.name || 'เอกสารประกอบการเรียน.pdf'}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex-1 sm:flex-none px-4 py-2.5 bg-primary text-white rounded-xl font-bold shadow-sm hover:bg-blue-600 transition-all flex items-center justify-center gap-2 text-sm"
+                    <button
+                      type="button"
+                      onClick={handleDownloadPdf}
+                      disabled={isPdfLoading}
+                      className="flex-1 sm:flex-none px-4 py-2.5 bg-primary text-white rounded-xl font-bold shadow-sm hover:bg-blue-600 transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Download className="h-4 w-4" /> ดาวน์โหลด
-                    </a>
+                    </button>
                   </div>
                 </div>
 
                 {/* Embedded PDF Viewer (Google Docs Viewer / Native Fallback) */}
-                {showPdfPreview && (
+                {showPdfPreview && pdfAccessUrl && (
                   <div className="mt-6 w-full h-[600px] sm:h-[800px] rounded-xl border border-slate-200 overflow-hidden bg-white shadow-inner relative animate-in fade-in duration-200">
                     <iframe
                       src={
-                        post.pdf.url.startsWith('http') && !post.pdf.url.includes('localhost') && !post.pdf.url.includes('127.0.0.1')
-                          ? `https://docs.google.com/gview?url=${encodeURIComponent(post.pdf.url)}&embedded=true`
-                          : `${post.pdf.url}#toolbar=0`
+                        pdfAccessUrl.startsWith('http') && !pdfAccessUrl.includes('localhost') && !pdfAccessUrl.includes('127.0.0.1')
+                          ? `https://docs.google.com/gview?url=${encodeURIComponent(pdfAccessUrl)}&embedded=true`
+                          : `${pdfAccessUrl}#toolbar=0`
                       }
                       className="w-full h-full border-0"
                       title="PDF Document Viewer"
