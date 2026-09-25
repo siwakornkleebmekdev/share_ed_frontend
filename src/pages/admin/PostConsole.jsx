@@ -4,7 +4,6 @@ import { Link, useSearchParams } from "react-router";
 import Swal from "sweetalert2";
 import toast from "react-hot-toast";
 import useReportStore from "@/store/reportStore";
-import { REPORT_THRESHOLD } from "@/constants/moderation";
 import { sanitizePostContent } from "@/utils/sanitizePostContent";
 import { subscribeSocketEvent } from "@/utils/socket";
 
