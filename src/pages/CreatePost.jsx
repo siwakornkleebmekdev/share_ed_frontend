@@ -424,10 +424,20 @@ export default function CreatePost() {
       if (result.success) {
         uploadCache.current = null;
         idempotencyKey.current = null;
+        if (isDraft) {
+          navigate('/profile?tab=drafts');
+          Swal.fire({
+            icon: 'success',
+            title: 'บันทึกสำเร็จ!',
+            text: 'บันทึกแบบร่างเรียบร้อยแล้ว',
+            confirmButtonColor: '#3b82f6'
+          });
+          return;
+        }
         Swal.fire({
           icon: 'success',
-          title: status === 'ACTIVE' ? 'โพสต์สำเร็จ!' : 'บันทึกสำเร็จ!',
-          text: status === 'ACTIVE' ? 'โพสต์สรุปความรู้เรียบร้อยแล้ว' : 'บันทึกแบบร่างเรียบร้อยแล้ว',
+          title: 'โพสต์สำเร็จ!',
+          text: 'โพสต์สรุปความรู้เรียบร้อยแล้ว',
           confirmButtonColor: '#3b82f6'
         }).then(() => {
           navigate('/home');
