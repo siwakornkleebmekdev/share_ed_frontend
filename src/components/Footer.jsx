@@ -52,7 +52,7 @@ export default function Footer() {
                 <Info className="h-4 w-4" />
               </div>
               <div className="flex flex-col">
-                <Link to="/about" className={`font-bold transition-colors leading-tight ${linkClass}`}>เกี่ยวกับเรา</Link>
+                <Link to="/" className={`font-bold transition-colors leading-tight ${linkClass}`}>เกี่ยวกับเรา</Link>
               </div>
             </div>
 
