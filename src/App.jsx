@@ -15,6 +15,7 @@ const Home = lazy(() => import("./pages/Home"));
 const Login = lazy(() => import("./pages/Login"));
 const Register = lazy(() => import("./pages/Register"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
 const Explore = lazy(() => import("./pages/Explore"));
 const CreatePost = lazy(() => import("./pages/CreatePost"));
 const EditPost = lazy(() => import("./pages/EditPost"));
@@ -305,6 +306,14 @@ function App() {
             }
           />
           <Route path="/register" element={<Register />} />
+          <Route
+            path="/verify-email"
+            element={
+              <PublicRoute>
+                <VerifyEmail />
+              </PublicRoute>
+            }
+          />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route
             path="/create"

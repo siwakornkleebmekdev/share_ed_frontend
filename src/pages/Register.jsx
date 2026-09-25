@@ -5,6 +5,11 @@ import toast from 'react-hot-toast';
 import { authService } from '@/services/auth.service';
 import useAuthStore from '@/store/authStore';
 import { supabase } from '@/utils/supabase';
+import {
+  EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS,
+  PENDING_VERIFICATION_EMAIL_KEY,
+  VERIFICATION_RESEND_UNTIL_KEY,
+} from '@/constants/auth';
 
 export default function Register() {
   const [isLoading, setIsLoading] = useState(false);
@@ -129,6 +134,18 @@ export default function Register() {
 
       const registeredUser = data?.session?.user || data?.user || {};
       const meta = registeredUser.user_metadata || {};
+
+      if (data?.requiresEmailVerification) {
+        const verificationEmail = email.trim().toLowerCase();
+        sessionStorage.setItem(PENDING_VERIFICATION_EMAIL_KEY, verificationEmail);
+        sessionStorage.setItem(
+          VERIFICATION_RESEND_UNTIL_KEY,
+          String(Date.now() + EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS * 1000),
+        );
+        toast.success('สมัครสมาชิกสำเร็จ กรุณาตรวจสอบอีเมลเพื่อรับรหัสยืนยัน');
+        navigate('/verify-email', { state: { email: verificationEmail }, replace: true });
+        return;
+      }
 
       if (!data?.session) {
         toast.success('สมัครสมาชิกสำเร็จ กรุณาเข้าสู่ระบบ');

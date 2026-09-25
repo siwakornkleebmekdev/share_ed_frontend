@@ -19,7 +19,7 @@ export const handleTokenExpiration = async () => {
     console.error('Error during auto logout on token expiration:', err);
   } finally {
     if (typeof window !== 'undefined') {
-      const publicPaths = ['/login', '/register', '/reset-password'];
+      const publicPaths = ['/login', '/register', '/verify-email', '/reset-password'];
       const pathname = window.location.pathname;
       const isPublicPath = publicPaths.some(p => pathname.startsWith(p));
       if (!isPublicPath) {
