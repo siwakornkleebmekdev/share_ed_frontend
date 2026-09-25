@@ -52,6 +52,14 @@ export const authService = {
         bio: bio || 'ยังไม่ได้ระบุ'
       });
       registeredUser = regRes.data?.data || regRes.data?.user || null;
+      if (regRes.data?.requires_email_verification) {
+        return {
+          user: registeredUser,
+          session: null,
+          email: normalizedEmail,
+          requiresEmailVerification: true,
+        };
+      }
     } catch (error) {
       const message = error?.response?.data?.message || error.message || 'เกิดข้อผิดพลาดในการสมัครสมาชิก';
       const normalizedMessage = message.toLowerCase();
@@ -83,6 +91,49 @@ export const authService = {
     return { user: registeredUser, session: null, requiresLogin: true };
   },
 
+  verifyEmailOtp: async ({ email, token }) => {
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    const normalizedToken = String(token || '').replace(/\D/g, '').slice(0, 6);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      throw new Error('กรุณากรอกอีเมลให้ถูกต้อง');
+    }
+    if (!/^\d{6}$/.test(normalizedToken)) {
+      throw new Error('กรุณากรอกรหัสยืนยัน 6 หลัก');
+    }
+
+    const { data, error } = await supabase.auth.verifyOtp({
+      email: normalizedEmail,
+      token: normalizedToken,
+      type: 'email',
+    });
+
+    if (error || !data?.session) {
+      const message = String(error?.message || '').toLowerCase();
+      if (message.includes('expired')) {
+        throw new Error('รหัสยืนยันหมดอายุแล้ว กรุณาขอรหัสใหม่');
+      }
+      throw new Error('รหัสยืนยันไม่ถูกต้องหรือหมดอายุ กรุณาตรวจสอบอีกครั้ง');
+    }
+    return data;
+  },
+
+  resendVerification: async (email) => {
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      throw new Error('กรุณากรอกอีเมลให้ถูกต้อง');
+    }
+    try {
+      const response = await api.post('/auth/resend-verification', { email: normalizedEmail });
+      return response.data;
+    } catch (error) {
+      const code = error?.response?.data?.code;
+      if (code === 'VERIFICATION_RATE_LIMITED' || error?.response?.status === 429) {
+        throw new Error('ขอรหัสบ่อยเกินไป กรุณารอสักครู่แล้วลองใหม่');
+      }
+      throw new Error(error?.response?.data?.message || 'ไม่สามารถส่งรหัสยืนยันได้ กรุณาลองใหม่');
+    }
+  },
+
   // Supabase is the single source of truth for the browser session.
   // Backend profile provisioning happens through authenticated /auth/me.
   login: async (email, password) => {
@@ -92,11 +143,15 @@ export const authService = {
       return data;
     } catch (loginError) {
       const msg = loginError?.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
-      if (msg.includes('Invalid login credentials') || msg.includes('Invalid credentials') || msg.includes('invalid_credentials')) {
+      const normalizedMessage = msg.toLowerCase();
+      if (normalizedMessage.includes('invalid login credentials') || normalizedMessage.includes('invalid credentials') || normalizedMessage.includes('invalid_credentials')) {
         throw new Error('อีเมลหรือรหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง');
       }
-      if (msg.includes('Email not confirmed')) {
-        throw new Error('กรุณายืนยันตัวตนผ่านอีเมลของคุณก่อนเข้าสู่ระบบ');
+      if (loginError?.code === 'email_not_confirmed' || normalizedMessage.includes('email not confirmed')) {
+        const verificationError = new Error('กรุณายืนยันอีเมลก่อนเข้าสู่ระบบ');
+        verificationError.code = 'EMAIL_NOT_VERIFIED';
+        verificationError.email = String(email || '').trim().toLowerCase();
+        throw verificationError;
       }
       throw new Error(msg);
     }
