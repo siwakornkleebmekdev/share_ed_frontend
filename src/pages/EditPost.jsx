@@ -22,6 +22,7 @@ import Swal from 'sweetalert2';
 import ContentEditor from '@/components/posts/ContentEditor';
 import UploadWorkspaceItem from '@/components/posts/UploadWorkspaceItem';
 import { postService, resolveCategoryName } from '@/services/post.service';
+import { uploadWorkspaceService } from '@/services/uploadWorkspace.service';
 import { categoryService, isValidCategoryUuid } from '@/services/category.service';
 import useAuthStore from '@/store/authStore';
 import { getDefaultDraftCoverFile } from '@/utils/draftCover';
@@ -50,6 +51,7 @@ export default function EditPost() {
   const [isPdfUploading, setIsPdfUploading] = useState(false);
   const submitting = useRef(false);
   const uploadAbortController = useRef(null);
+  const draftCover = useRef(null);
 
   // Existing assets from DB
   const [existingCoverImage, setExistingCoverImage] = useState(null);
@@ -548,6 +550,11 @@ export default function EditPost() {
       return;
     }
 
+    if (workspace.hasFailedFiles) {
+      setFieldErrors({ media: 'มีไฟล์ที่อัปโหลดไม่สำเร็จ กรุณาลบไฟล์นั้นหรือลองใหม่' });
+      return;
+    }
+
     if (!isDraft && isContentUploading) {
       setFieldErrors({ content: 'กรุณารอให้อัปโหลดรูปในรายละเอียดเพิ่มเติมเสร็จก่อนเผยแพร่' });
       return;
@@ -607,33 +614,33 @@ export default function EditPost() {
       formData.append('education_level', backendLevel);
       formData.append('post_status', isDraft ? 'DRAFT' : 'ACTIVE');
 
-      // Cover
-      if (workspace.coverFile?.file) {
-        formData.append('cover_image', workspace.coverFile.file);
-      } else if (isDraft && !existingCoverImage && !workspace.coverFile) {
-        formData.append('cover_image', await getDefaultDraftCoverFile());
-      }
-      if (workspace.coverAssetId) {
-        formData.append('cover_asset_id', workspace.coverAssetId);
+      // Upload Workspace V2 sends only verified asset IDs. The browser already
+      // uploaded the bytes directly to the storage provider.
+      let coverAssetId = workspace.coverAssetId;
+      let activeSessionId = workspace.sessionId;
+      if (!coverAssetId && isDraft && !existingCoverImage) {
+        activeSessionId = activeSessionId || await workspace.ensureSession();
+        if (!draftCover.current) draftCover.current = await getDefaultDraftCoverFile();
+        const defaultCover = draftCover.current;
+        const signData = await uploadWorkspaceService.signFile(activeSessionId, {
+          clientFileId: crypto.randomUUID(),
+          assetType: 'COVER',
+          originalName: defaultCover.name,
+          contentType: defaultCover.type,
+          size: defaultCover.size,
+        });
+        const uploadResult = await uploadWorkspaceService.uploadToCloudinary(defaultCover, signData);
+        const verified = await uploadWorkspaceService.completeFile(activeSessionId, signData.asset_id, uploadResult);
+        coverAssetId = verified.id || signData.asset_id;
       }
 
-      // New PDF
-      if (workspace.pdfFileItem?.file) {
-        formData.append('media_files', workspace.pdfFileItem.file);
-      }
-      if (workspace.pdfFileItem?.assetId) {
-        formData.append('pdf_asset_id', workspace.pdfFileItem.assetId);
-        formData.append('upload_session_id', workspace.sessionId);
-      }
-
-      // New Images
-      workspace.imageFileItems.forEach(img => {
-        if (img.file) formData.append('media_files', img.file);
-      });
-      if (workspace.mediaAssetIds.length > 0) {
-        formData.append('media_asset_ids', JSON.stringify(workspace.mediaAssetIds));
-        if (!formData.has('upload_session_id') && workspace.sessionId) {
-          formData.append('upload_session_id', workspace.sessionId);
+      const hasNewWorkspaceAssets = Boolean(coverAssetId || workspace.mediaAssetIds.length > 0);
+      if (hasNewWorkspaceAssets) {
+        activeSessionId = activeSessionId || await workspace.ensureSession();
+        formData.append('upload_session_id', activeSessionId);
+        if (coverAssetId) formData.append('cover_asset_id', coverAssetId);
+        if (workspace.mediaAssetIds.length > 0) {
+          formData.append('media_asset_ids', JSON.stringify(workspace.mediaAssetIds));
         }
       }
 
