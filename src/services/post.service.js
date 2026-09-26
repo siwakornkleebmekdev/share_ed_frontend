@@ -45,6 +45,11 @@ async function mapWithConcurrency(items, concurrency, operation) {
 
 async function uploadWithSignature(file, config, signal) {
   if (!config) throw new Error('ไม่พบข้อมูล Signature สำหรับอัปโหลดไฟล์');
+  if (!config.uploadUrl || !config.apiKey || !config.signature || !config.uploadParams?.timestamp) {
+    const error = new Error('ข้อมูล Signed Upload จากเซิร์ฟเวอร์ไม่ครบถ้วน กรุณาติดต่อผู้ดูแลระบบ');
+    error.code = 'CLOUDINARY_CONFIG_ERROR';
+    throw error;
+  }
   const formData = new FormData();
   formData.append('file', file);
   formData.append('api_key', config.apiKey);

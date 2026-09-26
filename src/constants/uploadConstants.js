@@ -14,10 +14,10 @@ export const MAX_MEDIA_FILES_COUNT = 15;
 export const MAX_TOTAL_POST_BYTES = 50 * 1024 * 1024; // 50 MB
 export const MAX_TOTAL_POST_LABEL = 'ขนาดรวมสูงสุด 50 MB';
 
-// Feature Flag Check for Upload Workspace V2
+// Upload Workspace V2 is intentionally dormant. Create/Edit Post always use
+// the established Cloudinary + Supabase signed-upload flow.
 export function isUploadWorkspaceV2Enabled() {
-  const envVal = import.meta.env?.VITE_UPLOAD_WORKSPACE_V2_ENABLED;
-  return envVal === 'true' || envVal === true || envVal === '1';
+  return false;
 }
 
 // Authoritative Backend Error Code Mapping (Thai UX)
@@ -33,6 +33,7 @@ export const BACKEND_ERROR_MAP = {
   TOTAL_UPLOAD_TOO_LARGE: 'ขนาดไฟล์รวมเกินกำหนด',
   UPLOAD_VERIFICATION_FAILED: 'ไม่สามารถตรวจสอบไฟล์ได้ กรุณาลองใหม่',
   STORAGE_PROVIDER_ERROR: 'ระบบจัดเก็บไฟล์ขัดข้อง กรุณาลองใหม่',
+  CLOUDINARY_CONFIG_ERROR: 'ระบบอัปโหลดรูปภาพยังไม่พร้อม กรุณาติดต่อผู้ดูแลระบบ',
   RATE_LIMITED: 'มีการอัปโหลดถี่เกินไป กรุณารอสักครู่',
   UNAUTHORIZED: 'กรุณาเข้าสู่ระบบใหม่',
   AUTH_SESSION_MISSING: 'กรุณาเข้าสู่ระบบก่อนดำเนินการ',
