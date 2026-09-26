@@ -115,19 +115,32 @@ export const uploadWorkspaceService = {
       throw new Error('ไม่พบ URL สำหรับอัปโหลดรูปภาพ');
     }
 
-    const uploadUrl = signData.upload_url || signData.uploadUrl;
+    const uploadUrl = signData.upload_url || signData.uploadUrl || signData.upload?.url || signData.url;
     const params = {
       ...(signData.params || {}),
       ...(signData.upload_params || {}),
       ...(signData.uploadParams || {}),
+      ...(signData.upload?.params || {}),
+      ...(signData.upload?.upload_params || {}),
+      ...(signData.credentials || {}),
+      ...(signData.fields || {}),
     };
 
-    const apiKey = signData.api_key || signData.apiKey || params.api_key || params.apiKey;
-    const timestamp = signData.timestamp || params.timestamp;
-    const signature = signData.signature || params.signature;
-    const uploadPreset = signData.upload_preset || signData.uploadPreset || params.upload_preset || params.uploadPreset;
-    const folder = signData.folder || params.folder;
-    const publicId = signData.public_id || signData.publicId || params.public_id || params.publicId;
+    const apiKey = signData.api_key || signData.apiKey || params.api_key || params.apiKey || signData.upload?.api_key || signData.upload?.apiKey;
+    const timestamp = signData.timestamp || params.timestamp || signData.upload?.timestamp;
+    const signature = signData.signature || params.signature || signData.upload?.signature;
+    const uploadPreset = signData.upload_preset || signData.uploadPreset || params.upload_preset || params.uploadPreset || signData.upload?.upload_preset;
+    const folder = signData.folder || params.folder || signData.upload?.folder;
+    const publicId = signData.public_id || signData.publicId || params.public_id || params.publicId || signData.upload?.public_id;
+
+    if (!signature && !uploadPreset) {
+      console.error('Cloudinary upload parameters incomplete (missing signature or upload_preset from backend):', signData);
+      throw new Error('ไม่พบ Signature จากเซิร์ฟเวอร์สำหรับยืนยันการอัปโหลดรูปภาพไปยัง Cloudinary (กรุณาตรวจสอบ CLOUDINARY_API_SECRET ใน Backend)');
+    }
+    if (!apiKey && !uploadPreset) {
+      console.error('Cloudinary upload parameters incomplete (missing api_key from backend):', signData);
+      throw new Error('ไม่พบ API Key ของ Cloudinary จากเซิร์ฟเวอร์ (กรุณาตรวจสอบ CLOUDINARY_API_KEY ใน Backend)');
+    }
 
     const formData = new FormData();
     formData.append('file', file);
