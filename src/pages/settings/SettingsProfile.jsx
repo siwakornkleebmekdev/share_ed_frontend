@@ -2,8 +2,6 @@ import { useState, useEffect } from "react";
 import {
   Upload,
   Image as ImageIcon,
-  Briefcase,
-  MapPin,
   Tag,
   X,
   Sparkles,

@@ -176,7 +176,7 @@ export const achievementService = {
 
   /**
    * ดึงรายการไอเทมของรางวัลทั้งหมดที่มีในระบบ
-   * - การทำงาน: ส่งคำขอ GET เพื่อรับของรางวัล (เช่น กรอบโปรไฟล์ FRAME หรือ THEME)
+   * - การทำงาน: ส่งคำขอ GET เพื่อรับของรางวัลกรอบโปรไฟล์ (FRAME)
    * - อิงจาก: Backend API GET /admin/rewards
    * - เชื่อมโยงกับ: RewardManagementModal.jsx และตัวเลือกของรางวัลใน AchievementFormModal.jsx
    */

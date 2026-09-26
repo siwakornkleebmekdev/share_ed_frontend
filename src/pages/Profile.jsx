@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useSearchParams, useParams } from "react-router";
 import {
   Image as ImageIcon,
-  MapPin,
   Link as LinkIcon,
   BookOpen,
   Star,
@@ -10,7 +9,6 @@ import {
   GraduationCap,
   Clock,
   Edit,
-  Briefcase,
   DoorOpen,
   Trophy,
   CheckCircle2,
@@ -207,9 +205,7 @@ export default function Profile() {
     );
   };
 
-  const theme = isOtherUser
-    ? otherProfile?.current_theme?.settings || {}
-    : user?.user_metadata?.theme_settings || {};
+  const theme = isOtherUser ? {} : user?.user_metadata?.theme_settings || {};
 
   const enterScreenEnabled = !isOtherUser && !!user?.user_metadata?.enter_screen_enabled;
   const [hasEntered, setHasEntered] = useState(!enterScreenEnabled);
@@ -450,7 +446,7 @@ export default function Profile() {
     return myPosts.reduce((sum, p) => {
       const count = Array.isArray(p.likes)
         ? p.likes.length
-        : (p.likes_count ?? p.like_count ?? p.likesCount ?? p._count?.likes ?? 0);
+        : (p.likes_count ?? p.likesCount ?? p._count?.likes ?? 0);
       return sum + (Number(count) || 0);
     }, 0);
   }, [isOtherUser, otherProfile, ownProfile, myPosts]);
@@ -468,14 +464,6 @@ export default function Profile() {
   const displayEducationLevel = isOtherUser
     ? otherProfile?.education_level
     : ownProfile?.education_level || user?.education_level;
-
-  const displayOccupation = isOtherUser
-    ? otherProfile?.occupation
-    : ownProfile?.occupation || user?.user_metadata?.occupation;
-
-  const displayLocation = isOtherUser
-    ? otherProfile?.location
-    : ownProfile?.location || user?.user_metadata?.location;
 
   const displayInstagram = isOtherUser
     ? otherProfile?.social_links?.instagram || otherProfile?.instagram_url
@@ -693,19 +681,6 @@ export default function Profile() {
                   <GraduationCap className="h-4 w-4 text-primary" />{" "}
                   {getEducationLevelLabel(displayEducationLevel)}
                 </div>
-
-                {displayOccupation && (
-                  <div className="flex items-center gap-1.5">
-                    <Briefcase className="h-4 w-4 text-primary" />{" "}
-                    {displayOccupation}
-                  </div>
-                )}
-                {displayLocation && (
-                  <div className="flex items-center gap-1.5">
-                    <MapPin className="h-4 w-4 text-primary" />{" "}
-                    {displayLocation}
-                  </div>
-                )}
 
                 {displayInstagram && (
                   <a

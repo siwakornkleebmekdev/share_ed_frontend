@@ -74,7 +74,7 @@ export const profileService = {
         const invRes = await api.get("/users/me/inventory");
         const invList = invRes.data?.data || [];
         invList.forEach((inv) => {
-          if (inv.item && (inv.item.item_type === "FRAME" || inv.item.item_type === "THEME")) {
+          if (inv.item?.item_type === "FRAME") {
             let matched = false;
             for (const [, v] of map.entries()) {
               if (String(v.reward_item_id || v.reward?.id) === String(inv.item.id)) {
@@ -188,8 +188,6 @@ export const profileService = {
         if (data.nickname !== undefined) formData.append("nickname", data.nickname);
         if (data.bio !== undefined) formData.append("bio", data.bio);
         if (data.education_level !== undefined) formData.append("education_level", data.education_level);
-        if (data.location !== undefined) formData.append("location", data.location);
-        if (data.occupation !== undefined) formData.append("occupation", data.occupation);
 
         // ลิงก์โซเชียลมีเดีย
         if (data.facebook_url !== undefined) formData.append("facebook_url", data.facebook_url);

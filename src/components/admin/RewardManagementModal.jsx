@@ -147,7 +147,7 @@ export default function RewardManagementModal({ isOpen, onClose, onRewardDeleted
               <input required maxLength={100} value={newName} onChange={(e) => setNewName(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-2.5 text-sm" />
             </label>
             <label className="text-xs font-semibold text-slate-700">ประเภท
-              <select value={newType} onChange={(e) => setNewType(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-2.5 text-sm"><option value="FRAME">กรอบโปรไฟล์</option><option value="THEME">ธีม</option></select>
+              <select value={newType} onChange={(e) => setNewType(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-2.5 text-sm"><option value="FRAME">กรอบโปรไฟล์</option></select>
             </label>
             <label className="text-xs font-semibold text-slate-700 sm:col-span-2">คำอธิบาย
               <input value={newDescription} onChange={(e) => setNewDescription(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-2.5 text-sm" />
@@ -168,7 +168,7 @@ export default function RewardManagementModal({ isOpen, onClose, onRewardDeleted
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="ค้นหาตามชื่อรางวัล หรือประเภท (เช่น FRAME, THEME)..."
+              placeholder="ค้นหาตามชื่อรางวัล หรือประเภท FRAME..."
               className="w-full pl-10 pr-9 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-slate-800 shadow-sm"
             />
             {search && (

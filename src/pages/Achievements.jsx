@@ -445,11 +445,7 @@ export default function Achievements() {
                     <div className="inline-flex items-center gap-1.5 mt-3.5 px-3 py-1.5 rounded-xl bg-amber-50/90 border border-amber-200/70 text-amber-800 text-xs font-bold w-fit max-w-full shadow-2xs">
                       <Gift className="h-3.5 w-3.5 text-amber-600 shrink-0" />
                       <span className="truncate">
-                        {milestone.reward.type === 'FRAME'
-                          ? 'กรอบรูป'
-                          : milestone.reward.type === 'THEME'
-                          ? 'ธีม'
-                          : 'รางวัล'}
+                        {milestone.reward.type === 'FRAME' ? 'กรอบรูป' : 'รางวัล'}
                         : {milestone.reward.name}
                       </span>
                     </div>
