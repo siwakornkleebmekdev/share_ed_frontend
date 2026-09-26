@@ -304,7 +304,7 @@ export const postService = {
   uploadPostFilesDirect: async ({ coverImage, pdfFile = null, images = [], signal }) => {
     if (!coverImage) throw new Error('กรุณาอัปโหลดรูปภาพหน้าปก');
     const imageFiles = Array.from(images || []);
-    if (imageFiles.length + (pdfFile ? 1 : 0) > 15) throw new Error('แนบไฟล์ได้สูงสุด 15 ไฟล์');
+    if (imageFiles.length > 15) throw new Error('แนบรูปภาพประกอบได้สูงสุด 15 ไฟล์');
 
     if (pdfFile) {
       const pdfVal = validatePdfFile(pdfFile);
