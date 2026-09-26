@@ -551,11 +551,11 @@ export default function CreatePost() {
         const uploads = sameFiles
           ? cached.uploads
           : await postService.uploadPostFilesDirect({
-              coverImage: coverFile,
-              pdfFile,
-              images,
-              signal: uploadController.signal,
-            });
+            coverImage: coverFile,
+            pdfFile,
+            images,
+            signal: uploadController.signal,
+          });
         if (pdfFile) setIsPdfUploading(false);
         uploadCache.current = { files, uploads };
         const { coverUpload, mediaUploads, pdfUpload, uploadSessionId } = uploads;
@@ -733,11 +733,10 @@ export default function CreatePost() {
                   />
                 ) : (
                   <label
-                    className={`flex flex-col items-center justify-center w-full aspect-video border-2 border-dashed rounded-2xl hover:bg-slate-50 cursor-pointer transition-all ${
-                      fieldErrors.cover
-                        ? 'border-red-500 hover:border-red-500'
-                        : 'border-slate-300 hover:border-primary'
-                    }`}
+                    className={`flex flex-col items-center justify-center w-full aspect-video border-2 border-dashed rounded-2xl hover:bg-slate-50 cursor-pointer transition-all ${fieldErrors.cover
+                      ? 'border-red-500 hover:border-red-500'
+                      : 'border-slate-300 hover:border-primary'
+                      }`}
                   >
                     <ImageIcon className="h-10 w-10 text-slate-400 mb-3" />
                     <span className="text-sm font-medium text-slate-500">คลิกเพื่ออัปโหลดรูปปก</span>
@@ -761,11 +760,10 @@ export default function CreatePost() {
                 /* Legacy Cover Area */
                 !coverImage ? (
                   <label
-                    className={`flex flex-col items-center justify-center w-full aspect-video border-2 border-dashed rounded-2xl hover:bg-slate-50 cursor-pointer transition-all ${
-                      fieldErrors.cover
-                        ? 'border-red-500 hover:border-red-500'
-                        : 'border-slate-300 hover:border-primary'
-                    }`}
+                    className={`flex flex-col items-center justify-center w-full aspect-video border-2 border-dashed rounded-2xl hover:bg-slate-50 cursor-pointer transition-all ${fieldErrors.cover
+                      ? 'border-red-500 hover:border-red-500'
+                      : 'border-slate-300 hover:border-primary'
+                      }`}
                   >
                     <ImageIcon className="h-10 w-10 text-slate-400 mb-3" />
                     <span className="text-sm font-medium text-slate-500">คลิกเพื่ออัปโหลดรูปปก</span>
@@ -820,9 +818,8 @@ export default function CreatePost() {
                   ชื่อหัวข้อสรุป <span className="text-rose-500">*</span>
                 </span>
                 <span
-                  className={`text-xs font-semibold ${
-                    title.length >= 100 ? 'text-rose-500' : 'text-slate-400'
-                  }`}
+                  className={`text-xs font-semibold ${title.length >= 100 ? 'text-rose-500' : 'text-slate-400'
+                    }`}
                 >
                   {title.length}/100 ตัวอักษร
                 </span>
@@ -836,11 +833,10 @@ export default function CreatePost() {
                   setTitle(e.target.value.slice(0, 100));
                   if (fieldErrors.title) setFieldErrors(prev => ({ ...prev, title: null }));
                 }}
-                className={`w-full px-5 py-4 rounded-xl border focus:outline-none transition-colors text-base ${
-                  fieldErrors.title
-                    ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
-                    : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
-                }`}
+                className={`w-full px-5 py-4 rounded-xl border focus:outline-none transition-colors text-base ${fieldErrors.title
+                  ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+                  : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
+                  }`}
                 placeholder="เช่น สรุปสูตรฟิสิกส์ ม.4 เทอม 1"
               />
               {fieldErrors.title && (
@@ -859,11 +855,10 @@ export default function CreatePost() {
                     setLevel(e.target.value);
                     if (fieldErrors.level) setFieldErrors(prev => ({ ...prev, level: null }));
                   }}
-                  className={`w-full px-5 py-4 rounded-xl border focus:outline-none transition-colors bg-white font-medium text-slate-700 text-base ${
-                    fieldErrors.level
-                      ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
-                      : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
-                  }`}
+                  className={`w-full px-5 py-4 rounded-xl border focus:outline-none transition-colors bg-white font-medium text-slate-700 text-base ${fieldErrors.level
+                    ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+                    : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
+                    }`}
                 >
                   <option value="" disabled>
                     เลือกระดับชั้น
@@ -887,9 +882,8 @@ export default function CreatePost() {
                 <span className="text-rose-500">*</span>
               </span>
               <span
-                className={`text-xs font-semibold ${
-                  summary.length >= 200 ? 'text-rose-500' : 'text-slate-400'
-                }`}
+                className={`text-xs font-semibold ${summary.length >= 200 ? 'text-rose-500' : 'text-slate-400'
+                  }`}
               >
                 {summary.length}/200 ตัวอักษร
               </span>
@@ -901,11 +895,10 @@ export default function CreatePost() {
                 setSummary(e.target.value.slice(0, 200));
                 if (fieldErrors.summary) setFieldErrors(prev => ({ ...prev, summary: null }));
               }}
-              className={`w-full px-5 py-4 rounded-xl border focus:outline-none transition-colors text-base min-h-[100px] resize-y bg-white ${
-                fieldErrors.summary
-                  ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
-                  : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
-              }`}
+              className={`w-full px-5 py-4 rounded-xl border focus:outline-none transition-colors text-base min-h-[100px] resize-y bg-white ${fieldErrors.summary
+                ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+                : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
+                }`}
               placeholder="อธิบายสั้นๆ เกี่ยวกับไฟล์สรุปนี้ (จะนำไปแสดงบนการ์ดในหน้ารายการ) เช่น สรุปฟิสิกส์ ม.4 เทอม 1 เหมาะกับทบทวนสอบกลางภาค..."
               rows={3}
             />
@@ -922,9 +915,8 @@ export default function CreatePost() {
             </label>
             <div
               onClick={() => setShowModal(true)}
-              className={`p-5 border border-dashed hover:border-primary rounded-2xl bg-white hover:bg-blue-50/10 cursor-pointer transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
-                fieldErrors.category ? 'border-red-500 bg-red-50/10' : 'border-slate-200'
-              }`}
+              className={`p-5 border border-dashed hover:border-primary rounded-2xl bg-white hover:bg-blue-50/10 cursor-pointer transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${fieldErrors.category ? 'border-red-500 bg-red-50/10' : 'border-slate-200'
+                }`}
             >
               <div className="flex flex-col gap-2">
                 {categoryName ? (
@@ -1121,7 +1113,7 @@ export default function CreatePost() {
                       <Plus className="w-4 h-4 text-slate-400" />
                       <span>เพิ่มรูปภาพประกอบ</span>
                       <input
-                        test-data="supporting-images-file-input"
+                        test-data="other-images-file-input"
                         type="file"
                         className="hidden"
                         accept=".jpg,.jpeg,.png,.webp"
@@ -1167,13 +1159,12 @@ export default function CreatePost() {
 
                   <div className="relative group/btn inline-block">
                     <label
-                      className={`w-20 h-20 border-2 border-dashed rounded-xl flex flex-col items-center justify-center transition-all ${
-                        images.length >= 15
-                          ? 'border-slate-200 bg-slate-100 cursor-not-allowed opacity-60'
-                          : fieldErrors.media
+                      className={`w-20 h-20 border-2 border-dashed rounded-xl flex flex-col items-center justify-center transition-all ${images.length >= 15
+                        ? 'border-slate-200 bg-slate-100 cursor-not-allowed opacity-60'
+                        : fieldErrors.media
                           ? 'border-red-500 hover:border-red-500 hover:bg-slate-50 cursor-pointer'
                           : 'border-slate-300 hover:border-primary hover:bg-slate-50 cursor-pointer'
-                      }`}
+                        }`}
                     >
                       <Plus className="h-6 w-6 text-slate-400" />
                       <input
@@ -1280,11 +1271,10 @@ export default function CreatePost() {
                   test-data="category-select"
                   value={categoryId || categoryName}
                   onChange={(e) => handleCategorySelect(e.target.value)}
-                  className={`w-full px-5 py-3.5 rounded-xl border focus:outline-none transition-colors bg-white font-medium text-slate-700 text-base cursor-pointer ${
-                    fieldErrors.category
-                      ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
-                      : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
-                  }`}
+                  className={`w-full px-5 py-3.5 rounded-xl border focus:outline-none transition-colors bg-white font-medium text-slate-700 text-base cursor-pointer ${fieldErrors.category
+                    ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+                    : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
+                    }`}
                 >
                   <option value="" disabled>
                     เลือกหมวดหมู่วิชา
@@ -1351,11 +1341,10 @@ export default function CreatePost() {
                         key={tag}
                         type="button"
                         onClick={() => toggleSuggestedTag(tag)}
-                        className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-all cursor-pointer ${
-                          hashtags.includes(tag)
-                            ? 'bg-primary text-white border-primary shadow-xs'
-                            : 'bg-white text-slate-600 border-slate-200 hover:border-primary/50 hover:bg-slate-50'
-                        }`}
+                        className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-all cursor-pointer ${hashtags.includes(tag)
+                          ? 'bg-primary text-white border-primary shadow-xs'
+                          : 'bg-white text-slate-600 border-slate-200 hover:border-primary/50 hover:bg-slate-50'
+                          }`}
                       >
                         {tag}
                       </button>
