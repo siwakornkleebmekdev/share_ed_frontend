@@ -17,6 +17,8 @@ import {
   UserX,
   Loader2,
   Heart,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import PostCard from "@/components/PostCard";
@@ -176,6 +178,12 @@ export default function Profile() {
   const [myPosts, setMyPosts] = useState([]);
   const [drafts, setDrafts] = useState([]);
   const [bookmarks, setBookmarks] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(() =>
+    typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches
+      ? 3
+      : 6,
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [followCounts, setFollowCounts] = useState({
     followersCount: 0,
@@ -296,6 +304,34 @@ export default function Profile() {
   const completedAchievements = allMilestones.filter(
     (m) => m.status !== "LOCKED",
   );
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 767px)");
+    const updateItemsPerPage = (event) => setItemsPerPage(event.matches ? 3 : 6);
+    updateItemsPerPage(mediaQuery);
+    mediaQuery.addEventListener("change", updateItemsPerPage);
+    return () => mediaQuery.removeEventListener("change", updateItemsPerPage);
+  }, []);
+
+  const activeItems =
+    activeTab === "drafts"
+      ? drafts
+      : activeTab === "bookmarks"
+        ? bookmarks
+        : myPosts;
+  const totalPages = Math.max(1, Math.ceil(activeItems.length / itemsPerPage));
+  const pageStart = (currentPage - 1) * itemsPerPage;
+  const paginatedPosts = myPosts.slice(pageStart, pageStart + itemsPerPage);
+  const paginatedDrafts = drafts.slice(pageStart, pageStart + itemsPerPage);
+  const paginatedBookmarks = bookmarks.slice(pageStart, pageStart + itemsPerPage);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, itemsPerPage]);
+
+  useEffect(() => {
+    setCurrentPage((page) => Math.min(page, totalPages));
+  }, [totalPages]);
 
   // ดึงข้อมูลโปรไฟล์ (แยกเคส: ตัวเอง vs คนอื่น)
   useEffect(() => {
@@ -845,7 +881,7 @@ export default function Profile() {
               {activeTab === "posts" && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {myPosts.length > 0 ? (
-                    myPosts.map((post) => (
+                    paginatedPosts.map((post) => (
                       <PostCard
                         key={post.id}
                         post={post}
@@ -870,7 +906,7 @@ export default function Profile() {
               {!isOtherUser && activeTab === "drafts" && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {drafts.length > 0 ? (
-                    drafts.map((draft) => (
+                    paginatedDrafts.map((draft) => (
                       <div
                         key={draft.id}
                         className={`backdrop-blur-xl rounded-3xl border shadow-lg shadow-black/10 hover:shadow-xl transition-all flex flex-col overflow-hidden group ${emptyCardClass}`}
@@ -964,7 +1000,7 @@ export default function Profile() {
               {!isOtherUser && activeTab === "bookmarks" && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {bookmarks.length > 0 ? (
-                    bookmarks.map((post) => (
+                    paginatedBookmarks.map((post) => (
                       <PostCard
                         key={post.id}
                         post={post}
@@ -992,6 +1028,52 @@ export default function Profile() {
                     </div>
                   )}
                 </div>
+              )}
+
+              {["posts", "drafts", "bookmarks"].includes(activeTab) && totalPages > 1 && (
+                <nav
+                  className="mt-8 flex flex-wrap items-center justify-center gap-2"
+                  aria-label="เปลี่ยนหน้ารายการโพสต์"
+                >
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                    disabled={currentPage === 1}
+                    className={`inline-flex min-h-11 items-center justify-center gap-1 rounded-xl border px-3 py-2 text-sm font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${tabInactiveClass}`}
+                    aria-label="หน้าก่อนหน้า"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    <span className="hidden sm:inline">ก่อนหน้า</span>
+                  </button>
+
+                  {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
+                    <button
+                      key={page}
+                      type="button"
+                      onClick={() => setCurrentPage(page)}
+                      aria-label={`หน้า ${page}`}
+                      aria-current={currentPage === page ? "page" : undefined}
+                      className={`h-11 min-w-11 rounded-xl px-3 text-sm font-bold transition-colors ${
+                        currentPage === page
+                          ? "bg-primary text-white shadow-md shadow-primary/20"
+                          : tabInactiveClass
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                    disabled={currentPage === totalPages}
+                    className={`inline-flex min-h-11 items-center justify-center gap-1 rounded-xl border px-3 py-2 text-sm font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${tabInactiveClass}`}
+                    aria-label="หน้าถัดไป"
+                  >
+                    <span className="hidden sm:inline">ถัดไป</span>
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </nav>
               )}
 
               {activeTab === "achievements" && (
