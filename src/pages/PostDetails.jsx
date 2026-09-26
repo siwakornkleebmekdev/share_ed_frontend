@@ -250,7 +250,7 @@ export default function PostDetails() {
       if (postId && String(postId) === String(id)) {
         postService.getPostById(id).then(updated => {
           if (updated) setPost(updated);
-        }).catch(() => {});
+        }).catch(() => { });
       }
     });
 
@@ -258,7 +258,7 @@ export default function PostDetails() {
       if (document.visibilityState === 'visible') {
         postService.getPostById(id).then(updated => {
           if (updated) setPost(updated);
-        }).catch(() => {});
+        }).catch(() => { });
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);
@@ -650,18 +650,18 @@ export default function PostDetails() {
           )}
           {isAuthor && (
 
-              <Link to={`/post/edit/${post.id}`} className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-primary border border-blue-100 rounded-xl text-sm font-bold shadow-sm transition-all">
-                <Edit3 className="h-4 w-4" /> แก้ไขโพสต์
-              </Link>
+            <Link to={`/post/edit/${post.id}`} className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-primary border border-blue-100 rounded-xl text-sm font-bold shadow-sm transition-all">
+              <Edit3 className="h-4 w-4" /> แก้ไขโพสต์
+            </Link>
           )}
           {canDeletePost && (
-              <button
-                onClick={handleDelete}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-100 rounded-xl text-sm font-bold shadow-sm transition-all cursor-pointer"
-                title={isAdmin && !isAuthor ? "ลบโพสต์ (ผู้ดูแลระบบ)" : "ลบโพสต์"}
-              >
-                <Trash2 className="h-4 w-4" /> {isAdmin && !isAuthor ? 'ลบโพสต์ (Admin)' : 'ลบโพสต์'}
-              </button>
+            <button
+              onClick={handleDelete}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-100 rounded-xl text-sm font-bold shadow-sm transition-all cursor-pointer"
+              title={isAdmin && !isAuthor ? "ลบโพสต์ (ผู้ดูแลระบบ)" : "ลบโพสต์"}
+            >
+              <Trash2 className="h-4 w-4" /> {isAdmin && !isAuthor ? 'ลบโพสต์ (Admin)' : 'ลบโพสต์'}
+            </button>
 
           )}
         </div>
@@ -670,8 +670,12 @@ export default function PostDetails() {
       <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 overflow-hidden">
 
         {/* Cover Image */}
-        <div className="w-full aspect-video sm:aspect-[2.4/1] bg-slate-100 relative overflow-hidden">
-          <img src={post.coverImage} alt={post.title} className="w-full h-full object-cover object-center" />
+        <div className="relative w-full bg-slate-100">
+          <img
+            src={post.coverImage}
+            alt={post.title}
+            className="block h-auto w-full object-contain"
+          />
           <div className="absolute top-4 left-4 flex gap-2">
             <span className="px-3 py-1.5 bg-white/90 backdrop-blur-sm text-primary rounded-full text-xs font-bold shadow-sm">
               {post.category}
@@ -736,10 +740,10 @@ export default function PostDetails() {
               <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2 mb-4">
                 <ImageIcon className="h-5 w-5 text-primary" /> รูปภาพประกอบ ({post.images.length})
               </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              <div className="columns-1 gap-4 sm:columns-2 md:columns-3">
                 {post.images.map((img, idx) => (
-                  <div key={idx} className="relative aspect-square rounded-2xl overflow-hidden group cursor-pointer border border-slate-200" onClick={() => setPreviewImage(img)}>
-                    <img src={img} alt={`gallery-${idx}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                  <div key={idx} className="group relative mb-4 break-inside-avoid cursor-pointer overflow-hidden rounded-2xl border border-slate-200 bg-slate-50" onClick={() => setPreviewImage(img)}>
+                    <img src={img} alt={`gallery-${idx}`} className="block h-auto w-full object-contain transition-opacity duration-300 group-hover:opacity-90" />
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                       <Eye className="h-8 w-8 text-white" />
                     </div>
@@ -932,11 +936,10 @@ export default function PostDetails() {
                         onClick={() => setCommentPage(page)}
                         aria-label={`ไปยังหน้าความคิดเห็น ${page}`}
                         aria-current={commentPage === page ? 'page' : undefined}
-                        className={`h-9 min-w-9 rounded-lg px-2 text-sm font-bold transition-colors ${
-                          commentPage === page
-                            ? 'bg-primary text-white shadow-sm'
-                            : 'text-slate-500 hover:bg-white hover:text-primary'
-                        }`}
+                        className={`h-9 min-w-9 rounded-lg px-2 text-sm font-bold transition-colors ${commentPage === page
+                          ? 'bg-primary text-white shadow-sm'
+                          : 'text-slate-500 hover:bg-white hover:text-primary'
+                          }`}
                       >
                         {page}
                       </button>
