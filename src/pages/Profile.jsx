@@ -845,27 +845,30 @@ export default function Profile() {
         </div>
 
         {/* แถบแท็บ */}
-        <div className="flex gap-2 mb-8 overflow-x-auto pb-2 scrollbar-hide">
+        <div className={`mb-8 grid w-full gap-2 ${isOtherUser ? "grid-cols-1" : "grid-cols-3"}`}>
           <button
             onClick={() => selectTab("posts")}
-            className={`flex items-center gap-2 px-6 py-3.5 rounded-xl font-bold whitespace-nowrap transition-all cursor-pointer ${activeTab === "posts" ? "bg-primary text-white shadow-lg shadow-primary/20" : tabInactiveClass}`}
+            className={`flex min-h-12 min-w-0 items-center justify-center gap-1 rounded-xl px-2 py-3 text-xs font-bold transition-all cursor-pointer min-[414px]:gap-2 min-[414px]:text-sm sm:px-6 sm:py-3.5 sm:text-base ${activeTab === "posts" ? "bg-primary text-white shadow-lg shadow-primary/20" : tabInactiveClass}`}
           >
-            <BookOpen className="h-5 w-5" /> {isOtherUser ? "โพสต์ทั้งหมด" : "โพสต์ของฉัน"}
+            <BookOpen className="h-4 w-4 shrink-0 sm:h-5 sm:w-5" />
+            <span className="min-w-0 truncate">{isOtherUser ? "โพสต์ทั้งหมด" : "โพสต์ของฉัน"}</span>
           </button>
 
           {!isOtherUser && (
             <>
               <button
                 onClick={() => selectTab("drafts")}
-                className={`flex items-center gap-2 px-6 py-3.5 rounded-xl font-bold whitespace-nowrap transition-all cursor-pointer ${activeTab === "drafts" ? "bg-primary text-white shadow-lg shadow-primary/20" : tabInactiveClass}`}
+                className={`flex min-h-12 min-w-0 items-center justify-center gap-1 rounded-xl px-2 py-3 text-xs font-bold transition-all cursor-pointer min-[414px]:gap-2 min-[414px]:text-sm sm:px-6 sm:py-3.5 sm:text-base ${activeTab === "drafts" ? "bg-primary text-white shadow-lg shadow-primary/20" : tabInactiveClass}`}
               >
-                <FileText className="h-5 w-5" /> แบบร่าง
+                <FileText className="h-4 w-4 shrink-0 sm:h-5 sm:w-5" />
+                <span className="min-w-0 truncate">แบบร่าง</span>
               </button>
               <button
                 onClick={() => selectTab("bookmarks")}
-                className={`flex items-center gap-2 px-6 py-3.5 rounded-xl font-bold whitespace-nowrap transition-all cursor-pointer ${activeTab === "bookmarks" ? "bg-primary text-white shadow-lg shadow-primary/20" : tabInactiveClass}`}
+                className={`flex min-h-12 min-w-0 items-center justify-center gap-1 rounded-xl px-2 py-3 text-xs font-bold transition-all cursor-pointer min-[414px]:gap-2 min-[414px]:text-sm sm:px-6 sm:py-3.5 sm:text-base ${activeTab === "bookmarks" ? "bg-primary text-white shadow-lg shadow-primary/20" : tabInactiveClass}`}
               >
-                <Star className="h-5 w-5" /> บุ๊คมาร์ก
+                <Star className="h-4 w-4 shrink-0 sm:h-5 sm:w-5" />
+                <span className="min-w-0 truncate">บุ๊กมาร์ก</span>
               </button>
             </>
           )}
