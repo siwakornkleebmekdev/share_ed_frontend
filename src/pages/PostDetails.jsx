@@ -670,12 +670,9 @@ export default function PostDetails() {
       <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 overflow-hidden">
 
         {/* Cover Image */}
-        <div className="relative w-full bg-slate-100">
-          <img
-            src={post.coverImage}
-            alt={post.title}
-            className="block h-auto w-full object-contain"
-          />
+
+        <div className="w-full aspect-video sm:aspect-[2.4/1] bg-slate-100 relative overflow-hidden">
+
           <div className="absolute top-4 left-4 flex gap-2">
             <span className="px-3 py-1.5 bg-white/90 backdrop-blur-sm text-primary rounded-full text-xs font-bold shadow-sm">
               {post.category}
@@ -740,10 +737,10 @@ export default function PostDetails() {
               <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2 mb-4">
                 <ImageIcon className="h-5 w-5 text-primary" /> รูปภาพประกอบ ({post.images.length})
               </h3>
-              <div className="columns-1 gap-4 sm:columns-2 md:columns-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {post.images.map((img, idx) => (
-                  <div key={idx} className="group relative mb-4 break-inside-avoid cursor-pointer overflow-hidden rounded-2xl border border-slate-200 bg-slate-50" onClick={() => setPreviewImage(img)}>
-                    <img src={img} alt={`gallery-${idx}`} className="block h-auto w-full object-contain transition-opacity duration-300 group-hover:opacity-90" />
+                  <div key={idx} className="relative aspect-square rounded-2xl overflow-hidden group cursor-pointer border border-slate-200" onClick={() => setPreviewImage(img)}>
+                    <img src={img} alt={`gallery-${idx}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                       <Eye className="h-8 w-8 text-white" />
                     </div>
