@@ -647,6 +647,7 @@ export function formatPostData(post) {
     category_id: post.category_id || post.category?.id || null,
     category: post.category || { id: post.category_id, name: categoryName },
     tags: post.tags?.map(t => typeof t === 'string' ? t : (t.tag?.tag_name || t.name)) || [],
+    view_count: Number(post.view_count) || 0,
     views: formatNumber(post.view_count),
     likes: post._count?.likes || post.likes_count || (Array.isArray(post.likes) ? post.likes.length : (typeof post.likes === 'number' ? post.likes : 0)),
     isLiked: Boolean(post.is_liked || post.isLiked || post.has_liked),

@@ -2,14 +2,10 @@ import { useState, useEffect } from 'react';
 import { TrendingUp, Flame, Eye, Sparkles, BookOpen } from 'lucide-react';
 import PostCard from '@/components/PostCard';
 import { postService } from '@/services/post.service';
-import { supabase } from '@/utils/supabase';
-
-const TRENDING_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
 export default function Trending() {
   const [filterType, setFilterType] = useState('likes'); // 'likes' or 'views'
   const [posts, setPosts] = useState([]);
-  const [recentViewStats, setRecentViewStats] = useState({});
   const [activeLevel, setActiveLevel] = useState('MIDDLE_SCHOOL');
   const [isLoading, setIsLoading] = useState(true);
 
@@ -25,30 +21,6 @@ export default function Trending() {
         setIsLoading(true);
         const fetchedPosts = await postService.getAllPosts();
         setPosts(fetchedPosts);
-
-        const postIds = fetchedPosts.map(post => post.id).filter(Boolean);
-        if (postIds.length > 0) {
-          const sevenDaysAgo = new Date(Date.now() - TRENDING_WINDOW_MS).toISOString();
-          const { data: recentViews, error: recentViewsError } = await supabase
-            .from('post_views')
-            .select('post_id, viewed_at')
-            .in('post_id', postIds)
-            .gte('viewed_at', sevenDaysAgo);
-
-          if (recentViewsError) throw recentViewsError;
-
-          const stats = recentViews.reduce((result, view) => {
-            const viewedAt = new Date(view.viewed_at).getTime();
-            const current = result[view.post_id] || { count: 0, latestViewedAt: 0 };
-            result[view.post_id] = {
-              count: current.count + 1,
-              latestViewedAt: Math.max(current.latestViewedAt, viewedAt),
-            };
-            return result;
-          }, {});
-
-          setRecentViewStats(stats);
-        }
       } catch (error) {
         console.error('Error fetching trending posts:', error);
       } finally {
@@ -72,31 +44,28 @@ export default function Trending() {
     return 0;
   };
 
+  // Keep the ranking rule in one place: highest views first, then newest post.
+  // `view_count` is the raw API value; `views` is only the display fallback.
+  const compareByViewsThenCreatedAt = (a, b) => {
+    const viewDifference = parseViews(b.view_count ?? b.views) - parseViews(a.view_count ?? a.views);
+    if (viewDifference !== 0) return viewDifference;
+
+    const createdAtDifference = new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+    if (createdAtDifference !== 0) return createdAtDifference;
+
+    return String(a.id).localeCompare(String(b.id));
+  };
+
   const sortPosts = (items) => {
     return [...items].sort((a, b) => {
       if (filterType === 'likes') return b.likes - a.likes;
-      return parseViews(b.views) - parseViews(a.views);
+      return compareByViewsThenCreatedAt(a, b);
     });
   };
 
-  // Rank by views in the last 7 days, then by the most recent view.
-  const postsWithRecentViews = postsOfLevel.filter(post => recentViewStats[post.id]?.count > 0);
-  const trendingCandidates = postsWithRecentViews.length > 0 ? postsWithRecentViews : postsOfLevel;
-  const sortedWeekly = [...trendingCandidates].sort((a, b) => {
-    const aStats = recentViewStats[a.id];
-    const bStats = recentViewStats[b.id];
-
-    if (postsWithRecentViews.length > 0) {
-      return bStats.count - aStats.count
-        || bStats.latestViewedAt - aStats.latestViewedAt
-        || String(a.id).localeCompare(String(b.id));
-    }
-
-    return parseViews(b.views) - parseViews(a.views)
-      || new Date(b.created_at || 0) - new Date(a.created_at || 0)
-      || String(a.id).localeCompare(String(b.id));
-  });
-  const top3 = sortedWeekly.slice(0, 3);
+  const top3 = [...postsOfLevel]
+    .sort(compareByViewsThenCreatedAt)
+    .slice(0, 3);
 
   // Rest of the posts: All posts of this level, sorted, excluding those in top3
   const sortedAll = sortPosts(postsOfLevel);
@@ -151,21 +120,14 @@ export default function Trending() {
         {top3.length > 0 ? (
           /* Top 3 Grid with special styling */
           <div className="grid grid-cols-3 items-stretch gap-2 px-0 min-[414px]:gap-3 sm:px-4 md:gap-6 md:px-8 lg:gap-10">
-            {top3[1] && (
-              <div className="order-1 h-full min-w-0 md:col-start-1 [&>div]:h-full animate-in slide-in-from-bottom-10 fade-in duration-700 delay-100">
-                <PostCard post={top3[1]} viewMode="grid" rank={2} />
+            {top3.map((post, index) => (
+              <div
+                key={post.id}
+                className="h-full min-w-0 [&>div]:h-full animate-in slide-in-from-bottom-10 fade-in duration-700"
+              >
+                <PostCard post={post} viewMode="grid" rank={index + 1} />
               </div>
-            )}
-            {top3[0] && (
-              <div className="order-2 h-full min-w-0 md:col-start-2 [&>div]:h-full z-10 animate-in slide-in-from-bottom-16 fade-in duration-700 delay-300">
-                <PostCard post={top3[0]} viewMode="grid" rank={1} />
-              </div>
-            )}
-            {top3[2] && (
-              <div className="order-3 h-full min-w-0 md:col-start-3 [&>div]:h-full animate-in slide-in-from-bottom-10 fade-in duration-700 delay-500">
-                <PostCard post={top3[2]} viewMode="grid" rank={3} />
-              </div>
-            )}
+            ))}
           </div>
         ) : (
           <div className="text-center py-12 bg-white rounded-2xl border border-slate-200 border-dashed">
