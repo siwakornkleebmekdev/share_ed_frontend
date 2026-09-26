@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import {
   MAX_PDF_SIZE_BYTES,
   MAX_IMAGE_SIZE_BYTES,
+  MAX_SUPPORTING_IMAGES_COUNT,
   MAX_MEDIA_FILES_COUNT,
   MAX_TOTAL_POST_BYTES,
   validateImageFile,
@@ -468,7 +469,12 @@ export function useUploadWorkspace({ mode = 'create', postId = null, isEnabled =
       // 3. Validate each file and prepare queued items
       const validItems = [];
       const hasExistingPdf = mediaFiles.some((m) => m.assetType === 'PDF');
+      let remainingImageSlots = Math.max(
+        0,
+        MAX_SUPPORTING_IMAGES_COUNT - mediaFiles.filter((m) => m.assetType === 'IMAGE').length
+      );
       let pdfEncounteredInBatch = false;
+      let removedExtraImages = false;
 
       for (const file of filesArray) {
         const isPdf =
@@ -489,11 +495,16 @@ export function useUploadWorkspace({ mode = 'create', postId = null, isEnabled =
           }
           pdfEncounteredInBatch = true;
         } else {
+          if (remainingImageSlots === 0) {
+            removedExtraImages = true;
+            continue;
+          }
           const imgVal = validateImageFile(file, false);
           if (!imgVal.valid) {
             toast.error(imgVal.error);
             continue;
           }
+          remainingImageSlots -= 1;
         }
 
         // Duplicate check
@@ -524,6 +535,10 @@ export function useUploadWorkspace({ mode = 'create', postId = null, isEnabled =
         };
 
         validItems.push(item);
+      }
+
+      if (removedExtraImages) {
+        toast.error('อัปโหลดรูปภาพประกอบได้สูงสุด 5 รูป ระบบนำรูปส่วนเกินออกแล้ว');
       }
 
       if (validItems.length === 0) return;

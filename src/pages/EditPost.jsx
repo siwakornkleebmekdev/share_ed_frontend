@@ -36,7 +36,7 @@ import {
   isUploadWorkspaceV2Enabled,
 } from '@/constants/uploadConstants';
 
-const SUGGESTED_TAGS = ['#AI', '#เรียนรู้ไปด้วยกัน', '#เตรียมสอบ', '#TCAS67', '#สรุปย่อ', '#แชร์ความรู้', '#เด็กซิ่ว', '#สรุปชีท'];
+const SUGGESTED_TAGS = ['#สรุป', '#ความรู้', '#โน้ตเรียน', '#สาระ', '#ทบทวน', '#สรุปย่อ', '#บทเรียน', '#อ่านสอบ'];
 
 export default function EditPost() {
   const { id } = useParams();
@@ -324,10 +324,10 @@ export default function EditPost() {
     let hasOversized = false;
     let hasInvalidType = false;
     let reachedLimit = false;
-    const totalCount = existingImages.length + images.length;
+    const totalCount = existingImages.length;
 
     for (const file of files) {
-      if (totalCount + newImages.length >= 15) {
+      if (totalCount + newImages.length >= 5) {
         reachedLimit = true;
         break;
       }
@@ -349,7 +349,7 @@ export default function EditPost() {
     }
 
     if (reachedLimit) {
-      toast.error('คุณสามารถอัปโหลดรูปภาพประกอบได้สูงสุด 15 รูปเท่านั้น');
+      toast.error('อัปโหลดรูปภาพประกอบได้สูงสุด 5 รูป ระบบนำรูปส่วนเกินออกแล้ว');
     }
     if (hasInvalidType) {
       toast.error('สามารถอัปโหลดไฟล์ .jpg,.jpeg,.png,.webp เท่านั้น');
@@ -1324,7 +1324,7 @@ export default function EditPost() {
                   {isV2
                     ? existingImages.length + workspace.imageFileItems.length
                     : existingImages.length + images.length}
-                  /15) <span className="text-rose-500">*</span>
+                  /5) <span className="text-rose-500">*</span>
                 </span>
                 <span className="text-xs font-normal text-slate-500">ไม่เกินรูปละ 2 MB</span>
               </label>
@@ -1384,7 +1384,7 @@ export default function EditPost() {
                     />
                   ))}
 
-                  {existingImages.length + workspace.imageFileItems.length < 15 && (
+                  {existingImages.length + workspace.imageFileItems.length < 5 && (
                     <label className="flex items-center justify-center gap-2 p-3 border-2 border-dashed border-slate-300 hover:border-primary hover:bg-slate-50 rounded-xl cursor-pointer transition-colors text-slate-600 text-sm font-semibold">
                       <Plus className="w-4 h-4 text-slate-400" />
                       <span>เพิ่มรูปภาพประกอบใหม่</span>
@@ -1395,7 +1395,15 @@ export default function EditPost() {
                         accept=".jpg,.jpeg,.png,.webp"
                         multiple
                         onChange={(e) => {
-                          workspace.addMediaFiles(e.target.files);
+                          const availableSlots = Math.max(
+                            0,
+                            5 - existingImages.length - workspace.imageFileItems.length
+                          );
+                          const selectedFiles = Array.from(e.target.files || []);
+                          workspace.addMediaFiles(selectedFiles.slice(0, availableSlots));
+                          if (selectedFiles.length > availableSlots) {
+                            toast.error('อัปโหลดรูปภาพประกอบได้สูงสุด 5 รูป ระบบนำรูปส่วนเกินออกแล้ว');
+                          }
                           e.target.value = '';
                         }}
                       />
@@ -1467,7 +1475,7 @@ export default function EditPost() {
                   <div className="relative group/btn inline-block">
                     <label
                       className={`w-20 h-20 border-2 border-dashed rounded-xl flex flex-col items-center justify-center transition-all ${
-                        existingImages.length + images.length >= 15
+                        existingImages.length + images.length >= 5
                           ? 'border-slate-200 bg-slate-100 cursor-not-allowed opacity-60'
                           : fieldErrors.media
                           ? 'border-red-500 hover:border-red-500 hover:bg-slate-50 cursor-pointer'
@@ -1482,10 +1490,10 @@ export default function EditPost() {
                         accept=".jpg,.jpeg,.png,.webp"
                         multiple
                         onChange={handleImagesUploadLegacy}
-                        disabled={existingImages.length + images.length >= 15}
+                        disabled={existingImages.length + images.length >= 5}
                       />
                     </label>
-                    {existingImages.length + images.length >= 15 && (
+                    {existingImages.length + images.length >= 5 && (
                       <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-xs px-3 py-1.5 bg-slate-800 text-white text-xs rounded-lg opacity-0 group-hover/btn:opacity-100 transition-opacity pointer-events-none z-20 whitespace-normal text-center shadow-lg">
                         ไม่สามารถเพิ่มรูปได้เนื่องจากครบจำนวนแล้ว
                       </div>
