@@ -250,19 +250,19 @@ export default function Navbar() {
 
                   {/* Notification Dropdown */}
                   {showNotifications && (
-                    <div className="absolute right-0 mt-3 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
-                      <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                        <h3 className="font-bold text-slate-800 text-base">
+                    <div className="fixed inset-x-3 top-20 z-[70] flex max-h-[calc(100dvh-6rem)] w-auto flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-xl animate-in fade-in slide-in-from-top-2 sm:absolute sm:inset-x-auto sm:right-0 sm:top-auto sm:mt-3 sm:max-h-[min(32rem,calc(100dvh-6rem))] sm:w-80">
+                      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/50 p-3 sm:p-4">
+                        <h3 className="min-w-0 break-words font-bold text-slate-800 text-sm sm:text-base">
                           การแจ้งเตือน
                         </h3>
                         {unreadCount() > 0 && (
-                          <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-0.5 rounded-full">
+                          <span className="shrink-0 whitespace-nowrap bg-red-100 text-red-600 text-xs font-bold px-2 py-0.5 rounded-full">
                             {unreadCount()} ใหม่
                           </span>
                         )}
                       </div>
 
-                      <div className="max-h-[360px] overflow-y-auto">
+                      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain sm:max-h-[360px]">
                         {error ? (<div role="alert" className="p-4 text-sm text-red-600">{error}<button className="block underline mt-2" onClick={fetchNotifications}>ลองอีกครั้ง</button></div>) : isLoading && notifications.length === 0 ? (<p className="p-6 text-center">กำลังโหลดข้อมูล...</p>) : notifications.length === 0 ? (
                           <div className="p-8 text-center text-slate-500 flex flex-col items-center gap-2">
                             <Bell className="h-8 w-8 text-slate-300" />
@@ -290,7 +290,7 @@ export default function Navbar() {
                                     event.currentTarget.click();
                                   }
                                 }}
-                                className={`group relative p-3.5 flex gap-3 hover:bg-slate-50 transition-colors ${notif.link ? "cursor-pointer" : ""} ${
+                                className={`group relative flex gap-2.5 p-3 hover:bg-slate-50 transition-colors sm:gap-3 sm:p-3.5 ${notif.link ? "cursor-pointer" : ""} ${
                                   !notif.isRead ? "bg-blue-50/40" : ""
                                 }`}
                               >
@@ -305,12 +305,12 @@ export default function Navbar() {
 
                                 {/* Text */}
                                 <div className="flex-1 min-w-0 text-left">
-                                  <p className={`text-sm mb-0.5 truncate ${
+                                  <p className={`mb-0.5 line-clamp-2 break-words text-sm ${
                                     !notif.isRead ? "font-bold text-slate-800" : "font-medium text-slate-700"
                                   }`}>
                                     {notif.title}
                                   </p>
-                                  <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
+                                  <p className="line-clamp-3 break-words text-xs leading-relaxed text-slate-500 sm:line-clamp-2">
                                     {notif.message}
                                   </p>
                                   {notif.link && (
@@ -333,7 +333,7 @@ export default function Navbar() {
                                       e.stopPropagation();
                                       deleteNotification(notif.id);
                                     }}
-                                    className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 transition-opacity p-0.5 rounded hover:bg-red-50 text-slate-400 hover:text-red-500"
+                                    className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 opacity-100 transition-opacity hover:bg-red-50 hover:text-red-500 focus:opacity-100 sm:h-auto sm:w-auto sm:p-1 sm:opacity-0 sm:group-hover:opacity-100"
                                     disabled={isMutating} aria-label="ลบการแจ้งเตือน" title="ลบการแจ้งเตือน"
                                   >
                                     <X className="h-3 w-3" />
@@ -346,17 +346,17 @@ export default function Navbar() {
                       </div>
 
                       {notifications.length > 0 && (
-                        <div className="p-3 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+                        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-slate-100 bg-slate-50 p-3">
                           <button
                             disabled={isMutating} onClick={() => markAllAsRead()}
-                            className="text-xs font-semibold text-slate-500 hover:text-primary transition-colors"
+                            className="min-h-11 rounded-lg px-2 text-xs font-semibold text-slate-500 transition-colors hover:bg-white hover:text-primary"
                           >
                             อ่านทั้งหมด
                           </button>
                           <Link
                             to="/notifications"
                             onClick={() => setShowNotifications(false)}
-                            className="text-sm font-bold text-primary hover:text-blue-700 transition-colors"
+                            className="inline-flex min-h-11 items-center rounded-lg px-2 text-sm font-bold text-primary transition-colors hover:bg-white hover:text-blue-700"
                           >
                             ดูทั้งหมด →
                           </Link>
