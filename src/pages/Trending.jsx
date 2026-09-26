@@ -111,14 +111,14 @@ export default function Trending() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
+    <div className="max-w-7xl mx-auto px-3 min-[414px]:px-4 sm:px-6 lg:px-8 py-8 sm:py-14">
       {/* Header */}
       <div className="mb-8 text-center">
-        <h1 className="text-4xl sm:text-5xl font-extrabold text-slate-900 flex items-center justify-center gap-4">
-          <TrendingUp className="h-10 w-10 sm:h-12 sm:w-12 text-rose-500" />
+        <h1 className="text-3xl min-[414px]:text-4xl sm:text-5xl font-extrabold text-slate-900 flex items-center justify-center gap-2 sm:gap-4">
+          <TrendingUp className="h-8 w-8 shrink-0 min-[414px]:h-10 min-[414px]:w-10 sm:h-12 sm:w-12 text-rose-500" />
           Trending Now
         </h1>
-        <p className="text-slate-500 mt-4 text-lg">สรุปเนื้อหาที่กำลังได้รับความนิยมสูงสุดในขณะนี้</p>
+        <p className="mx-auto mt-4 max-w-2xl break-words text-base leading-relaxed text-slate-500 sm:text-lg">สรุปเนื้อหาที่กำลังได้รับความนิยมสูงสุดในขณะนี้</p>
       </div>
 
       {/* Education Level Tab Buttons */}
@@ -142,27 +142,27 @@ export default function Trending() {
 
       {/* Top 3 Section */}
       <div className="mb-16">
-        <div className="flex items-center justify-center gap-2 mb-8">
-          <Sparkles className="h-5 w-5 text-yellow-500" />
-          <h2 className="text-2xl font-extrabold text-slate-800">Top 3 ยอดวิวสูงสุดของสัปดาห์นี้</h2>
-          <Sparkles className="h-5 w-5 text-yellow-500" />
+        <div className="mx-auto mb-8 flex max-w-full items-center justify-center gap-1 px-1 text-center sm:gap-2">
+          <Sparkles className="h-4 w-4 shrink-0 text-yellow-500 sm:h-5 sm:w-5" />
+          <h2 className="min-w-0 break-words text-lg font-extrabold leading-snug text-slate-800 sm:text-2xl">Top 3 ยอดวิวสูงสุดของสัปดาห์นี้</h2>
+          <Sparkles className="h-4 w-4 shrink-0 text-yellow-500 sm:h-5 sm:w-5" />
         </div>
 
         {top3.length > 0 ? (
           /* Top 3 Grid with special styling */
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-6 lg:gap-10 items-stretch px-4 sm:px-8">
+          <div className="grid grid-cols-3 items-stretch gap-2 px-0 min-[414px]:gap-3 sm:px-4 md:gap-6 md:px-8 lg:gap-10">
             {top3[1] && (
-              <div className="order-2 md:order-1 md:col-start-1 h-full [&>div]:h-full animate-in slide-in-from-bottom-10 fade-in duration-700 delay-100">
+              <div className="order-1 h-full min-w-0 md:col-start-1 [&>div]:h-full animate-in slide-in-from-bottom-10 fade-in duration-700 delay-100">
                 <PostCard post={top3[1]} viewMode="grid" rank={2} />
               </div>
             )}
             {top3[0] && (
-              <div className="order-1 md:order-2 md:col-start-2 h-full [&>div]:h-full z-10 animate-in slide-in-from-bottom-16 fade-in duration-700 delay-300">
+              <div className="order-2 h-full min-w-0 md:col-start-2 [&>div]:h-full z-10 animate-in slide-in-from-bottom-16 fade-in duration-700 delay-300">
                 <PostCard post={top3[0]} viewMode="grid" rank={1} />
               </div>
             )}
             {top3[2] && (
-              <div className="order-3 md:order-3 md:col-start-3 h-full [&>div]:h-full animate-in slide-in-from-bottom-10 fade-in duration-700 delay-500">
+              <div className="order-3 h-full min-w-0 md:col-start-3 [&>div]:h-full animate-in slide-in-from-bottom-10 fade-in duration-700 delay-500">
                 <PostCard post={top3[2]} viewMode="grid" rank={3} />
               </div>
             )}

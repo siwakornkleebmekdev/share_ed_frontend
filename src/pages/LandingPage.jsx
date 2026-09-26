@@ -25,7 +25,7 @@ export default function LandingPage() {
           พร้อมระบบสะสมความสำเร็จเพื่อปลดล็อกของรางวัลสุดพิเศษ
         </p>
         <div className="flex flex-col sm:flex-row justify-center gap-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-500">
-          <Link to="/explore" className="px-8 py-4 bg-primary text-white rounded-full font-bold text-lg hover:bg-blue-600 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-1 transition-all flex items-center justify-center gap-2 group">
+          <Link to="/home" className="px-8 py-4 bg-primary text-white rounded-full font-bold text-lg hover:bg-blue-600 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-1 transition-all flex items-center justify-center gap-2 group">
             เริ่มต้นเรียนรู้ฟรี <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
           </Link>
           <Link to="/trending" className="px-8 py-4 bg-white text-slate-700 border border-slate-200 rounded-full font-bold text-lg hover:bg-slate-50 hover:border-slate-300 hover:shadow-md hover:-translate-y-1 transition-all flex items-center justify-center">
