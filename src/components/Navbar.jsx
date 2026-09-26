@@ -520,7 +520,7 @@ export default function Navbar() {
       <Link
         to="/create"
         aria-label="สร้างโพสต์ใหม่"
-        className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-[max(1.25rem,env(safe-area-inset-right))] z-[60] inline-flex h-16 w-16 items-center justify-center rounded-full bg-primary text-white shadow-2xl shadow-blue-500/35 transition-all hover:-translate-y-1 hover:bg-blue-600 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-300 active:translate-y-0 sm:h-[4.5rem] sm:w-[4.5rem]"
+        className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-[max(1.25rem,env(safe-area-inset-right))] z-[60] inline-flex h-16 w-16 items-center justify-center rounded-full bg-primary text-white shadow-2xl shadow-blue-500/35 transition-all hover:-translate-y-1 hover:bg-blue-600 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-300 active:translate-y-0 sm:h-[4.5rem] sm:w-[4.5rem] md:hidden"
       >
         <PenTool className="h-7 w-7 sm:h-8 sm:w-8" aria-hidden="true" />
         <span className="sr-only">สร้างโพสต์</span>
