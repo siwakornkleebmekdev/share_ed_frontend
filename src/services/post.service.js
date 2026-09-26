@@ -329,32 +329,31 @@ export const postService = {
     tasks.push(...imageFiles.map(file => ({ kind: 'media', file })));
 
     const completedCloudinary = [];
-    let uploadedCloudinary;
-    try {
-      uploadedCloudinary = await mapWithConcurrency(tasks, DIRECT_UPLOAD_CONCURRENCY, async (task, _index, workerSignal) => {
-        const requestSignal = signal
-          ? AbortSignal.any([signal, workerSignal])
-          : workerSignal;
-        const asset = await uploadWithSignature(task.file, signatures[task.kind], requestSignal);
-        completedCloudinary.push(asset);
-        return asset;
-      });
-    } catch (error) {
-      await postService.cleanupDirectUploads(completedCloudinary);
-      throw error;
-    }
+    const cloudinaryUploadPromise = mapWithConcurrency(tasks, DIRECT_UPLOAD_CONCURRENCY, async (task, _index, workerSignal) => {
+      const requestSignal = signal
+        ? AbortSignal.any([signal, workerSignal])
+        : workerSignal;
+      const asset = await uploadWithSignature(task.file, signatures[task.kind], requestSignal);
+      completedCloudinary.push(asset);
+      return asset;
+    });
 
-    // 2. Upload PDF directly to Supabase Storage if provided
-    let pdfUploadMetadata = null;
-    if (pdfFile) {
-      try {
-        pdfUploadMetadata = await postService.uploadPdfToSupabase(pdfFile, { sessionId, signal });
-      } catch (pdfError) {
-        // If PDF upload fails, clean up finished Cloudinary uploads and abort
-        await postService.cleanupDirectUploads(completedCloudinary);
-        throw pdfError;
-      }
+    // 2. Upload PDF and Cloudinary assets together. Both already use the same
+    // upload session, so there is no reason to serialize these network transfers.
+    const pdfUploadPromise = pdfFile
+      ? postService.uploadPdfToSupabase(pdfFile, { sessionId, signal })
+      : Promise.resolve(null);
+    const [cloudinaryResult, pdfResult] = await Promise.allSettled([
+      cloudinaryUploadPromise,
+      pdfUploadPromise,
+    ]);
+    if (cloudinaryResult.status === 'rejected' || pdfResult.status === 'rejected') {
+      await postService.cleanupDirectUploads(completedCloudinary);
+      throw cloudinaryResult.status === 'rejected' ? cloudinaryResult.reason : pdfResult.reason;
     }
+    const uploadedCloudinary = cloudinaryResult.value;
+    const pdfUploadMetadata = pdfResult.value;
+
 
     return {
       coverUpload: uploadedCloudinary[0],
