@@ -343,6 +343,11 @@ export default function CreatePost() {
       return;
     }
 
+    if (workspace.hasFailedFiles) {
+      setFieldErrors({ media: 'มีไฟล์ที่อัปโหลดไม่สำเร็จ กรุณาลบไฟล์นั้นหรือลองใหม่' });
+      return;
+    }
+
     if (!isDraft && isContentUploading) {
       setFieldErrors({ content: 'กรุณารอให้อัปโหลดรูปในรายละเอียดเพิ่มเติมเสร็จก่อนเผยแพร่' });
       return;
