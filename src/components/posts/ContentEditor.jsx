@@ -280,7 +280,7 @@ export default function ContentEditor({ value, onChange, error, onUploadingChang
     setSelectionRect(null);
   };
 
-  return <div onDropCapture={handleDrop} onDragOverCapture={(event) => event.preventDefault()} onPaste={(e) => { const files = Array.from(e.clipboardData?.items || []).filter(item => item.type.startsWith('image/')).map(item => item.getAsFile()); if (files.length) { e.preventDefault(); pickFiles(files); } }}>
+  return <div test-data="post-content-input" onDropCapture={handleDrop} onDragOverCapture={(event) => event.preventDefault()} onPaste={(e) => { const files = Array.from(e.clipboardData?.items || []).filter(item => item.type.startsWith('image/')).map(item => item.getAsFile()); if (files.length) { e.preventDefault(); pickFiles(files); } }}>
     <div className={`border rounded-xl overflow-hidden bg-white focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all ${error ? 'border-rose-500' : 'border-slate-200'}`}>
       <ReactQuill ref={quillRef} theme="snow" value={value || ''} onChange={onChange} modules={modules} formats={editorFormats} className="content-editor min-h-48 border-0" placeholder="อธิบายเพิ่มเติมเกี่ยวกับเนื้อหา เทคนิคการจำ หรือที่มา..." />
     </div>
@@ -290,7 +290,7 @@ export default function ContentEditor({ value, onChange, error, onUploadingChang
       <button type="button" title="จัดรูปกึ่งกลาง" onClick={() => alignSelectedImage('center')} className="content-image-action-button"><AlignCenter className="h-4 w-4" /> กึ่งกลาง</button>
       <button type="button" title="จัดรูปชิดขวา" onClick={() => alignSelectedImage('right')} className="content-image-action-button"><AlignRight className="h-4 w-4" /> ขวา</button>
     </div>}
-    <input ref={fileRef} className="hidden" type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => { pickFiles(e.target.files); e.target.value = ''; }} />
+    <input test-data="content-image-file-input" ref={fileRef} className="hidden" type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => { pickFiles(e.target.files); e.target.value = ''; }} />
     {selectedImage && selectionRect && <button type="button" aria-label="ลากเพื่อปรับขนาดรูปภาพ" onMouseDown={startResize} className="content-image-resize-handle fixed z-50 h-4 w-4 cursor-se-resize rounded-sm border-2 border-white bg-primary shadow" style={{ left: selectionRect.right - 8, top: selectionRect.bottom - 8 }} />}
     <p className="mt-2 text-xs text-slate-500 flex items-center gap-1"><ImagePlus className="h-3.5 w-3.5" /> เพิ่มรูปจากปุ่มใน toolbar, ลากไฟล์ หรือวางจาก clipboard (JPEG/PNG/WebP, ไม่เกิน 10 MB)</p>
     {validationError && <p className="mt-2 text-xs font-medium text-rose-500" role="alert">{validationError}</p>}

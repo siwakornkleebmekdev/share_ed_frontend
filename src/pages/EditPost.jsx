@@ -646,7 +646,7 @@ export default function EditPost() {
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
 
-      <button onClick={() => navigate(`/post/${id}`)} className="inline-flex items-center gap-2 text-slate-500 hover:text-primary transition-colors mb-6 font-bold cursor-pointer">
+      <button test-data="cancel-edit-post-header-button" onClick={() => navigate(`/post/${id}`)} className="inline-flex items-center gap-2 text-slate-500 hover:text-primary transition-colors mb-6 font-bold cursor-pointer">
         <ChevronLeft className="h-5 w-5" /> ยกเลิกการแก้ไข
       </button>
 
@@ -674,7 +674,7 @@ export default function EditPost() {
                   <ImageIcon className="h-10 w-10 text-slate-400 mb-3" />
                   <span className="text-sm font-medium text-slate-500">คลิกเพื่ออัปโหลดรูปปกใหม่</span>
                   <span className="text-xs text-slate-400 mt-1">อัตราส่วนที่แนะนำ 16:9 (1280×720px) รูปภาพขนาดไม่เกิน 2 MB</span>
-                  <input type="file" className="hidden" accept=".jpg,.jpeg,.png" onChange={handleCoverUpload} />
+                  <input test-data="edit-cover-file-input" type="file" className="hidden" accept=".jpg,.jpeg,.png" onChange={handleCoverUpload} />
                 </label>
               ) : (
                 <div className="relative w-full aspect-video rounded-2xl overflow-hidden border border-slate-200 group">
@@ -687,6 +687,7 @@ export default function EditPost() {
                     }}
                   />
                   <button
+                    test-data="remove-edit-cover-button"
                     onClick={(e) => {
                       e.stopPropagation();
                       setCoverImage(null);
@@ -715,6 +716,7 @@ export default function EditPost() {
                 </span>
               </label>
               <input
+                test-data="edit-post-title-input"
                 type="text"
                 maxLength={100}
                 value={title}
@@ -737,6 +739,7 @@ export default function EditPost() {
                   <GraduationCap className="h-5 w-5 text-slate-400" /> ระดับชั้น <span className="text-rose-500">*</span>
                 </label>
                 <select
+                  test-data="edit-education-level-select"
                   value={level}
                   onChange={(e) => {
                     setLevel(e.target.value);
@@ -770,6 +773,7 @@ export default function EditPost() {
               </span>
             </label>
             <textarea
+              test-data="edit-post-summary-input"
               value={summary}
               onChange={(e) => {
                 setSummary(e.target.value.slice(0, 200));
@@ -826,6 +830,7 @@ export default function EditPost() {
                 )}
               </div>
               <button
+                test-data="edit-category-tags-settings-button"
                 type="button"
                 className="px-5 py-2.5 bg-primary/10 hover:bg-primary/20 text-primary font-bold rounded-xl text-sm transition-colors flex items-center gap-2 self-start sm:self-auto cursor-pointer"
               >
@@ -859,7 +864,7 @@ export default function EditPost() {
                 <div className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-primary/40 bg-blue-50/50 rounded-2xl">
                   <Loader2 className="h-8 w-8 text-primary animate-spin mb-2" />
                   <span className="text-sm font-medium text-primary">กำลังอัปโหลด PDF...</span>
-                  <button type="button" onClick={cancelPdfUpload} className="mt-2 text-xs font-bold text-rose-600 hover:text-rose-700 cursor-pointer">
+                  <button test-data="cancel-edit-pdf-upload-button" type="button" onClick={cancelPdfUpload} className="mt-2 text-xs font-bold text-rose-600 hover:text-rose-700 cursor-pointer">
                     ยกเลิกการอัปโหลด
                   </button>
                 </div>
@@ -868,7 +873,7 @@ export default function EditPost() {
                   <UploadCloud className="h-8 w-8 text-slate-400 mb-2" />
                   <span className="text-sm font-medium text-slate-500">อัปโหลดไฟล์ PDF ใหม่</span>
                   <span className="text-xs text-slate-400 mt-0.5">{MAX_PDF_SIZE_LABEL}</span>
-                  <input type="file" className="hidden" accept=".pdf,application/pdf" onChange={handlePdfUpload} />
+                  <input test-data="edit-pdf-file-input" type="file" className="hidden" accept=".pdf,application/pdf" onChange={handlePdfUpload} />
                 </label>
               ) : (
                 <div
@@ -887,6 +892,7 @@ export default function EditPost() {
                     </div>
                   </div>
                   <button
+                    test-data="remove-edit-pdf-button"
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -923,6 +929,7 @@ export default function EditPost() {
                       onClick={() => setPreviewFile({ type: 'image', url: img.url })}
                     />
                     <button
+                      test-data={`remove-existing-supporting-image-button-${idx}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         setExistingImages(prev => prev.filter((_, i) => i !== idx));
@@ -951,6 +958,7 @@ export default function EditPost() {
                       onClick={() => openPreview(item.previewUrl, 'image')}
                     />
                     <button
+                      test-data={`remove-new-supporting-image-button-${idx}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         removeImage(idx);
@@ -976,6 +984,7 @@ export default function EditPost() {
                     }`}>
                     <Plus className="h-6 w-6 text-slate-400" />
                     <input
+                      test-data="edit-supporting-images-file-input"
                       type="file"
                       className="hidden"
                       accept=".jpg,.jpeg,.png"
@@ -1002,10 +1011,10 @@ export default function EditPost() {
         {/* Actions */}
         <div className="sticky bottom-0 z-40 bg-slate-50 p-6 sm:px-12 sm:py-8 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4 rounded-b-[24px] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
           <div className="flex items-center gap-3 w-full sm:w-auto">
-            <button onClick={() => navigate(`/post/${id}`)} className="w-full sm:w-auto px-6 py-4 rounded-xl font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-colors shadow-sm cursor-pointer">
+            <button test-data="cancel-edit-post-button" onClick={() => navigate(`/post/${id}`)} className="w-full sm:w-auto px-6 py-4 rounded-xl font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-colors shadow-sm cursor-pointer">
               ยกเลิกการแก้ไข
             </button>
-            <button onClick={handleDelete} className="w-full sm:w-auto px-6 py-4 rounded-xl font-bold text-rose-600 bg-rose-50 border border-rose-100 hover:bg-rose-100 transition-colors flex items-center justify-center gap-2 shadow-sm cursor-pointer">
+            <button test-data="delete-post-button" onClick={handleDelete} className="w-full sm:w-auto px-6 py-4 rounded-xl font-bold text-rose-600 bg-rose-50 border border-rose-100 hover:bg-rose-100 transition-colors flex items-center justify-center gap-2 shadow-sm cursor-pointer">
               <Trash2 className="h-5 w-5" />
               ลบโพสต์
             </button>
@@ -1013,6 +1022,7 @@ export default function EditPost() {
           <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
             {originalStatus === 'DRAFT' && (
               <button
+                test-data="save-edit-draft-button"
                 type="button"
                 disabled={isPdfUploading || isContentUploading || submitting.current || isPageLoading}
                 onClick={() => handleSubmit('DRAFT')}
@@ -1023,6 +1033,7 @@ export default function EditPost() {
               </button>
             )}
             <button
+              test-data="update-post-button"
               type="button"
               disabled={isPdfUploading || isContentUploading || submitting.current || isPageLoading}
               onClick={() => handleSubmit('ACTIVE')}
@@ -1043,7 +1054,7 @@ export default function EditPost() {
                 <Tag className="h-6 w-6 text-primary" />
                 ตั้งค่าวิชาและแท็ก
               </h2>
-              <button onClick={() => setShowModal(false)} className="p-2 text-slate-400 hover:bg-slate-200 hover:text-slate-800 rounded-full transition-colors">
+              <button test-data="close-edit-category-tags-modal-button" onClick={() => setShowModal(false)} className="p-2 text-slate-400 hover:bg-slate-200 hover:text-slate-800 rounded-full transition-colors">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -1055,6 +1066,7 @@ export default function EditPost() {
                   <BookOpen className="h-5 w-5 text-primary" /> หมวดหมู่วิชา <span className="text-rose-500">*</span>
                 </label>
                 <select
+                  test-data="edit-category-select"
                   value={categoryId || categoryName}
                   onChange={(e) => handleCategorySelect(e.target.value)}
                   className="w-full px-5 py-3.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors bg-white font-medium text-slate-700 text-base cursor-pointer"
@@ -1087,6 +1099,7 @@ export default function EditPost() {
                     </span>
                   ))}
                   <input
+                    test-data="edit-hashtag-input"
                     ref={tagInputRef}
                     type="text"
                     value={hashtagInput}
@@ -1108,8 +1121,9 @@ export default function EditPost() {
                     แท็กยอดนิยม (คลิกเพื่อเลือก)
                   </label>
                   <div className="flex flex-wrap gap-1.5">
-                    {SUGGESTED_TAGS.map(tag => (
+                    {SUGGESTED_TAGS.map((tag, index) => (
                       <button
+                        test-data={`edit-suggested-hashtag-button-${index}`}
                         key={tag}
                         type="button"
                         onClick={() => toggleSuggestedTag(tag)}
@@ -1125,6 +1139,7 @@ export default function EditPost() {
 
             <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-end">
               <button
+                test-data="confirm-edit-category-tags-button"
                 type="button"
                 onClick={() => setShowModal(false)}
                 className="px-6 py-3 bg-primary text-white rounded-xl font-bold hover:bg-blue-600 transition-all shadow-md hover:shadow-lg cursor-pointer"
@@ -1145,7 +1160,7 @@ export default function EditPost() {
                 {previewFile.type === 'pdf' ? <File className="h-5 w-5 text-primary" /> : <ImageIcon className="h-5 w-5 text-primary" />}
                 ดูตัวอย่างไฟล์
               </h2>
-              <button onClick={closePreview} className="p-2 text-slate-400 hover:bg-slate-200 hover:text-slate-800 rounded-full transition-colors">
+              <button test-data="close-edit-file-preview-button" onClick={closePreview} className="p-2 text-slate-400 hover:bg-slate-200 hover:text-slate-800 rounded-full transition-colors">
                 <X className="h-6 w-6" />
               </button>
             </div>

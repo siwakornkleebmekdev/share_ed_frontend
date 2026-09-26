@@ -509,7 +509,7 @@ export default function CreatePost() {
                   <ImageIcon className="h-10 w-10 text-slate-400 mb-3" />
                   <span className="text-sm font-medium text-slate-500">คลิกเพื่ออัปโหลดรูปปก</span>
                   <span className="text-xs text-slate-400 mt-1">อัตราส่วนที่แนะนำ 16:9 (1280×720px) รูปภาพขนาดไม่เกิน 2 Mb</span>
-                  <input type="file" className="hidden" accept=".jpg,.jpeg,.png" onChange={handleCoverUpload} />
+                  <input test-data="cover-file-input" type="file" className="hidden" accept=".jpg,.jpeg,.png" onChange={handleCoverUpload} />
                 </label>
               ) : (
                 <div className="relative w-full aspect-video rounded-2xl overflow-hidden border border-slate-200 group">
@@ -519,7 +519,7 @@ export default function CreatePost() {
                     className="w-full h-full object-cover object-center rounded-2xl cursor-pointer transition-transform duration-300 group-hover:scale-[1.02]"
                     onClick={() => openPreview(coverPreviewUrl, 'image')}
                   />
-                  <button onClick={(e) => { e.stopPropagation(); setCoverImage(null); }} className="absolute top-3 right-3 p-1.5 bg-white/90 backdrop-blur-sm text-slate-500 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-all z-10 shadow-sm border border-slate-200 hover:border-rose-200" title="ลบรูปปก">
+                  <button test-data="remove-cover-button" onClick={(e) => { e.stopPropagation(); setCoverImage(null); }} className="absolute top-3 right-3 p-1.5 bg-white/90 backdrop-blur-sm text-slate-500 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-all z-10 shadow-sm border border-slate-200 hover:border-rose-200" title="ลบรูปปก">
                     <X className="h-5 w-5" />
                   </button>
                   {/* Hover Overlay */}
@@ -541,6 +541,7 @@ export default function CreatePost() {
                 </span>
               </label>
               <input
+                test-data="post-title-input"
                 type="text"
                 maxLength={100}
                 value={title}
@@ -563,6 +564,7 @@ export default function CreatePost() {
                   <GraduationCap className="h-5 w-5 text-slate-400" /> ระดับชั้น <span className="text-rose-500">*</span>
                 </label>
                 <select
+                  test-data="education-level-select"
                   value={level}
                   onChange={(e) => {
                     setLevel(e.target.value);
@@ -596,6 +598,7 @@ export default function CreatePost() {
               </span>
             </label>
             <textarea
+              test-data="post-summary-input"
               value={summary}
               onChange={(e) => {
                 setSummary(e.target.value.slice(0, 200));
@@ -651,6 +654,7 @@ export default function CreatePost() {
                 )}
               </div>
               <button
+                test-data="category-tags-settings-button"
                 type="button"
                 className="px-5 py-2.5 bg-primary/10 hover:bg-primary/20 text-primary font-bold rounded-xl text-sm transition-colors flex items-center gap-2 self-start sm:self-auto cursor-pointer"
               >
@@ -683,7 +687,7 @@ export default function CreatePost() {
                 <div className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-primary/40 bg-blue-50/50 rounded-2xl">
                   <Loader2 className="h-8 w-8 text-primary animate-spin mb-2" />
                   <span className="text-sm font-medium text-primary">กำลังอัปโหลด PDF...</span>
-                  <button type="button" onClick={cancelPdfUpload} className="mt-2 text-xs font-bold text-rose-600 hover:text-rose-700 cursor-pointer">
+                  <button test-data="cancel-pdf-upload-button" type="button" onClick={cancelPdfUpload} className="mt-2 text-xs font-bold text-rose-600 hover:text-rose-700 cursor-pointer">
                     ยกเลิกการอัปโหลด
                   </button>
                 </div>
@@ -692,7 +696,7 @@ export default function CreatePost() {
                   <UploadCloud className="h-8 w-8 text-slate-400 mb-2" />
                   <span className="text-sm font-medium text-slate-500">อัปโหลดไฟล์ PDF</span>
                   <span className="text-xs text-slate-400 mt-0.5">{MAX_PDF_SIZE_LABEL}</span>
-                  <input type="file" className="hidden" accept=".pdf,application/pdf" onChange={handlePdfUpload} />
+                  <input test-data="pdf-file-input" type="file" className="hidden" accept=".pdf,application/pdf" onChange={handlePdfUpload} />
                 </label>
               ) : (
                 <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-100 rounded-2xl group cursor-pointer hover:bg-blue-100/50 transition-colors" onClick={() => openPreview(pdfFile, 'pdf')}>
@@ -704,6 +708,7 @@ export default function CreatePost() {
                     </div>
                   </div>
                   <button
+                    test-data="remove-pdf-button"
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -736,6 +741,7 @@ export default function CreatePost() {
                       onClick={() => openPreview(item.previewUrl, 'image')}
                     />
                     <button
+                      test-data={`remove-supporting-image-button-${idx}`}
                       onClick={(e) => { e.stopPropagation(); removeImage(idx); }}
                       className="absolute -top-2 -left-2 p-1 bg-white text-slate-500 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-all z-10 shadow-sm border border-slate-200 hover:border-rose-200"
                       title="ลบรูปภาพ"
@@ -759,6 +765,7 @@ export default function CreatePost() {
                     }`}>
                     <Plus className="h-6 w-6 text-slate-400" />
                     <input
+                      test-data="supporting-images-file-input"
                       type="file"
                       className="hidden"
                       accept=".jpg,.jpeg,.png"
@@ -785,11 +792,12 @@ export default function CreatePost() {
 
         {/* Actions */}
         <div className="sticky bottom-0 z-40 bg-slate-50 p-6 sm:px-12 sm:py-8 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4 rounded-b-[24px] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-          <button onClick={() => navigate('/home')} className="w-full sm:w-auto px-6 py-4 rounded-xl font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-colors shadow-sm cursor-pointer">
+          <button test-data="cancel-create-post-button" onClick={() => navigate('/home')} className="w-full sm:w-auto px-6 py-4 rounded-xl font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-colors shadow-sm cursor-pointer">
             ยกเลิก
           </button>
           <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
             <button
+              test-data="save-draft-button"
               type="button"
               disabled={isPdfUploading || isContentUploading || submitting.current}
               onClick={() => handleSubmit('DRAFT')}
@@ -799,6 +807,7 @@ export default function CreatePost() {
               บันทึกแบบร่าง
             </button>
             <button
+              test-data="publish-post-button"
               type="button"
               disabled={isPdfUploading || isContentUploading || submitting.current}
               onClick={() => handleSubmit('ACTIVE')}
@@ -819,7 +828,7 @@ export default function CreatePost() {
                 <Tag className="h-6 w-6 text-primary" />
                 ตั้งค่าวิชาและแท็ก
               </h2>
-              <button onClick={() => setShowModal(false)} className="p-2 text-slate-400 hover:bg-slate-200 hover:text-slate-800 rounded-full transition-colors">
+              <button test-data="close-category-tags-modal-button" onClick={() => setShowModal(false)} className="p-2 text-slate-400 hover:bg-slate-200 hover:text-slate-800 rounded-full transition-colors">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -831,6 +840,7 @@ export default function CreatePost() {
                   <BookOpen className="h-5 w-5 text-primary" /> หมวดหมู่วิชา <span className="text-rose-500">*</span>
                 </label>
                 <select
+                  test-data="category-select"
                   value={categoryId || categoryName}
                   onChange={(e) => handleCategorySelect(e.target.value)}
                   className={`w-full px-5 py-3.5 rounded-xl border focus:outline-none transition-colors bg-white font-medium text-slate-700 text-base cursor-pointer ${fieldErrors.category
@@ -870,6 +880,7 @@ export default function CreatePost() {
                     </span>
                   ))}
                   <input
+                    test-data="hashtag-input"
                     ref={tagInputRef}
                     type="text"
                     value={hashtagInput}
@@ -891,8 +902,9 @@ export default function CreatePost() {
                     แท็กยอดนิยม (คลิกเพื่อเลือก)
                   </label>
                   <div className="flex flex-wrap gap-1.5">
-                    {SUGGESTED_TAGS.map(tag => (
+                    {SUGGESTED_TAGS.map((tag, index) => (
                       <button
+                        test-data={`suggested-hashtag-button-${index}`}
                         key={tag}
                         type="button"
                         onClick={() => toggleSuggestedTag(tag)}
@@ -908,6 +920,7 @@ export default function CreatePost() {
 
             <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-end">
               <button
+                test-data="confirm-category-tags-button"
                 type="button"
                 onClick={() => setShowModal(false)}
                 className="px-6 py-3 bg-primary text-white rounded-xl font-bold hover:bg-blue-600 transition-all shadow-md hover:shadow-lg cursor-pointer"
@@ -928,7 +941,7 @@ export default function CreatePost() {
                 {previewFile.type === 'pdf' ? <File className="h-5 w-5 text-primary" /> : <ImageIcon className="h-5 w-5 text-primary" />}
                 ดูตัวอย่างไฟล์
               </h2>
-              <button onClick={closePreview} className="p-2 text-slate-400 hover:bg-slate-200 hover:text-slate-800 rounded-full transition-colors">
+              <button test-data="close-file-preview-button" onClick={closePreview} className="p-2 text-slate-400 hover:bg-slate-200 hover:text-slate-800 rounded-full transition-colors">
                 <X className="h-6 w-6" />
               </button>
             </div>

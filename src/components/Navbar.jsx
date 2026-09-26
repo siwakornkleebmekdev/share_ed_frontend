@@ -218,7 +218,7 @@ export default function Navbar() {
                   to="/create"
                   id="create-post-btn"
                   name="create-post-btn"
-                  data-testid="create-post-btn"
+                  test-data="create-post-button"
                   role="button"
                   aria-label="สร้างโพสต์"
                   className="flex items-center gap-1.5 bg-primary text-white hover:bg-blue-600 rounded-full font-bold px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
