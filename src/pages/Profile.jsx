@@ -12,7 +12,6 @@ import {
   Edit,
   Briefcase,
   DoorOpen,
-  Trophy,
   CheckCircle2,
   Gift,
   UserPlus,
@@ -177,7 +176,7 @@ export default function Profile() {
 
   useEffect(() => {
     const tab = searchParams.get("tab");
-    if (tab && ["posts", "drafts", "bookmarks", "achievements"].includes(tab)) {
+    if (tab && ["posts", "drafts", "bookmarks"].includes(tab)) {
       if (isOtherUser && (tab === "drafts" || tab === "bookmarks")) {
         setActiveTab("posts");
       } else {
@@ -722,12 +721,6 @@ export default function Profile() {
             </>
           )}
 
-          <button
-            onClick={() => selectTab("achievements")}
-            className={`flex items-center gap-2 px-6 py-3.5 rounded-xl font-bold whitespace-nowrap transition-all cursor-pointer ${activeTab === "achievements" ? "bg-primary text-white shadow-lg shadow-primary/20" : tabInactiveClass}`}
-          >
-            <Trophy className="h-5 w-5" /> ความสำเร็จ
-          </button>
         </div>
 
         {/* เนื้อหาของแต่ละแท็บ */}
