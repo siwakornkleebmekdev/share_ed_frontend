@@ -116,22 +116,42 @@ export const uploadWorkspaceService = {
     }
 
     const uploadUrl = signData.upload_url || signData.uploadUrl;
+    const params = {
+      ...(signData.params || {}),
+      ...(signData.upload_params || {}),
+      ...(signData.uploadParams || {}),
+    };
+
+    const apiKey = signData.api_key || signData.apiKey || params.api_key || params.apiKey;
+    const timestamp = signData.timestamp || params.timestamp;
+    const signature = signData.signature || params.signature;
+    const uploadPreset = signData.upload_preset || signData.uploadPreset || params.upload_preset || params.uploadPreset;
+    const folder = signData.folder || params.folder;
+    const publicId = signData.public_id || signData.publicId || params.public_id || params.publicId;
+
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('api_key', signData.api_key || signData.apiKey);
-    formData.append('timestamp', String(signData.timestamp));
-    formData.append('signature', signData.signature);
 
-    if (signData.folder) formData.append('folder', signData.folder);
-    if (signData.public_id) formData.append('public_id', signData.public_id);
-    if (signData.allowed_formats) {
-      const formats = Array.isArray(signData.allowed_formats)
-        ? signData.allowed_formats.join(',')
-        : signData.allowed_formats;
+    if (apiKey) formData.append('api_key', String(apiKey));
+    if (timestamp) formData.append('timestamp', String(timestamp));
+    if (signature) formData.append('signature', String(signature));
+    if (uploadPreset) formData.append('upload_preset', String(uploadPreset));
+    if (folder) formData.append('folder', String(folder));
+    if (publicId) formData.append('public_id', String(publicId));
+
+    const rawFormats = signData.allowed_formats || params.allowed_formats;
+    if (rawFormats) {
+      const formats = Array.isArray(rawFormats) ? rawFormats.join(',') : String(rawFormats);
       formData.append('allowed_formats', formats);
     }
-    if (signData.upload_params) {
-      for (const [k, v] of Object.entries(signData.upload_params)) {
+
+    const handledKeys = new Set([
+      'file', 'api_key', 'apiKey', 'timestamp', 'signature',
+      'upload_preset', 'uploadPreset', 'folder', 'public_id',
+      'publicId', 'allowed_formats', 'allowedFormats',
+    ]);
+    for (const [k, v] of Object.entries(params)) {
+      if (!handledKeys.has(k) && v !== undefined && v !== null && v !== '') {
         formData.append(k, String(v));
       }
     }
