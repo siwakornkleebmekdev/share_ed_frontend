@@ -1,17 +1,35 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router';
-import { UploadCloud, File, X, GraduationCap, Tag, AlignLeft, BookOpen, PenTool, Save, Image as ImageIcon, Plus, Eye, FileText, Loader2 } from 'lucide-react';
+import {
+  UploadCloud,
+  File,
+  X,
+  GraduationCap,
+  Tag,
+  AlignLeft,
+  BookOpen,
+  Save,
+  Image as ImageIcon,
+  Plus,
+  Eye,
+  FileText,
+  Loader2,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import ContentEditor from '@/components/posts/ContentEditor';
+import UploadWorkspaceItem from '@/components/posts/UploadWorkspaceItem';
 import { postService } from '../services/post.service';
 import { categoryService, isValidCategoryUuid } from '../services/category.service';
+import { uploadWorkspaceService } from '../services/uploadWorkspace.service';
+import { useUploadWorkspace } from '../hooks/useUploadWorkspace';
 import { getDefaultDraftCoverFile } from '../utils/draftCover';
 import {
   validatePdfFile,
   translateUploadError,
   formatFileSize,
   MAX_PDF_SIZE_LABEL,
+  isUploadWorkspaceV2Enabled,
 } from '../constants/uploadConstants';
 
 const SUGGESTED_TAGS = ['#AI', '#เรียนรู้ไปด้วยกัน', '#เตรียมสอบ', '#TCAS67', '#สรุปย่อ', '#แชร์ความรู้', '#เด็กซิ่ว', '#สรุปชีท'];
@@ -19,17 +37,22 @@ const DIRECT_UPLOAD_ENABLED = import.meta.env.VITE_DIRECT_UPLOAD_ENABLED !== 'fa
 
 export default function CreatePost() {
   const navigate = useNavigate();
+  const isV2 = isUploadWorkspaceV2Enabled();
+  const workspace = useUploadWorkspace({ mode: 'create', isEnabled: isV2 });
+
   const submitting = useRef(false);
   const uploadCache = useRef(null);
   const uploadAbortController = useRef(null);
   const draftCover = useRef(null);
   const idempotencyKey = useRef(null);
+
+  // Legacy state (used when isV2 is false)
   const [coverImage, setCoverImage] = useState(null);
   const [pdfFile, setPdfFile] = useState(null);
   const [isPdfUploading, setIsPdfUploading] = useState(false);
   const [images, setImages] = useState([]);
 
-  // Memoize preview URLs to prevent repeated network fetching / memory leak on re-renders
+  // Memoize legacy preview URLs
   const coverPreviewUrl = useMemo(() => {
     if (!coverImage) return null;
     return URL.createObjectURL(coverImage);
@@ -54,6 +77,7 @@ export default function CreatePost() {
     };
   }, [imagePreviews]);
 
+  // Form Fields
   const [title, setTitle] = useState('');
   const [summary, setSummary] = useState('');
   const [content, setContent] = useState('');
@@ -100,20 +124,19 @@ export default function CreatePost() {
     }
   };
 
-  // File Handlers
-  const handleCoverUpload = (e) => {
+  // Legacy File Handlers
+  const handleCoverUploadLegacy = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg'];
-    const allowedExtensions = ['jpg', 'jpeg', 'png'];
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+    const allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
     const fileExtension = file.name ? file.name.split('.').pop().toLowerCase() : '';
     const fileType = file.type ? file.type.toLowerCase() : '';
 
     const isValidType = allowedTypes.includes(fileType) || allowedExtensions.includes(fileExtension);
-
     if (!isValidType) {
-      toast.error('สามารถอัปโหลดไฟล์ .jpg,.jpeg,.png เท่านั้น');
+      toast.error('สามารถอัปโหลดไฟล์ .jpg,.jpeg,.png,.webp เท่านั้น');
       e.target.value = '';
       return;
     }
@@ -129,7 +152,7 @@ export default function CreatePost() {
     }
   };
 
-  const handlePdfUpload = (e) => {
+  const handlePdfUploadLegacy = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
@@ -145,16 +168,16 @@ export default function CreatePost() {
     e.target.value = '';
   };
 
-  const cancelPdfUpload = () => {
+  const cancelPdfUploadLegacy = () => {
     uploadAbortController.current?.abort();
   };
 
-  const handleImagesUpload = (e) => {
+  const handleImagesUploadLegacy = (e) => {
     const files = Array.from(e.target.files);
     if (!files.length) return;
 
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg'];
-    const allowedExtensions = ['jpg', 'jpeg', 'png'];
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+    const allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
 
     let newImages = [...images];
     let hasOversized = false;
@@ -186,11 +209,9 @@ export default function CreatePost() {
     if (reachedLimit) {
       toast.error('คุณสามารถอัปโหลดรูปภาพประกอบได้สูงสุด 15 รูปเท่านั้น');
     }
-
     if (hasInvalidType) {
-      toast.error('สามารถอัปโหลดไฟล์ .jpg,.jpeg,.png เท่านั้น');
+      toast.error('สามารถอัปโหลดไฟล์ .jpg,.jpeg,.png,.webp เท่านั้น');
     }
-
     if (hasOversized) {
       toast.error('รูปภาพประกอบต้องมีขนาดไม่เกิน 2 MB');
     }
@@ -202,7 +223,7 @@ export default function CreatePost() {
     e.target.value = '';
   };
 
-  const removeImage = (index) => {
+  const removeImageLegacy = (index) => {
     setImages(images.filter((_, i) => i !== index));
   };
 
@@ -306,7 +327,154 @@ export default function CreatePost() {
     }
   };
 
-  const handleSubmit = async (status = 'ACTIVE') => {
+  // ==========================================
+  // Submission Handlers
+  // ==========================================
+
+  // Upload Workspace V2 Submission
+  const handleSubmitV2 = async (status = 'ACTIVE') => {
+    if (submitting.current) return;
+    setFieldErrors({});
+    const newErrors = {};
+    const isDraft = status === 'DRAFT';
+
+    if (workspace.isAnyUploading) {
+      toast('กำลังเตรียมไฟล์ให้พร้อม กรุณารอสักครู่...', { icon: '⏳' });
+      return;
+    }
+
+    if (!isDraft && isContentUploading) {
+      setFieldErrors({ content: 'กรุณารอให้อัปโหลดรูปในรายละเอียดเพิ่มเติมเสร็จก่อนเผยแพร่' });
+      return;
+    }
+
+    // Publish validations
+    if (!isDraft) {
+      if (!title.trim()) newErrors.title = 'กรุณากรอกชื่อหัวข้อสรุปความรู้';
+      else if (title.length > 100) newErrors.title = 'ชื่อหัวข้อต้องมีความยาวไม่เกิน 100 ตัวอักษร';
+      if (!level) newErrors.level = 'กรุณาเลือกระดับชั้น';
+      if (!summary.trim()) newErrors.summary = 'กรุณากรอกบทสรุปย่อ';
+      if (!categoryId && !categoryName) newErrors.category = 'กรุณาเลือกหมวดหมู่วิชา';
+      if (!content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim()) {
+        newErrors.content = 'กรุณากรอกรายละเอียดเพิ่มเติม';
+      }
+
+      if (!workspace.coverFile) {
+        newErrors.cover = 'กรุณาอัปโหลดรูปภาพหน้าปก';
+      } else if (workspace.coverFile.status !== 'VERIFIED') {
+        newErrors.cover = 'กรุณารอให้อัปโหลดรูปภาพหน้าปกเสร็จสมบูรณ์';
+      }
+
+      if (workspace.mediaFiles.length === 0) {
+        newErrors.media = 'กรุณาแนบรูปภาพประกอบหรือเอกสาร PDF อย่างน้อย 1 ไฟล์';
+      } else if (workspace.mediaFiles.some(m => m.status !== 'VERIFIED')) {
+        newErrors.media = 'มีไฟล์ที่ยังไม่พร้อมใช้งาน กรุณารอหรือลองใหม่อีกครั้ง';
+      }
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setFieldErrors(newErrors);
+      return;
+    }
+
+    submitting.current = true;
+    const savingToastId = toast.loading('กำลังบันทึกโพสต์...');
+
+    try {
+      // Resolve category
+      let validCatId = isValidCategoryUuid(categoryId) ? categoryId : null;
+      if (!validCatId && categoryName) {
+        const matchInList = categoriesList.find(c => c.name === categoryName && isValidCategoryUuid(c.id));
+        if (matchInList) {
+          validCatId = matchInList.id;
+        }
+      }
+
+      let backendLevel = 'UNIVERSITY';
+      if (level === 'มัธยมศึกษาตอนต้น') backendLevel = 'MIDDLE_SCHOOL';
+      else if (level === 'มัธยมศึกษาตอนปลาย') backendLevel = 'HIGH_SCHOOL';
+
+      const activeSessionId = await workspace.ensureSession();
+
+      // For draft without cover, automatically upload default draft cover
+      let coverAssetId = workspace.coverAssetId;
+      if (!coverAssetId && isDraft) {
+        if (!draftCover.current) draftCover.current = await getDefaultDraftCoverFile();
+        const defaultCover = draftCover.current;
+        const clientFileId = crypto.randomUUID();
+        const signData = await uploadWorkspaceService.signFile(activeSessionId, {
+          clientFileId,
+          assetType: 'COVER',
+          originalName: defaultCover.name,
+          contentType: defaultCover.type,
+          size: defaultCover.size,
+        });
+        const uploadRes = await uploadWorkspaceService.uploadToCloudinary(defaultCover, signData);
+        const verified = await uploadWorkspaceService.completeFile(activeSessionId, signData.asset_id, uploadRes);
+        coverAssetId = verified.id || signData.asset_id;
+      }
+
+      const postPayload = {
+        title: title.trim() || 'Untitled draft',
+        summary: summary.trim(),
+        content: content || '<p></p>',
+        education_level: backendLevel,
+        post_status: isDraft ? 'DRAFT' : 'ACTIVE',
+        tags: hashtags,
+        category_id: validCatId,
+        upload_session_id: activeSessionId,
+        cover_asset_id: coverAssetId,
+        media_asset_ids: workspace.mediaAssetIds,
+        idempotency_key: workspace.idempotencyKey,
+      };
+
+      const result = await postService.createPost(postPayload);
+      Swal.close();
+
+      if (result.success) {
+        workspace.clearDraftSession();
+        if (isDraft) {
+          navigate('/profile?tab=drafts');
+          Swal.fire({
+            icon: 'success',
+            title: 'บันทึกสำเร็จ!',
+            text: 'บันทึกแบบร่างเรียบร้อยแล้ว',
+            confirmButtonColor: '#3b82f6',
+          });
+        } else {
+          const createdId = result.data?.id;
+          navigate(createdId ? `/post/${createdId}` : '/explore');
+          Swal.fire({
+            icon: 'success',
+            title: 'สำเร็จ!',
+            text: 'สร้างโพสต์สรุปความรู้เรียบร้อยแล้ว',
+            confirmButtonColor: '#3b82f6',
+          });
+        }
+      } else {
+        throw new Error(result.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+      }
+    } catch (error) {
+      Swal.close();
+      console.error('Error creating post V2:', error);
+      const errMsg = translateUploadError(
+        error,
+        error.response?.data?.message || error.message || 'ไม่สามารถบันทึกโพสต์ได้'
+      );
+      Swal.fire({
+        icon: 'error',
+        title: 'เกิดข้อผิดพลาด',
+        text: errMsg,
+        confirmButtonColor: '#3b82f6',
+      });
+    } finally {
+      toast.dismiss(savingToastId);
+      submitting.current = false;
+    }
+  };
+
+  // Legacy Submission
+  const handleSubmitLegacy = async (status = 'ACTIVE') => {
     if (submitting.current) return;
     setFieldErrors({});
     const newErrors = {};
@@ -316,7 +484,6 @@ export default function CreatePost() {
       return;
     }
 
-    // Drafts may be saved at any point. Publish validation only runs for ACTIVE posts.
     if (!isDraft) {
       if (!title.trim()) newErrors.title = 'กรุณากรอกชื่อหัวข้อสรุปความรู้';
       else if (title.length > 100) newErrors.title = 'ชื่อหัวข้อต้องมีความยาวไม่เกิน 100 ตัวอักษร';
@@ -346,8 +513,8 @@ export default function CreatePost() {
     const uploadController = new AbortController();
     uploadAbortController.current = uploadController;
     const savingToastId = toast.loading(pdfFile ? 'กำลังอัปโหลด PDF...' : 'กำลังบันทึกโพสต์...');
+
     try {
-      // Resolve category and education level
       let validCatId = isValidCategoryUuid(categoryId) ? categoryId : null;
       if (!validCatId && categoryName) {
         const matchInList = categoriesList.find(c => c.name === categoryName && isValidCategoryUuid(c.id));
@@ -368,18 +535,22 @@ export default function CreatePost() {
       if (DIRECT_UPLOAD_ENABLED) {
         const files = [coverFile, pdfFile, ...images];
         const cached = uploadCache.current;
-        const sessionIsUsable = cached?.uploads?.uploadSessionExpiresAt
-          && Date.parse(cached.uploads.uploadSessionExpiresAt) > Date.now() + 30000;
-        const sameFiles = cached && sessionIsUsable && cached.files.length === files.length
-          && files.every((file, index) => file === cached.files[index]);
+        const sessionIsUsable =
+          cached?.uploads?.uploadSessionExpiresAt &&
+          Date.parse(cached.uploads.uploadSessionExpiresAt) > Date.now() + 30000;
+        const sameFiles =
+          cached &&
+          sessionIsUsable &&
+          cached.files.length === files.length &&
+          files.every((file, index) => file === cached.files[index]);
         const uploads = sameFiles
           ? cached.uploads
           : await postService.uploadPostFilesDirect({
-            coverImage: coverFile,
-            pdfFile,
-            images,
-            signal: uploadController.signal,
-          });
+              coverImage: coverFile,
+              pdfFile,
+              images,
+              signal: uploadController.signal,
+            });
         if (pdfFile) setIsPdfUploading(false);
         uploadCache.current = { files, uploads };
         const { coverUpload, mediaUploads, pdfUpload, uploadSessionId } = uploads;
@@ -429,8 +600,6 @@ export default function CreatePost() {
       try {
         result = await postService.createPost(postPayload);
       } catch (error) {
-        // A network/5xx error may occur after the database committed. Only clean
-        // up definitive client rejection; never delete possibly attached assets.
         if (directAssets && error.response?.status >= 400 && error.response.status < 500) {
           uploadCache.current = null;
           await postService.cleanupDirectUploads(directAssets);
@@ -448,30 +617,33 @@ export default function CreatePost() {
             icon: 'success',
             title: 'บันทึกสำเร็จ!',
             text: 'บันทึกแบบร่างเรียบร้อยแล้ว',
-            confirmButtonColor: '#3b82f6'
+            confirmButtonColor: '#3b82f6',
           });
-          return;
+        } else {
+          const createdId = result.data?.id;
+          navigate(createdId ? `/post/${createdId}` : '/explore');
+          Swal.fire({
+            icon: 'success',
+            title: 'สำเร็จ!',
+            text: 'สร้างโพสต์สรุปความรู้เรียบร้อยแล้ว',
+            confirmButtonColor: '#3b82f6',
+          });
         }
-        Swal.fire({
-          icon: 'success',
-          title: 'โพสต์สำเร็จ!',
-          text: 'โพสต์สรุปความรู้เรียบร้อยแล้ว',
-          confirmButtonColor: '#3b82f6'
-        }).then(() => {
-          navigate('/home');
-        });
       } else {
         throw new Error(result.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
       }
     } catch (error) {
       Swal.close();
-      console.error('Error submitting post:', error);
-      const errMsg = translateUploadError(error, error.response?.data?.message || error.message || 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
+      console.error('Error creating post:', error);
+      const errMsg = translateUploadError(
+        error,
+        error.response?.data?.message || error.message || 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้'
+      );
       Swal.fire({
         icon: 'error',
         title: 'เกิดข้อผิดพลาด',
         text: errMsg,
-        confirmButtonColor: '#3b82f6'
+        confirmButtonColor: '#3b82f6',
       });
     } finally {
       toast.dismiss(savingToastId);
@@ -483,60 +655,170 @@ export default function CreatePost() {
     }
   };
 
+  const handleSubmit = (status = 'ACTIVE') => {
+    if (isV2) {
+      return handleSubmitV2(status);
+    }
+    return handleSubmitLegacy(status);
+  };
+
+  // Cancel Create Post Action
+  const handleCancelCreatePost = async () => {
+    if (isV2 && (workspace.coverFile || workspace.mediaFiles.length > 0)) {
+      const confirm = await Swal.fire({
+        title: 'ยกเลิกการสร้างโพสต์?',
+        text: 'ข้อมูลและไฟล์ที่อัปโหลดไว้ในแบบร่างนี้จะถูกยกเลิก',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'ยืนยันยกเลิก',
+        cancelButtonText: 'กลับไปแก้ไขต่อ',
+        confirmButtonColor: '#ef4444',
+      });
+      if (!confirm.isConfirmed) return;
+      await workspace.cancelDraftSession();
+    }
+    navigate('/home');
+  };
+
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
-      <div className="mb-10 text-center sm:text-left">
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 flex items-center justify-center sm:justify-start gap-4">
-          <PenTool className="h-8 w-8 sm:h-10 sm:w-10 text-primary" />
-          แบ่งปันความรู้ของคุณ
-        </h1>
-        <p className="text-slate-500 mt-3 text-lg">อัปโหลดชีทสรุป แนวข้อสอบ หรือเนื้อหาที่เป็นประโยชน์ให้เพื่อนๆ</p>
-      </div>
+      {/* Header Form */}
+      <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 overflow-hidden">
+        <div className="p-6 sm:p-10 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50/50">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+              สร้างโพสต์สรุปความรู้
+            </h1>
+            <p className="text-slate-500 text-sm mt-1 font-normal">
+              แบ่งปันความรู้ของคุณให้เพื่อนๆ ได้เรียนรู้ไปด้วยกัน
+            </p>
+          </div>
+          {isV2 && (
+            <div className="flex items-center gap-2 text-xs font-medium text-slate-500 bg-white px-3 py-1.5 rounded-lg border border-slate-200">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Upload Workspace พร้อมใช้งาน</span>
+            </div>
+          )}
+        </div>
 
-      <div className="bg-white rounded-[24px] shadow-sm border border-slate-100">
-        <div className="p-8 sm:p-12 flex flex-col gap-8">
-
-          {/* Title & Cover */}
+        <div className="p-6 sm:p-10 space-y-8">
+          {/* Main Form Fields: Cover Image & Title / Level */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+            {/* Cover Image Section */}
             <div className="md:col-span-1">
               <label className="flex items-center justify-between text-base font-bold text-slate-800 mb-1">
-                <span>รูปปก <span className="text-rose-500">*</span></span>
+                <span>
+                  รูปปก <span className="text-rose-500">*</span>
+                </span>
                 <span className="text-xs font-normal text-slate-500">ไม่เกิน 2 MB</span>
               </label>
-              <p className="text-xs text-slate-400 mb-3">แนะนำอัตราส่วน 16:9 (เช่น 1280×720px) เพื่อให้แสดงผลสวยที่สุด</p>
-              {!coverImage ? (
-                <label className={`flex flex-col items-center justify-center w-full aspect-video border-2 border-dashed rounded-2xl hover:bg-slate-50 cursor-pointer transition-all ${fieldErrors.cover ? 'border-red-500 hover:border-red-500' : 'border-slate-300 hover:border-primary'}`}>
-                  <ImageIcon className="h-10 w-10 text-slate-400 mb-3" />
-                  <span className="text-sm font-medium text-slate-500">คลิกเพื่ออัปโหลดรูปปก</span>
-                  <span className="text-xs text-slate-400 mt-1">อัตราส่วนที่แนะนำ 16:9 (1280×720px) รูปภาพขนาดไม่เกิน 2 Mb</span>
-                  <input test-data="cover-file-input" type="file" className="hidden" accept=".jpg,.jpeg,.png" onChange={handleCoverUpload} />
-                </label>
-              ) : (
-                <div className="relative w-full aspect-video rounded-2xl overflow-hidden border border-slate-200 group">
-                  <img
-                    src={coverPreviewUrl}
-                    alt="Cover"
-                    className="w-full h-full object-cover object-center rounded-2xl cursor-pointer transition-transform duration-300 group-hover:scale-[1.02]"
-                    onClick={() => openPreview(coverPreviewUrl, 'image')}
+              <p className="text-xs text-slate-400 mb-3">
+                แนะนำอัตราส่วน 16:9 (เช่น 1280×720px) เพื่อให้แสดงผลสวยที่สุด
+              </p>
+
+              {isV2 ? (
+                /* V2 Cover Area */
+                workspace.coverFile ? (
+                  <UploadWorkspaceItem
+                    item={workspace.coverFile}
+                    isCover={true}
+                    onRemove={workspace.removeCover}
+                    onRetry={workspace.retryFile}
+                    onPreview={openPreview}
                   />
-                  <button test-data="remove-cover-button" onClick={(e) => { e.stopPropagation(); setCoverImage(null); }} className="absolute top-3 right-3 p-1.5 bg-white/90 backdrop-blur-sm text-slate-500 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-all z-10 shadow-sm border border-slate-200 hover:border-rose-200" title="ลบรูปปก">
-                    <X className="h-5 w-5" />
-                  </button>
-                  {/* Hover Overlay */}
-                  <div className="absolute inset-0 bg-black/30 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none rounded-2xl">
-                    <Eye className="h-8 w-8" />
+                ) : (
+                  <label
+                    className={`flex flex-col items-center justify-center w-full aspect-video border-2 border-dashed rounded-2xl hover:bg-slate-50 cursor-pointer transition-all ${
+                      fieldErrors.cover
+                        ? 'border-red-500 hover:border-red-500'
+                        : 'border-slate-300 hover:border-primary'
+                    }`}
+                  >
+                    <ImageIcon className="h-10 w-10 text-slate-400 mb-3" />
+                    <span className="text-sm font-medium text-slate-500">คลิกเพื่ออัปโหลดรูปปก</span>
+                    <span className="text-xs text-slate-400 mt-1">
+                      อัตราส่วน 16:9 (1280×720px) ขนาดไม่เกิน 2 MB
+                    </span>
+                    <input
+                      test-data="cover-file-input"
+                      type="file"
+                      className="hidden"
+                      accept=".jpg,.jpeg,.png,.webp"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) workspace.setCover(file);
+                        e.target.value = '';
+                      }}
+                    />
+                  </label>
+                )
+              ) : (
+                /* Legacy Cover Area */
+                !coverImage ? (
+                  <label
+                    className={`flex flex-col items-center justify-center w-full aspect-video border-2 border-dashed rounded-2xl hover:bg-slate-50 cursor-pointer transition-all ${
+                      fieldErrors.cover
+                        ? 'border-red-500 hover:border-red-500'
+                        : 'border-slate-300 hover:border-primary'
+                    }`}
+                  >
+                    <ImageIcon className="h-10 w-10 text-slate-400 mb-3" />
+                    <span className="text-sm font-medium text-slate-500">คลิกเพื่ออัปโหลดรูปปก</span>
+                    <span className="text-xs text-slate-400 mt-1">
+                      อัตราส่วน 16:9 (1280×720px) ขนาดไม่เกิน 2 MB
+                    </span>
+                    <input
+                      test-data="cover-file-input"
+                      type="file"
+                      className="hidden"
+                      accept=".jpg,.jpeg,.png,.webp"
+                      onChange={handleCoverUploadLegacy}
+                    />
+                  </label>
+                ) : (
+                  <div className="relative w-full aspect-video rounded-2xl overflow-hidden border border-slate-200 group">
+                    <img
+                      src={coverPreviewUrl}
+                      alt="Cover"
+                      className="w-full h-full object-cover object-center rounded-2xl cursor-pointer transition-transform duration-300 group-hover:scale-[1.02]"
+                      onClick={() => openPreview(coverPreviewUrl, 'image')}
+                    />
+                    <button
+                      test-data="remove-cover-button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCoverImage(null);
+                      }}
+                      className="absolute top-3 right-3 p-1.5 bg-white/90 backdrop-blur-sm text-slate-500 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-all z-10 shadow-sm border border-slate-200 hover:border-rose-200"
+                      title="ลบรูปปก"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                    <div className="absolute inset-0 bg-black/30 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none rounded-2xl">
+                      <Eye className="h-8 w-8" />
+                    </div>
                   </div>
-                </div>
+                )
               )}
+
               {fieldErrors.cover && (
-                <p className="mt-1.5 text-xs text-red-500 font-medium" role="alert">{fieldErrors.cover}</p>
+                <p className="mt-1.5 text-xs text-red-500 font-medium" role="alert">
+                  {fieldErrors.cover}
+                </p>
               )}
             </div>
 
+            {/* Title & Level Section */}
             <div className="md:col-span-1">
               <label className="flex items-center justify-between text-base font-bold text-slate-800 mb-3">
-                <span>ชื่อหัวข้อสรุป <span className="text-rose-500">*</span></span>
-                <span className={`text-xs font-semibold ${title.length >= 100 ? 'text-rose-500' : 'text-slate-400'}`}>
+                <span>
+                  ชื่อหัวข้อสรุป <span className="text-rose-500">*</span>
+                </span>
+                <span
+                  className={`text-xs font-semibold ${
+                    title.length >= 100 ? 'text-rose-500' : 'text-slate-400'
+                  }`}
+                >
                   {title.length}/100 ตัวอักษร
                 </span>
               </label>
@@ -549,10 +831,11 @@ export default function CreatePost() {
                   setTitle(e.target.value.slice(0, 100));
                   if (fieldErrors.title) setFieldErrors(prev => ({ ...prev, title: null }));
                 }}
-                className={`w-full px-5 py-4 rounded-xl border focus:outline-none transition-colors text-base ${fieldErrors.title
-                  ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
-                  : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
-                  }`}
+                className={`w-full px-5 py-4 rounded-xl border focus:outline-none transition-colors text-base ${
+                  fieldErrors.title
+                    ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+                    : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
+                }`}
                 placeholder="เช่น สรุปสูตรฟิสิกส์ ม.4 เทอม 1"
               />
               {fieldErrors.title && (
@@ -561,7 +844,8 @@ export default function CreatePost() {
 
               <div className="mt-6">
                 <label className="flex items-center gap-2 text-base font-bold text-slate-800 mb-3">
-                  <GraduationCap className="h-5 w-5 text-slate-400" /> ระดับชั้น <span className="text-rose-500">*</span>
+                  <GraduationCap className="h-5 w-5 text-slate-400" /> ระดับชั้น{' '}
+                  <span className="text-rose-500">*</span>
                 </label>
                 <select
                   test-data="education-level-select"
@@ -570,12 +854,15 @@ export default function CreatePost() {
                     setLevel(e.target.value);
                     if (fieldErrors.level) setFieldErrors(prev => ({ ...prev, level: null }));
                   }}
-                  className={`w-full px-5 py-4 rounded-xl border focus:outline-none transition-colors bg-white font-medium text-slate-700 text-base ${fieldErrors.level
-                    ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
-                    : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
-                    }`}
+                  className={`w-full px-5 py-4 rounded-xl border focus:outline-none transition-colors bg-white font-medium text-slate-700 text-base ${
+                    fieldErrors.level
+                      ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+                      : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
+                  }`}
                 >
-                  <option value="" disabled>เลือกระดับชั้น</option>
+                  <option value="" disabled>
+                    เลือกระดับชั้น
+                  </option>
                   <option value="มัธยมศึกษาตอนต้น">มัธยมศึกษาตอนต้น</option>
                   <option value="มัธยมศึกษาตอนปลาย">มัธยมศึกษาตอนปลาย</option>
                   <option value="มหาวิทยาลัย">มหาวิทยาลัย</option>
@@ -587,13 +874,18 @@ export default function CreatePost() {
             </div>
           </div>
 
-          {/* Summary */}
+          {/* Summary Section */}
           <div>
             <label className="flex items-center justify-between text-base font-bold text-slate-800 mb-3">
               <span className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-slate-400" /> บทสรุปย่อ (Summary) <span className="text-rose-500">*</span>
+                <FileText className="h-5 w-5 text-slate-400" /> บทสรุปย่อ (Summary){' '}
+                <span className="text-rose-500">*</span>
               </span>
-              <span className={`text-xs font-semibold ${summary.length >= 200 ? 'text-rose-500' : 'text-slate-400'}`}>
+              <span
+                className={`text-xs font-semibold ${
+                  summary.length >= 200 ? 'text-rose-500' : 'text-slate-400'
+                }`}
+              >
                 {summary.length}/200 ตัวอักษร
               </span>
             </label>
@@ -604,10 +896,11 @@ export default function CreatePost() {
                 setSummary(e.target.value.slice(0, 200));
                 if (fieldErrors.summary) setFieldErrors(prev => ({ ...prev, summary: null }));
               }}
-              className={`w-full px-5 py-4 rounded-xl border focus:outline-none transition-colors text-base min-h-[100px] resize-y bg-white ${fieldErrors.summary
-                ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
-                : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
-                }`}
+              className={`w-full px-5 py-4 rounded-xl border focus:outline-none transition-colors text-base min-h-[100px] resize-y bg-white ${
+                fieldErrors.summary
+                  ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+                  : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
+              }`}
               placeholder="อธิบายสั้นๆ เกี่ยวกับไฟล์สรุปนี้ (จะนำไปแสดงบนการ์ดในหน้ารายการ) เช่น สรุปฟิสิกส์ ม.4 เทอม 1 เหมาะกับทบทวนสอบกลางภาค..."
               rows={3}
             />
@@ -619,20 +912,22 @@ export default function CreatePost() {
           {/* Subject & Hashtags Section */}
           <div>
             <label className="flex items-center gap-2 text-base font-bold text-slate-800 mb-3">
-              <Tag className="h-5 w-5 text-slate-400" /> หมวดหมู่วิชาและแฮชแท็ก <span className="text-rose-500">*</span>
+              <Tag className="h-5 w-5 text-slate-400" /> หมวดหมู่วิชาและแฮชแท็ก{' '}
+              <span className="text-rose-500">*</span>
             </label>
             <div
-              onClick={() => {
-                setShowModal(true);
-              }}
-              className={`p-5 border border-dashed hover:border-primary rounded-2xl bg-white hover:bg-blue-50/10 cursor-pointer transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${fieldErrors.category ? 'border-red-500 bg-red-50/10' : 'border-slate-200'
-                }`}
+              onClick={() => setShowModal(true)}
+              className={`p-5 border border-dashed hover:border-primary rounded-2xl bg-white hover:bg-blue-50/10 cursor-pointer transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+                fieldErrors.category ? 'border-red-500 bg-red-50/10' : 'border-slate-200'
+              }`}
             >
               <div className="flex flex-col gap-2">
                 {categoryName ? (
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-bold text-slate-400">วิชาที่เลือก:</span>
-                    <span className="px-3 py-1 bg-primary/10 text-primary font-bold text-xs rounded-full">{categoryName}</span>
+                    <span className="px-3 py-1 bg-primary/10 text-primary font-bold text-xs rounded-full">
+                      {categoryName}
+                    </span>
                   </div>
                 ) : (
                   <span className="text-sm text-rose-500 font-medium">กรุณาเลือกหมวดหมู่วิชา *</span>
@@ -643,14 +938,19 @@ export default function CreatePost() {
                     <span className="text-sm font-bold text-slate-400">แฮชแท็ก:</span>
                     <div className="flex flex-wrap gap-1.5">
                       {hashtags.map(tag => (
-                        <span key={tag} className="px-2.5 py-0.5 bg-slate-100 text-slate-600 rounded-md text-xs font-semibold border border-slate-200">
+                        <span
+                          key={tag}
+                          className="px-2.5 py-0.5 bg-slate-100 text-slate-600 rounded-md text-xs font-semibold border border-slate-200"
+                        >
                           {tag}
                         </span>
                       ))}
                     </div>
                   </div>
                 ) : (
-                  <span className="text-sm text-slate-400">ยังไม่มีแฮชแท็ก (สามารถเพิ่มแท็กช่วยให้ค้นหาง่ายขึ้น)</span>
+                  <span className="text-sm text-slate-400">
+                    ยังไม่มีแฮชแท็ก (สามารถเพิ่มแท็กช่วยให้ค้นหาง่ายขึ้น)
+                  </span>
                 )}
               </div>
               <button
@@ -663,16 +963,32 @@ export default function CreatePost() {
               </button>
             </div>
             {fieldErrors.category && (
-              <p className="mt-1.5 text-xs text-red-500 font-medium" role="alert">{fieldErrors.category}</p>
+              <p className="mt-1.5 text-xs text-red-500 font-medium" role="alert">
+                {fieldErrors.category}
+              </p>
             )}
           </div>
 
           {/* Rich Text Editor */}
           <div>
             <label className="flex items-center gap-2 text-base font-bold text-slate-800 mb-3">
-              <AlignLeft className="h-5 w-5 text-slate-400" /> รายละเอียดเพิ่มเติม <span className="text-rose-500">*</span>
+              <AlignLeft className="h-5 w-5 text-slate-400" /> รายละเอียดเพิ่มเติม{' '}
+              <span className="text-rose-500">*</span>
             </label>
-            <ContentEditor value={content} onUploadingChange={setIsContentUploading} error={fieldErrors.content} onChange={(value) => { setContent(value); if (fieldErrors.content && value.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim()) setFieldErrors(prev => ({ ...prev, content: null })); }} />
+            <ContentEditor
+              value={content}
+              onUploadingChange={setIsContentUploading}
+              error={fieldErrors.content}
+              onChange={(value) => {
+                setContent(value);
+                if (
+                  fieldErrors.content &&
+                  value.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim()
+                ) {
+                  setFieldErrors(prev => ({ ...prev, content: null }));
+                }
+              }}
+            />
           </div>
 
           {/* File Uploads (Split left/right) */}
@@ -683,137 +999,248 @@ export default function CreatePost() {
                 <span>ไฟล์เอกสาร PDF (ถ้ามี)</span>
                 <span className="text-xs font-normal text-slate-500">{MAX_PDF_SIZE_LABEL}</span>
               </label>
-              {isPdfUploading ? (
-                <div className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-primary/40 bg-blue-50/50 rounded-2xl">
-                  <Loader2 className="h-8 w-8 text-primary animate-spin mb-2" />
-                  <span className="text-sm font-medium text-primary">กำลังอัปโหลด PDF...</span>
-                  <button test-data="cancel-pdf-upload-button" type="button" onClick={cancelPdfUpload} className="mt-2 text-xs font-bold text-rose-600 hover:text-rose-700 cursor-pointer">
-                    ยกเลิกการอัปโหลด
-                  </button>
-                </div>
-              ) : !pdfFile ? (
-                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-300 rounded-2xl hover:border-primary hover:bg-slate-50 cursor-pointer transition-all">
-                  <UploadCloud className="h-8 w-8 text-slate-400 mb-2" />
-                  <span className="text-sm font-medium text-slate-500">อัปโหลดไฟล์ PDF</span>
-                  <span className="text-xs text-slate-400 mt-0.5">{MAX_PDF_SIZE_LABEL}</span>
-                  <input test-data="pdf-file-input" type="file" className="hidden" accept=".pdf,application/pdf" onChange={handlePdfUpload} />
-                </label>
+
+              {isV2 ? (
+                /* V2 PDF Area */
+                workspace.pdfFileItem ? (
+                  <UploadWorkspaceItem
+                    item={workspace.pdfFileItem}
+                    onRemove={workspace.removeMediaFile}
+                    onRetry={workspace.retryFile}
+                    onPreview={openPreview}
+                  />
+                ) : (
+                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-300 rounded-2xl hover:border-primary hover:bg-slate-50 cursor-pointer transition-all">
+                    <UploadCloud className="h-8 w-8 text-slate-400 mb-2" />
+                    <span className="text-sm font-medium text-slate-500">อัปโหลดไฟล์ PDF</span>
+                    <span className="text-xs text-slate-400 mt-0.5">{MAX_PDF_SIZE_LABEL}</span>
+                    <input
+                      test-data="pdf-file-input"
+                      type="file"
+                      className="hidden"
+                      accept=".pdf,application/pdf"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) workspace.addMediaFiles([file]);
+                        e.target.value = '';
+                      }}
+                    />
+                  </label>
+                )
               ) : (
-                <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-100 rounded-2xl group cursor-pointer hover:bg-blue-100/50 transition-colors" onClick={() => openPreview(pdfFile, 'pdf')}>
-                  <div className="flex items-center gap-4 truncate">
-                    <File className="h-8 w-8 text-primary flex-shrink-0" />
-                    <div className="truncate">
-                      <p className="font-bold text-slate-800 text-sm truncate group-hover:text-primary transition-colors">{pdfFile.name}</p>
-                      <p className="text-xs text-slate-500">{formatFileSize(pdfFile.size)}</p>
-                    </div>
+                /* Legacy PDF Area */
+                isPdfUploading ? (
+                  <div className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-primary/40 bg-blue-50/50 rounded-2xl">
+                    <Loader2 className="h-8 w-8 text-primary animate-spin mb-2" />
+                    <span className="text-sm font-medium text-primary">กำลังอัปโหลด PDF...</span>
+                    <button
+                      test-data="cancel-pdf-upload-button"
+                      type="button"
+                      onClick={cancelPdfUploadLegacy}
+                      className="mt-2 text-xs font-bold text-rose-600 hover:text-rose-700 cursor-pointer"
+                    >
+                      ยกเลิกการอัปโหลด
+                    </button>
                   </div>
-                  <button
-                    test-data="remove-pdf-button"
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setPdfFile(null);
-                      uploadCache.current = null;
-                    }}
-                    className="p-2 bg-white text-slate-500 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-all flex-shrink-0 z-10 shadow-sm border border-slate-200 hover:border-rose-200 cursor-pointer"
-                    title="ลบไฟล์ PDF"
+                ) : !pdfFile ? (
+                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-300 rounded-2xl hover:border-primary hover:bg-slate-50 cursor-pointer transition-all">
+                    <UploadCloud className="h-8 w-8 text-slate-400 mb-2" />
+                    <span className="text-sm font-medium text-slate-500">อัปโหลดไฟล์ PDF</span>
+                    <span className="text-xs text-slate-400 mt-0.5">{MAX_PDF_SIZE_LABEL}</span>
+                    <input
+                      test-data="pdf-file-input"
+                      type="file"
+                      className="hidden"
+                      accept=".pdf,application/pdf"
+                      onChange={handlePdfUploadLegacy}
+                    />
+                  </label>
+                ) : (
+                  <div
+                    className="flex items-center justify-between p-4 bg-blue-50 border border-blue-100 rounded-2xl group cursor-pointer hover:bg-blue-100/50 transition-colors"
+                    onClick={() => openPreview(pdfFile, 'pdf')}
                   >
-                    <X className="h-5 w-5" />
-                  </button>
-                </div>
+                    <div className="flex items-center gap-4 truncate">
+                      <File className="h-8 w-8 text-primary flex-shrink-0" />
+                      <div className="truncate">
+                        <p className="font-bold text-slate-800 text-sm truncate group-hover:text-primary transition-colors">
+                          {pdfFile.name}
+                        </p>
+                        <p className="text-xs text-slate-500">{formatFileSize(pdfFile.size)}</p>
+                      </div>
+                    </div>
+                    <button
+                      test-data="remove-pdf-button"
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPdfFile(null);
+                        uploadCache.current = null;
+                      }}
+                      className="p-2 bg-white text-slate-500 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-all flex-shrink-0 z-10 shadow-sm border border-slate-200 hover:border-rose-200 cursor-pointer"
+                      title="ลบไฟล์ PDF"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
+                )
               )}
             </div>
 
-            {/* Right: Images */}
+            {/* Right: Media Images */}
             <div>
               <label className="flex items-center justify-between text-base font-bold text-slate-800 mb-3">
-                <span>รูปภาพประกอบ ({images.length}/15) <span className="text-rose-500">*</span></span>
+                <span>
+                  รูปภาพประกอบ (
+                  {isV2 ? workspace.imageFileItems.length : images.length}/15){' '}
+                  <span className="text-rose-500">*</span>
+                </span>
                 <span className="text-xs font-normal text-slate-500">ไม่เกินรูปละ 2 MB</span>
               </label>
 
-              <div className="flex flex-wrap gap-4 pt-1">
-                {imagePreviews.map((item, idx) => (
-                  <div key={idx} className="relative w-20 h-20 rounded-xl border border-slate-200 overflow-visible group">
-                    <img
-                      src={item.previewUrl}
-                      alt={`img-${idx}`}
-                      className="w-full h-full object-cover rounded-xl cursor-pointer"
-                      onClick={() => openPreview(item.previewUrl, 'image')}
+              {isV2 ? (
+                /* V2 Media Images List */
+                <div className="space-y-3">
+                  {workspace.imageFileItems.map((item) => (
+                    <UploadWorkspaceItem
+                      key={item.clientFileId}
+                      item={item}
+                      onRemove={workspace.removeMediaFile}
+                      onRetry={workspace.retryFile}
+                      onPreview={openPreview}
                     />
-                    <button
-                      test-data={`remove-supporting-image-button-${idx}`}
-                      onClick={(e) => { e.stopPropagation(); removeImage(idx); }}
-                      className="absolute -top-2 -left-2 p-1 bg-white text-slate-500 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-all z-10 shadow-sm border border-slate-200 hover:border-rose-200"
-                      title="ลบรูปภาพ"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                    {/* View Overlay */}
-                    <div className="absolute inset-0 bg-black/40 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none rounded-xl">
-                      <Eye className="h-6 w-6" />
-                    </div>
-                  </div>
-                ))}
+                  ))}
 
-                {/* Upload Button */}
-                <div className="relative group/btn inline-block">
-                  <label className={`w-20 h-20 border-2 border-dashed rounded-xl flex flex-col items-center justify-center transition-all ${images.length >= 15
-                    ? 'border-slate-200 bg-slate-100 cursor-not-allowed opacity-60'
-                    : fieldErrors.media
-                      ? 'border-red-500 hover:border-red-500 hover:bg-slate-50 cursor-pointer'
-                      : 'border-slate-300 hover:border-primary hover:bg-slate-50 cursor-pointer'
-                    }`}>
-                    <Plus className="h-6 w-6 text-slate-400" />
-                    <input
-                      test-data="supporting-images-file-input"
-                      type="file"
-                      className="hidden"
-                      accept=".jpg,.jpeg,.png"
-                      multiple
-                      onChange={handleImagesUpload}
-                      disabled={images.length >= 15}
-                    />
-                  </label>
-                  {/* Tooltip on Hover if Disabled */}
-                  {images.length >= 15 && (
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-xs px-3 py-1.5 bg-slate-800 text-white text-xs rounded-lg opacity-0 group-hover/btn:opacity-100 transition-opacity pointer-events-none z-20 whitespace-normal text-center shadow-lg">
-                      ไม่สามารถเพิ่มรูปได้เนื่องจากครบจำนวนแล้ว
-                    </div>
+                  {workspace.mediaFiles.length < 15 && (
+                    <label className="flex items-center justify-center gap-2 p-3 border-2 border-dashed border-slate-300 hover:border-primary hover:bg-slate-50 rounded-xl cursor-pointer transition-colors text-slate-600 text-sm font-semibold">
+                      <Plus className="w-4 h-4 text-slate-400" />
+                      <span>เพิ่มรูปภาพประกอบ</span>
+                      <input
+                        test-data="supporting-images-file-input"
+                        type="file"
+                        className="hidden"
+                        accept=".jpg,.jpeg,.png,.webp"
+                        multiple
+                        onChange={(e) => {
+                          workspace.addMediaFiles(e.target.files);
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
                   )}
                 </div>
-              </div>
+              ) : (
+                /* Legacy Media Images Grid */
+                <div className="flex flex-wrap gap-4 pt-1">
+                  {imagePreviews.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className="relative w-20 h-20 rounded-xl border border-slate-200 overflow-visible group"
+                    >
+                      <img
+                        src={item.previewUrl}
+                        alt={`img-${idx}`}
+                        className="w-full h-full object-cover rounded-xl cursor-pointer"
+                        onClick={() => openPreview(item.previewUrl, 'image')}
+                      />
+                      <button
+                        test-data={`remove-supporting-image-button-${idx}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeImageLegacy(idx);
+                        }}
+                        className="absolute -top-2 -left-2 p-1 bg-white text-slate-500 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-all z-10 shadow-sm border border-slate-200 hover:border-rose-200"
+                        title="ลบรูปภาพ"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                      <div className="absolute inset-0 bg-black/40 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none rounded-xl">
+                        <Eye className="h-6 w-6" />
+                      </div>
+                    </div>
+                  ))}
+
+                  <div className="relative group/btn inline-block">
+                    <label
+                      className={`w-20 h-20 border-2 border-dashed rounded-xl flex flex-col items-center justify-center transition-all ${
+                        images.length >= 15
+                          ? 'border-slate-200 bg-slate-100 cursor-not-allowed opacity-60'
+                          : fieldErrors.media
+                          ? 'border-red-500 hover:border-red-500 hover:bg-slate-50 cursor-pointer'
+                          : 'border-slate-300 hover:border-primary hover:bg-slate-50 cursor-pointer'
+                      }`}
+                    >
+                      <Plus className="h-6 w-6 text-slate-400" />
+                      <input
+                        test-data="supporting-images-file-input"
+                        type="file"
+                        className="hidden"
+                        accept=".jpg,.jpeg,.png,.webp"
+                        multiple
+                        onChange={handleImagesUploadLegacy}
+                        disabled={images.length >= 15}
+                      />
+                    </label>
+                    {images.length >= 15 && (
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-xs px-3 py-1.5 bg-slate-800 text-white text-xs rounded-lg opacity-0 group-hover/btn:opacity-100 transition-opacity pointer-events-none z-20 whitespace-normal text-center shadow-lg">
+                        ไม่สามารถเพิ่มรูปได้เนื่องจากครบจำนวนแล้ว
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {fieldErrors.media && (
-                <p className="mt-2 text-xs font-medium text-rose-500" role="alert">{fieldErrors.media}</p>
+                <p className="mt-2 text-xs font-medium text-rose-500" role="alert">
+                  {fieldErrors.media}
+                </p>
               )}
             </div>
           </div>
-
         </div>
 
-        {/* Actions */}
+        {/* Action Bar */}
         <div className="sticky bottom-0 z-40 bg-slate-50 p-6 sm:px-12 sm:py-8 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4 rounded-b-[24px] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-          <button test-data="cancel-create-post-button" onClick={() => navigate('/home')} className="w-full sm:w-auto px-6 py-4 rounded-xl font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-colors shadow-sm cursor-pointer">
+          <button
+            test-data="cancel-create-post-button"
+            type="button"
+            onClick={handleCancelCreatePost}
+            className="w-full sm:w-auto px-6 py-4 rounded-xl font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-colors shadow-sm cursor-pointer"
+          >
             ยกเลิก
           </button>
           <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
             <button
               test-data="save-draft-button"
               type="button"
-              disabled={isPdfUploading || isContentUploading || submitting.current}
+              disabled={
+                isV2
+                  ? workspace.isAnyUploading || isContentUploading || submitting.current
+                  : isPdfUploading || isContentUploading || submitting.current
+              }
               onClick={() => handleSubmit('DRAFT')}
               className="w-full sm:w-auto px-6 py-4 rounded-xl font-bold text-primary bg-blue-50 border border-blue-100 hover:bg-blue-100 transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Save className="h-5 w-5" />
-              บันทึกแบบร่าง
+              <span>บันทึกแบบร่าง</span>
             </button>
             <button
               test-data="publish-post-button"
               type="button"
-              disabled={isPdfUploading || isContentUploading || submitting.current}
+              disabled={
+                isV2
+                  ? workspace.isAnyUploading || isContentUploading || submitting.current
+                  : isPdfUploading || isContentUploading || submitting.current
+              }
               onClick={() => handleSubmit('ACTIVE')}
-              className="w-full sm:w-auto px-8 py-4 rounded-xl font-bold text-white bg-primary hover:bg-blue-600 transition-colors shadow-md hover:shadow-lg hover:-translate-y-0.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full sm:w-auto px-8 py-4 rounded-xl font-bold text-white bg-primary hover:bg-blue-600 transition-colors shadow-md hover:shadow-lg hover:-translate-y-0.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              โพสต์สรุปความรู้
+              {isV2 && workspace.isAnyUploading && (
+                <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+              )}
+              <span>
+                {isV2 && workspace.isAnyUploading ? 'กำลังเตรียมไฟล์ให้พร้อม...' : 'โพสต์สรุปความรู้'}
+              </span>
             </button>
           </div>
         </div>
@@ -828,7 +1255,11 @@ export default function CreatePost() {
                 <Tag className="h-6 w-6 text-primary" />
                 ตั้งค่าวิชาและแท็ก
               </h2>
-              <button test-data="close-category-tags-modal-button" onClick={() => setShowModal(false)} className="p-2 text-slate-400 hover:bg-slate-200 hover:text-slate-800 rounded-full transition-colors">
+              <button
+                test-data="close-category-tags-modal-button"
+                onClick={() => setShowModal(false)}
+                className="p-2 text-slate-400 hover:bg-slate-200 hover:text-slate-800 rounded-full transition-colors cursor-pointer"
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -837,78 +1268,89 @@ export default function CreatePost() {
               {/* Category Select */}
               <div>
                 <label className="flex items-center gap-2 text-base font-bold text-slate-800 mb-3">
-                  <BookOpen className="h-5 w-5 text-primary" /> หมวดหมู่วิชา <span className="text-rose-500">*</span>
+                  <BookOpen className="h-5 w-5 text-primary" /> หมวดหมู่วิชา{' '}
+                  <span className="text-rose-500">*</span>
                 </label>
                 <select
                   test-data="category-select"
                   value={categoryId || categoryName}
                   onChange={(e) => handleCategorySelect(e.target.value)}
-                  className={`w-full px-5 py-3.5 rounded-xl border focus:outline-none transition-colors bg-white font-medium text-slate-700 text-base cursor-pointer ${fieldErrors.category
-                    ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
-                    : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
-                    }`}
+                  className={`w-full px-5 py-3.5 rounded-xl border focus:outline-none transition-colors bg-white font-medium text-slate-700 text-base cursor-pointer ${
+                    fieldErrors.category
+                      ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+                      : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
+                  }`}
                 >
-                  <option value="" disabled>เลือกหมวดหมู่วิชา</option>
+                  <option value="" disabled>
+                    เลือกหมวดหมู่วิชา
+                  </option>
                   {categoriesList.map((cat) => (
                     <option key={cat.id} value={cat.id}>
                       {cat.name}
                     </option>
                   ))}
                 </select>
-                {fieldErrors.category && (
-                  <p className="mt-1.5 text-xs text-red-500 font-medium" role="alert">{fieldErrors.category}</p>
-                )}
               </div>
 
-              {/* Hashtags Input */}
+              {/* Hashtag Management */}
               <div>
-                <label className="flex items-center gap-2 text-base font-bold text-slate-800 mb-3">
-                  <Tag className="h-5 w-5 text-primary" /> แฮชแท็ก (Hashtags)
-                </label>
+                <div className="flex justify-between items-center mb-3">
+                  <label className="flex items-center gap-2 text-base font-bold text-slate-800">
+                    <Tag className="h-5 w-5 text-primary" /> แฮชแท็ก ({hashtags.length}/3)
+                  </label>
+                  <span className="text-xs text-slate-400">กด Enter เพื่อเพิ่มแท็ก</span>
+                </div>
 
-                {/* Tag Container acting like an input field */}
-                <div
-                  onClick={() => tagInputRef.current?.focus()}
-                  className={`flex flex-wrap items-center gap-1.5 p-1.5 px-2.5 border rounded-xl focus-within:ring-2 transition-colors min-h-[44px] bg-white cursor-text ${hashtagError ? 'border-rose-400 focus-within:ring-rose-100 focus-within:border-rose-500' : 'border-slate-200 focus-within:ring-primary/20 focus-within:border-primary'}`}
-                >
-                  {hashtags.map(tag => (
-                    <span key={tag} className="px-2 py-0.5 bg-blue-50 text-primary rounded-lg text-xs font-semibold flex items-center gap-1 border border-blue-100/50 animate-in zoom-in-95 duration-200">
+                <div className="flex flex-wrap gap-2 p-3 bg-slate-50 border border-slate-200 rounded-2xl min-h-[56px] items-center focus-within:border-primary focus-within:bg-white transition-all">
+                  {hashtags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-semibold shadow-xs"
+                    >
                       {tag}
-                      <button type="button" onClick={(e) => { e.stopPropagation(); handleRemoveHashtag(tag); }} className="hover:text-rose-500 transition-colors cursor-pointer">
-                        <X className="h-3 w-3" />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveHashtag(tag)}
+                        className="text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
+                      >
+                        <X className="h-3.5 w-3.5" />
                       </button>
                     </span>
                   ))}
-                  <input
-                    test-data="hashtag-input"
-                    ref={tagInputRef}
-                    type="text"
-                    value={hashtagInput}
-                    onChange={(e) => handleHashtagInputChange(e.target.value)}
-                    onKeyDown={handleKeyDownHashtag}
-                    onBlur={() => handleAddHashtag()}
-                    className="flex-1 min-w-[120px] outline-none border-none py-0.5 px-1.5 text-sm bg-transparent text-slate-800 placeholder-slate-400 focus:ring-0 focus:outline-none"
-                    placeholder={hashtags.length === 0 ? "พิมพ์แท็กที่ต้องการแล้วกด Enter หรือ Space..." : "เพิ่มแฮชแท็ก..."}
-                  />
+                  {hashtags.length < 3 && (
+                    <input
+                      test-data="hashtag-input"
+                      ref={tagInputRef}
+                      type="text"
+                      value={hashtagInput}
+                      onChange={(e) => handleHashtagInputChange(e.target.value)}
+                      onKeyDown={handleKeyDownHashtag}
+                      placeholder={hashtags.length === 0 ? 'พิมพ์แท็ก เช่น TCAS67' : ''}
+                      className="flex-1 min-w-[120px] bg-transparent border-none outline-none text-sm text-slate-700 placeholder:text-slate-400"
+                    />
+                  )}
                 </div>
-                {hashtagError && (
-                  <p className="mt-1.5 text-xs font-medium text-rose-500" role="alert">{hashtagError}</p>
-                )}
-                <p className="mt-1.5 text-xs text-slate-400">เพิ่มได้สูงสุด 3 แท็ก, ความยาวไม่เกิน 10 ตัวอักษร และใช้ได้เฉพาะตัวอักษรหรือตัวเลข</p>
 
-                {/* Suggested Tags Area */}
-                <div className="mt-4 pt-4 border-t border-slate-100">
-                  <label className="flex items-center gap-2 text-xs font-bold text-slate-500 mb-2">
-                    แท็กยอดนิยม (คลิกเพื่อเลือก)
-                  </label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {SUGGESTED_TAGS.map((tag, index) => (
+                {hashtagError && (
+                  <p className="mt-2 text-xs text-rose-500 font-medium">{hashtagError}</p>
+                )}
+
+                {/* Suggested Tags */}
+                <div className="mt-4">
+                  <span className="text-xs font-bold text-slate-400 block mb-2">
+                    แท็กแนะนำที่น่าสนใจ:
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {SUGGESTED_TAGS.map((tag) => (
                       <button
-                        test-data={`suggested-hashtag-button-${index}`}
                         key={tag}
                         type="button"
                         onClick={() => toggleSuggestedTag(tag)}
-                        className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition-all cursor-pointer ${hashtags.includes(tag) ? 'bg-primary text-white border-primary shadow-sm' : 'bg-white text-slate-500 border-slate-200 hover:border-primary hover:text-primary'}`}
+                        className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-all cursor-pointer ${
+                          hashtags.includes(tag)
+                            ? 'bg-primary text-white border-primary shadow-xs'
+                            : 'bg-white text-slate-600 border-slate-200 hover:border-primary/50 hover:bg-slate-50'
+                        }`}
                       >
                         {tag}
                       </button>
@@ -920,43 +1362,54 @@ export default function CreatePost() {
 
             <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-end">
               <button
-                test-data="confirm-category-tags-button"
                 type="button"
                 onClick={() => setShowModal(false)}
-                className="px-6 py-3 bg-primary text-white rounded-xl font-bold hover:bg-blue-600 transition-all shadow-md hover:shadow-lg cursor-pointer"
+                className="px-6 py-2.5 bg-primary text-white font-bold rounded-xl text-sm hover:bg-blue-600 transition-colors shadow-sm cursor-pointer"
               >
-                ตกลง
+                เสร็จสิ้น
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* MODAL: File Preview */}
+      {/* Modal Preview for Images / PDF */}
       {previewFile && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 sm:p-8 bg-slate-900/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl overflow-hidden shadow-2xl w-full h-full max-w-6xl max-h-[90vh] flex flex-col">
-            <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 flex-shrink-0">
-              <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                {previewFile.type === 'pdf' ? <File className="h-5 w-5 text-primary" /> : <ImageIcon className="h-5 w-5 text-primary" />}
-                ดูตัวอย่างไฟล์
-              </h2>
-              <button test-data="close-file-preview-button" onClick={closePreview} className="p-2 text-slate-400 hover:bg-slate-200 hover:text-slate-800 rounded-full transition-colors">
-                <X className="h-6 w-6" />
+        <div
+          className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={closePreview}
+        >
+          <div
+            className="relative bg-white rounded-2xl overflow-hidden max-w-4xl max-h-[90vh] w-full flex flex-col shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <span className="text-sm font-bold text-slate-700">ดูตัวอย่างไฟล์</span>
+              <button
+                onClick={closePreview}
+                className="p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-800 rounded-full transition-colors cursor-pointer"
+              >
+                <X className="h-5 w-5" />
               </button>
             </div>
-
-            <div className="flex-1 bg-slate-100 overflow-auto flex items-center justify-center relative p-4">
-              {previewFile.type === 'image' ? (
-                <img src={previewFile.url} alt="Preview" className="max-w-full max-h-full object-contain rounded-lg shadow-sm" />
+            <div className="p-4 flex items-center justify-center flex-1 overflow-auto bg-slate-100/50">
+              {previewFile.type === 'pdf' ? (
+                <iframe
+                  src={previewFile.url}
+                  className="w-full h-[70vh] rounded-xl border border-slate-200 bg-white"
+                  title="PDF Preview"
+                />
               ) : (
-                <iframe src={previewFile.url} className="w-full h-full rounded-lg shadow-sm bg-white border-0" title="PDF Preview" />
+                <img
+                  src={previewFile.url}
+                  alt="Preview"
+                  className="max-h-[75vh] max-w-full object-contain rounded-xl"
+                />
               )}
             </div>
           </div>
         </div>
       )}
-
     </div>
   );
 }
