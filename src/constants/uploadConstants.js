@@ -7,6 +7,7 @@ export const ALLOWED_PDF_EXTENSIONS = ['pdf'];
 
 export const MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
 export const MAX_IMAGE_SIZE_LABEL = 'ไม่เกิน 2 MB';
+export const MAX_SUPPORTING_IMAGES_COUNT = 5;
 export const ALLOWED_IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp', 'image/apng'];
 export const ALLOWED_IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'apng'];
 

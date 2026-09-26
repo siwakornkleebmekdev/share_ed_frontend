@@ -32,7 +32,7 @@ import {
   isUploadWorkspaceV2Enabled,
 } from '../constants/uploadConstants';
 
-const SUGGESTED_TAGS = ['#AI', '#เรียนรู้ไปด้วยกัน', '#เตรียมสอบ', '#TCAS67', '#สรุปย่อ', '#แชร์ความรู้', '#เด็กซิ่ว', '#สรุปชีท'];
+const SUGGESTED_TAGS = ['#สรุป', '#ความรู้', '#โน้ตเรียน', '#สาระ', '#ทบทวน', '#สรุปย่อ', '#บทเรียน', '#อ่านสอบ'];
 const DIRECT_UPLOAD_ENABLED = import.meta.env.VITE_DIRECT_UPLOAD_ENABLED !== 'false';
 
 export default function CreatePost() {
@@ -185,7 +185,7 @@ export default function CreatePost() {
     let reachedLimit = false;
 
     for (const file of files) {
-      if (newImages.length >= 15) {
+      if (newImages.length >= 5) {
         reachedLimit = true;
         break;
       }
@@ -207,7 +207,7 @@ export default function CreatePost() {
     }
 
     if (reachedLimit) {
-      toast.error('คุณสามารถอัปโหลดรูปภาพประกอบได้สูงสุด 15 รูปเท่านั้น');
+      toast.error('อัปโหลดรูปภาพประกอบได้สูงสุด 5 รูป ระบบนำรูปส่วนเกินออกแล้ว');
     }
     if (hasInvalidType) {
       toast.error('สามารถอัปโหลดไฟล์ .jpg,.jpeg,.png,.webp เท่านั้น');
@@ -1089,7 +1089,7 @@ export default function CreatePost() {
               <label className="flex items-center justify-between text-base font-bold text-slate-800 mb-3">
                 <span>
                   รูปภาพประกอบ (
-                  {isV2 ? workspace.imageFileItems.length : images.length}/15){' '}
+                  {isV2 ? workspace.imageFileItems.length : images.length}/5){' '}
                   <span className="text-rose-500">*</span>
                 </span>
                 <span className="text-xs font-normal text-slate-500">ไม่เกินรูปละ 2 MB</span>
@@ -1108,7 +1108,7 @@ export default function CreatePost() {
                     />
                   ))}
 
-                  {workspace.mediaFiles.length < 15 && (
+                  {workspace.imageFileItems.length < 5 && (
                     <label className="flex items-center justify-center gap-2 p-3 border-2 border-dashed border-slate-300 hover:border-primary hover:bg-slate-50 rounded-xl cursor-pointer transition-colors text-slate-600 text-sm font-semibold">
                       <Plus className="w-4 h-4 text-slate-400" />
                       <span>เพิ่มรูปภาพประกอบ</span>
@@ -1159,7 +1159,7 @@ export default function CreatePost() {
 
                   <div className="relative group/btn inline-block">
                     <label
-                      className={`w-20 h-20 border-2 border-dashed rounded-xl flex flex-col items-center justify-center transition-all ${images.length >= 15
+                      className={`w-20 h-20 border-2 border-dashed rounded-xl flex flex-col items-center justify-center transition-all ${images.length >= 5
                         ? 'border-slate-200 bg-slate-100 cursor-not-allowed opacity-60'
                         : fieldErrors.media
                           ? 'border-red-500 hover:border-red-500 hover:bg-slate-50 cursor-pointer'
@@ -1174,10 +1174,10 @@ export default function CreatePost() {
                         accept=".jpg,.jpeg,.png,.webp"
                         multiple
                         onChange={handleImagesUploadLegacy}
-                        disabled={images.length >= 15}
+                        disabled={images.length >= 5}
                       />
                     </label>
-                    {images.length >= 15 && (
+                    {images.length >= 5 && (
                       <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-xs px-3 py-1.5 bg-slate-800 text-white text-xs rounded-lg opacity-0 group-hover/btn:opacity-100 transition-opacity pointer-events-none z-20 whitespace-normal text-center shadow-lg">
                         ไม่สามารถเพิ่มรูปได้เนื่องจากครบจำนวนแล้ว
                       </div>
@@ -1320,7 +1320,7 @@ export default function CreatePost() {
                       value={hashtagInput}
                       onChange={(e) => handleHashtagInputChange(e.target.value)}
                       onKeyDown={handleKeyDownHashtag}
-                      placeholder={hashtags.length === 0 ? 'พิมพ์แท็ก เช่น TCAS67' : ''}
+                      placeholder={hashtags.length === 0 ? 'พิมพ์แท็ก เช่น สาระน่ารู้' : ''}
                       className="flex-1 min-w-[120px] bg-transparent border-none outline-none text-sm text-slate-700 placeholder:text-slate-400"
                     />
                   )}
