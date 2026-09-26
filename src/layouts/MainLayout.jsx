@@ -12,7 +12,7 @@ export default function MainLayout() {
   return (
     <div className={`min-h-screen flex flex-col relative ${isDarkHero ? 'bg-slate-950' : 'bg-background'}`}>
       <Navbar />
-      <div className="flex-1 pt-28">
+      <div className="flex-1 pt-20 sm:pt-28 pb-20 sm:pb-24">
         <Outlet />
       </div>
       <Footer />

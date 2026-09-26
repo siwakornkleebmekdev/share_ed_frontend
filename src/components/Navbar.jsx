@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import {
   BookOpen,
   Search,
@@ -18,6 +18,7 @@ import {
   UserPlus,
   Newspaper,
   X,
+  Menu,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import useNotificationStore from "@/store/notificationStore";
@@ -35,9 +36,12 @@ export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const notifRef = useRef(null);
   const profileRef = useRef(null);
+  const mobileMenuRef = useRef(null);
   const navigate = useNavigate();
+  const location = useLocation();
   // Set by whichever page is currently mounted (see useHeroThemeStore) based
   // on the actual brightness of its background image, not the route.
   const isDarkHero = useHeroThemeStore((state) => state.isDarkHero);
@@ -118,6 +122,9 @@ export default function Navbar() {
       if (profileRef.current && !profileRef.current.contains(event.target)) {
         setShowProfileMenu(false);
       }
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target)) {
+        setShowMobileMenu(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -162,14 +169,15 @@ export default function Navbar() {
   };
 
   return (
+    <>
     <div
-      className={`fixed top-0 left-0 w-full z-50 transition-all duration-500 ease-out px-4 ${isScrolled ? "pt-2" : "pt-4"}`}
+      className={`fixed top-0 left-0 w-full z-50 transition-all duration-500 ease-out px-2 min-[414px]:px-3 sm:px-4 ${isScrolled ? "pt-2" : "pt-3 sm:pt-4"}`}
     >
       <nav
         className={`mx-auto backdrop-blur-md transition-all duration-500 ease-out overflow-visible rounded-full border ${isDarkHero ? "border-white/10" : "border-slate-200/50"
           } ${isScrolled
-            ? "w-[92%] max-w-5xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] py-2 px-6"
-            : "w-[98%] max-w-7xl shadow-sm py-2.5 px-8"
+            ? "w-full sm:w-[92%] max-w-5xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] py-2 px-3 sm:px-6"
+            : "w-full sm:w-[98%] max-w-7xl shadow-sm py-2 px-3 sm:py-2.5 sm:px-8"
           }`}
         style={{
           backgroundColor: rgbToRgba(glassColor, isScrolled ? 85 : 65),
@@ -179,10 +187,10 @@ export default function Navbar() {
         <div
           className={`w-full flex justify-between items-center transition-all duration-500 ${isScrolled ? "h-12" : "h-14"}`}
         >
-          <Link to="/" className="flex items-center gap-2 group flex-shrink-0">
+          <Link to="/" className="flex min-w-0 items-center gap-1.5 group flex-shrink sm:gap-2">
             <BookOpen className="text-primary transition-transform duration-300 group-hover:scale-110 h-7 w-7 sm:h-8 sm:w-8" />
             <span
-              className={`font-bold tracking-tight text-lg sm:text-xl ${isDarkHero ? "text-white" : "text-slate-800"}`}
+              className={`truncate font-bold tracking-tight text-base min-[414px]:text-lg sm:text-xl ${isDarkHero ? "text-white" : "text-slate-800"}`}
             >
               SHARE-ED
             </span>
@@ -221,7 +229,7 @@ export default function Navbar() {
                   test-data="create-post-button"
                   role="button"
                   aria-label="สร้างโพสต์"
-                  className="flex items-center gap-1.5 bg-primary text-white hover:bg-blue-600 rounded-full font-bold px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
+                  className="hidden md:flex items-center gap-1.5 bg-primary text-white hover:bg-blue-600 rounded-full font-bold px-4 py-2 text-sm shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
                 >
                   <PenTool className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   <span>สร้างโพสต์</span>
@@ -361,7 +369,7 @@ export default function Navbar() {
                 <Link
                   to="/achievements"
                   title="ความสำเร็จ"
-                  className={`relative p-2.5 rounded-full transition-colors shadow-sm ${isDarkHero ? "text-slate-300 hover:text-white bg-white/10 hover:bg-white/20" : "text-slate-500 hover:text-primary bg-slate-100 hover:bg-slate-200"}`}
+                  className={`relative hidden md:inline-flex p-2.5 rounded-full transition-colors shadow-sm ${isDarkHero ? "text-slate-300 hover:text-white bg-white/10 hover:bg-white/20" : "text-slate-500 hover:text-primary bg-slate-100 hover:bg-slate-200"}`}
                 >
                   <Trophy className="h-4 w-4 sm:h-5 sm:w-5" />
                   {readyToClaimCount() > 0 && (
@@ -370,6 +378,43 @@ export default function Navbar() {
                     </span>
                   )}
                 </Link>
+
+                <div className="relative md:hidden" ref={mobileMenuRef}>
+                  <button
+                    type="button"
+                    onClick={() => setShowMobileMenu((open) => !open)}
+                    aria-label="เปิดเมนูหลัก"
+                    aria-expanded={showMobileMenu}
+                    aria-controls="mobile-navigation"
+                    className={`inline-flex h-11 w-11 items-center justify-center rounded-full shadow-sm transition-colors ${isDarkHero ? "bg-white/10 text-white hover:bg-white/20" : "bg-slate-100 text-slate-700 hover:bg-slate-200"}`}
+                  >
+                    {showMobileMenu ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                  </button>
+                  {showMobileMenu && (
+                    <nav
+                      id="mobile-navigation"
+                      aria-label="เมนูมือถือ"
+                      className="absolute right-0 mt-3 w-64 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-slate-100 bg-white p-2 shadow-2xl"
+                    >
+                      {[
+                        ["/home", "หน้าหลัก", BookOpen],
+                        ["/explore", "สำรวจเนื้อหา", Search],
+                        ["/trending", "โพสต์ยอดนิยม", Newspaper],
+                        ["/achievements", "ความสำเร็จ", Trophy],
+                      ].map(([to, label, Icon]) => (
+                        <Link
+                          key={to}
+                          to={to}
+                          onClick={() => setShowMobileMenu(false)}
+                          className="flex min-h-12 items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 transition-colors hover:bg-blue-50 hover:text-primary"
+                        >
+                          <Icon className="h-5 w-5 shrink-0" />
+                          <span>{label}</span>
+                        </Link>
+                      ))}
+                    </nav>
+                  )}
+                </div>
 
                 <div className="relative" ref={profileRef}>
                   <button
@@ -471,5 +516,16 @@ export default function Navbar() {
         </div>
       </nav>
     </div>
+    {isAuthenticated && !location.pathname.startsWith("/create") && !location.pathname.startsWith("/post/edit/") && (
+      <Link
+        to="/create"
+        aria-label="สร้างโพสต์ใหม่"
+        className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-[max(1.25rem,env(safe-area-inset-right))] z-[60] inline-flex h-16 w-16 items-center justify-center rounded-full bg-primary text-white shadow-2xl shadow-blue-500/35 transition-all hover:-translate-y-1 hover:bg-blue-600 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-300 active:translate-y-0 sm:h-[4.5rem] sm:w-[4.5rem]"
+      >
+        <PenTool className="h-7 w-7 sm:h-8 sm:w-8" aria-hidden="true" />
+        <span className="sr-only">สร้างโพสต์</span>
+      </Link>
+    )}
+    </>
   );
 }
