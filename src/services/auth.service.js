@@ -108,11 +108,10 @@ export const authService = {
     });
 
     if (error || !data?.session) {
-      const message = String(error?.message || '').toLowerCase();
-      if (message.includes('expired')) {
+      if (error?.code === 'otp_expired') {
         throw new Error('รหัสยืนยันหมดอายุแล้ว กรุณาขอรหัสใหม่');
       }
-      throw new Error('รหัสยืนยันไม่ถูกต้องหรือหมดอายุ กรุณาตรวจสอบอีกครั้ง');
+      throw new Error('รหัสยืนยันไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง');
     }
     return data;
   },
