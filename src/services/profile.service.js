@@ -40,8 +40,15 @@ export const profileService = {
       const response = await api.get("/bookmarks");
       if (response.data?.success && Array.isArray(response.data?.data)) {
         const posts = response.data.data
-          .map((b) => (b.post ? { ...b.post, id: b.post.id || b.post_id, isBookmarked: true } : b))
-          .filter(Boolean);
+          // A deleted post can briefly leave a stale bookmark payload in flight.
+          // Never turn the bookmark envelope itself into a PostCard.
+          .filter((bookmark) => bookmark?.post)
+          .map((bookmark) => ({
+            ...bookmark.post,
+            id: bookmark.post.id || bookmark.post_id,
+            isBookmarked: true,
+          }))
+          .filter((post) => String(post.post_status || "ACTIVE").toUpperCase() === "ACTIVE");
         return formatPosts(posts);
       }
       return [];
