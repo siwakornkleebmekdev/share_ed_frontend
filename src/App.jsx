@@ -22,7 +22,7 @@ const EditPost = lazy(() => import("./pages/EditPost"));
 const Trending = lazy(() => import("./pages/Trending"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Notifications = lazy(() => import("./pages/Notifications"));
-const Achievements = lazy(() => import("./pages/Achievements"));
+const Achievements = lazy(() => import("./pages/AchievementsModern"));
 const PostDetails = lazy(() => import("./pages/PostDetails"));
 const SettingsProfile = lazy(() => import("./pages/settings/SettingsProfile"));
 const SettingsWidgets = lazy(() => import("./pages/settings/SettingsWidgets"));
