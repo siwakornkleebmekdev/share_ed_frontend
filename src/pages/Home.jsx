@@ -153,10 +153,15 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="p-5 flex flex-col flex-1">
-                  <h3 className="font-bold text-slate-900 text-lg mb-2 line-clamp-2 group-hover:text-primary transition-colors leading-snug">
-                    {post.title}
+                  <h3 title={String(post.title ?? '').trim()} className="font-bold text-slate-900 text-lg mb-2 line-clamp-2 break-words group-hover:text-primary transition-colors leading-snug">
+                    {String(post.title ?? '').trim()}
                   </h3>
-                  <div className="flex items-center gap-2 mb-4 flex-1 min-w-0">
+                  {(post.description || post.summary) && (
+                    <p title={String(post.description ?? post.summary).trim()} className="mb-3 line-clamp-2 break-words text-xs leading-relaxed text-slate-500">
+                      {String(post.description ?? post.summary).trim()}
+                    </p>
+                  )}
+                  <div className="flex items-center gap-2 mb-4 mt-auto min-w-0">
                     <div className="w-5 h-5 rounded-full overflow-hidden shrink-0 bg-slate-100 border border-slate-200 flex items-center justify-center text-[10px] text-slate-500 font-bold">
                       <img
                         src={post.authorAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.author || 'User')}&background=1e293b&color=38bdf8`}
