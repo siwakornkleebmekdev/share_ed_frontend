@@ -19,6 +19,9 @@ import { supabase } from "@/utils/supabase";
 
 const PROFILE_IMAGE_EXTENSIONS = ["jpg", "jpeg", "png"];
 const PROFILE_IMAGE_MIMES = ["image/jpeg", "image/jpg", "image/png"];
+const WALLPAPER_IMAGE_EXTENSIONS = [...PROFILE_IMAGE_EXTENSIONS, "webp", "gif"];
+const WALLPAPER_IMAGE_MIMES = [...PROFILE_IMAGE_MIMES, "image/webp", "image/gif"];
+const MAX_WALLPAPER_SIZE_BYTES = 10 * 1024 * 1024;
 const MAX_PROFILE_IMAGE_SIZE_BYTES = 2 * 1024 * 1024;
 
 const generateGradientFile = (filename, width, height, color1, color2) => {
@@ -50,9 +53,8 @@ const generateGradientFile = (filename, width, height, color1, color2) => {
 
 export default function SettingsProfile() {
   const { user, login } = useAuthStore();
-  const isAdmin = String(user?.role || "").toUpperCase() === "ADMIN";
-  const profileImageAccept = `.${[...PROFILE_IMAGE_EXTENSIONS, ...(isAdmin ? ["webp", "gif"] : [])].join(",.")}`;
-  const wallpaperAccept = ".jpg,.jpeg,.png,.webp";
+  const profileImageAccept = ".jpg,.jpeg,.png";
+  const wallpaperAccept = ".jpg,.jpeg,.png,.webp,.gif";
   const { milestones: storedMilestones, ownerId, fetchMilestones } = useAchievementStore();
   const [isSaving, setIsSaving] = useState(false);
   const [profileImageError, setProfileImageError] = useState(false);
@@ -184,7 +186,7 @@ export default function SettingsProfile() {
     const resetInput = () => { e.target.value = ""; };
 
     const maxSize = type === "wallpaper"
-      ? 25 * 1024 * 1024
+      ? MAX_WALLPAPER_SIZE_BYTES
       : type === "avatar"
         ? MAX_PROFILE_IMAGE_SIZE_BYTES
         : 8 * 1024 * 1024;
@@ -194,7 +196,7 @@ export default function SettingsProfile() {
         resetInput();
         return;
       }
-      toast.error(`ไฟล์ต้องมีขนาดไม่เกิน ${type === "wallpaper" ? 25 : 8} MB`);
+      toast.error(`ไฟล์ต้องมีขนาดไม่เกิน ${type === "wallpaper" ? 10 : 8} MB`);
       resetInput();
       return;
     }
@@ -205,21 +207,18 @@ export default function SettingsProfile() {
 
     const extension = file.name?.split(".").pop()?.toLowerCase() || "";
     const mimeType = String(file.type || "").toLowerCase();
-    const gifAllowed = type === "wallpaper" || isAdmin;
-    const allowedImageExtensions = [...PROFILE_IMAGE_EXTENSIONS, ...(gifAllowed ? ["webp", "gif"] : [])];
-    const allowedImageMimes = [...PROFILE_IMAGE_MIMES, ...(gifAllowed ? ["image/webp", "image/gif"] : [])];
+    const allowedImageExtensions = type === "wallpaper"
+      ? WALLPAPER_IMAGE_EXTENSIONS
+      : PROFILE_IMAGE_EXTENSIONS;
+    const allowedImageMimes = type === "wallpaper"
+      ? WALLPAPER_IMAGE_MIMES
+      : PROFILE_IMAGE_MIMES;
     const isImage = allowedImageExtensions.includes(extension)
       && (!mimeType || allowedImageMimes.includes(mimeType));
-    const isWallpaperVideo = type === "wallpaper"
-      && extension === "mp4"
-      && (!mimeType || mimeType === "video/mp4");
-
-    if (!isImage && !isWallpaperVideo) {
+    if (!isImage) {
       toast.error(type === "wallpaper"
-        ? "ภาพพื้นหลังรองรับ JPG, PNG, WebP เท่านั้น"
-        : isAdmin
-          ? "รองรับ JPG, PNG, Web เท่านั้น"
-          : "รองรับ JPG, PNG หรือ APNG เท่านั้น");
+        ? "ภาพพื้นหลังรองรับ JPG, JPEG, PNG, WebP หรือ GIF เท่านั้น"
+        : "รองรับเฉพาะไฟล์ JPG, JPEG และ PNG เท่านั้น");
       resetInput();
       return;
     }
@@ -416,33 +415,19 @@ export default function SettingsProfile() {
                   {!media.wallpaper?.remove &&
                     (media.wallpaper?.url ||
                       user?.user_metadata?.wallpaper_url) ? (
-                    media.wallpaper?.type?.startsWith("video") ||
-                      user?.user_metadata?.wallpaper_url?.endsWith(".mp4") ? (
-                      <video
-                        src={
-                          media.wallpaper?.url ||
-                          user?.user_metadata?.wallpaper_url
-                        }
-                        className="w-full h-full object-cover"
-                        autoPlay
-                        muted
-                        loop
-                      />
-                    ) : (
-                      <img
-                        src={
-                          media.wallpaper?.url ||
-                          user?.user_metadata?.wallpaper_url
-                        }
-                        alt="Wallpaper"
-                        className="w-full h-full object-cover"
-                      />
-                    )
+                    <img
+                      src={
+                        media.wallpaper?.url ||
+                        user?.user_metadata?.wallpaper_url
+                      }
+                      alt="Wallpaper"
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
                     <div className="text-center">
                       <ImageIcon className="h-6 w-6 text-slate-400 mx-auto mb-1" />
                       <span className="text-slate-500 text-xs font-medium">
-                        รูป/วิดีโอ MP4 (ไม่เกิน 25MB)
+                        รูปภาพหรือ GIF (ไม่เกิน 10 MB)
                       </span>
                     </div>
                   )}
@@ -468,7 +453,7 @@ export default function SettingsProfile() {
                   </div>
                 </div>
                 <p className="text-xs leading-relaxed text-slate-500">
-                  แนะนำภาพหรือวิดีโอ MP4 แนวนอนขนาด 1920 × 1080 พิกเซล (16:9) วางรายละเอียดสำคัญไว้กลางภาพ เพราะหน้าจอแต่ละขนาดอาจตัดขอบภาพออก · ไฟล์ไม่เกิน 25 MB
+                  แนะนำภาพหรือ GIF แนวนอนขนาด 1920 × 1080 พิกเซล (16:9) วางรายละเอียดสำคัญไว้กลางภาพ เพราะหน้าจอแต่ละขนาดอาจตัดขอบภาพออก · ทุกไฟล์ต้องมีขนาดไม่เกิน 10 MB
                 </p>
                 {claimedWallpapers.length > 0 && (
                   <div>
