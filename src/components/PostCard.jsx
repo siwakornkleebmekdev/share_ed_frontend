@@ -36,6 +36,8 @@ export default function PostCard({ post, viewMode, rank = null, dark = false, on
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const user = useAuthStore((state) => state.user);
   const navigate = useNavigate();
+  const displayTitle = String(post.title ?? '').trim();
+  const displaySummary = String(post.description ?? post.summary ?? '').trim();
 
   useEffect(() => {
     setIsLiked(Boolean(post.isLiked || post.is_liked));
@@ -230,7 +232,7 @@ export default function PostCard({ post, viewMode, rank = null, dark = false, on
         <div className="flex flex-1 flex-col justify-between py-1">
           <div>
             <div className="flex items-start justify-between gap-4">
-              <h3 className={`text-xl font-bold line-clamp-2 group-hover:text-primary transition-colors ${dark ? 'text-white' : 'text-slate-800'}`}>{post.title}</h3>
+              <h3 title={displayTitle} className={`text-xl font-bold line-clamp-2 break-words group-hover:text-primary transition-colors ${dark ? 'text-white' : 'text-slate-800'}`}>{displayTitle}</h3>
               <button
                 onClick={handleBookmark}
                 className={`p-2 rounded-lg transition-all flex-shrink-0 ${isBookmarked ? 'text-primary bg-blue-50' : dark ? 'text-slate-400 hover:text-primary hover:bg-white/10' : 'text-slate-300 hover:text-primary hover:bg-primary/5'}`}
@@ -241,6 +243,11 @@ export default function PostCard({ post, viewMode, rank = null, dark = false, on
             <span className={`inline-block mt-2 px-2.5 py-1 rounded-md text-[11px] font-medium ${dark ? 'bg-white/5 border border-white/10 text-slate-300' : 'bg-slate-50 border border-slate-100 text-slate-600'}`}>
               {post.level}
             </span>
+            {displaySummary && (
+              <p title={displaySummary} className={`mt-2 line-clamp-2 break-words text-sm leading-relaxed ${dark ? 'text-slate-300' : 'text-slate-500'}`}>
+                {displaySummary}
+              </p>
+            )}
           </div>
           <div className={`flex items-center justify-between mt-4 sm:mt-0 pt-4 border-t sm:pt-0 ${dark ? 'border-white/10 sm:border-transparent' : 'border-slate-50 sm:border-transparent'}`}>
             <div
@@ -282,7 +289,12 @@ export default function PostCard({ post, viewMode, rank = null, dark = false, on
         <span className={`${rank ? 'hidden md:inline-block' : 'inline-block'} mb-3 px-2.5 py-1 rounded-md text-[11px] font-medium w-fit ${dark ? 'bg-white/5 border border-white/10 text-slate-300' : 'bg-slate-50 border border-slate-100 text-slate-600'}`}>
           {post.level}
         </span>
-        <h3 className={`${rank ? 'text-xs leading-snug md:text-lg' : 'text-lg'} min-w-0 break-words font-bold line-clamp-3 md:line-clamp-2 mb-2 md:mb-4 group-hover:text-primary transition-colors flex-1 ${dark ? 'text-white' : 'text-slate-800'}`}>{post.title}</h3>
+        <h3 title={displayTitle} className={`${rank ? 'text-xs leading-snug md:text-lg' : 'text-lg'} min-w-0 break-words font-bold line-clamp-2 mb-1.5 group-hover:text-primary transition-colors ${dark ? 'text-white' : 'text-slate-800'}`}>{displayTitle}</h3>
+        {displaySummary && (
+          <p title={displaySummary} className={`${rank ? 'text-[10px] leading-snug md:text-xs md:leading-relaxed' : 'text-xs leading-relaxed'} min-w-0 line-clamp-2 break-words mb-2 flex-1 ${dark ? 'text-slate-300' : 'text-slate-500'}`}>
+            {displaySummary}
+          </p>
+        )}
         <div className={`flex flex-col items-start justify-between gap-1 border-t pt-2 md:flex-row md:items-center md:gap-2 md:pt-4 mt-auto ${dark ? 'border-white/10' : 'border-slate-100'}`}>
           <div
             onClick={handleAuthorClick}
