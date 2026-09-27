@@ -1,5 +1,4 @@
 import api from "../utils/api";
-import { convertSvgToPngFile } from "../utils/imageUtils";
 import { prepareRewardImageFile } from "../utils/rewardImage";
 
 // การตั้งค่าและข้อมูลอธิบายประเภทภารกิจความสำเร็จ (Milestone / Achievement Types)
@@ -107,7 +106,7 @@ function buildAchievementFormData(payload) {
 /**
  * จัดการของรางวัลที่แนบมากับภารกิจ (Auto-create Reward Item)
  * - การทำงาน: หากผู้ใช้กรอกชื่อของรางวัลใหม่พร้อมไฟล์ภาพ แต่ยังไม่มี reward_item_id
- *   ระบบจะทำการสร้างไอเทมของรางวัลขึ้นก่อนอัตโนมัติ โดยตรวจไฟล์ APNG หรือแปลง SVG เป็น PNG
+ *   ระบบจะทำการสร้างไอเทมของรางวัลขึ้นก่อนอัตโนมัติ โดยตรวจไฟล์ APNG ก่อนอัปโหลด
  *   จากนั้นนำ ID ของรางวัลที่ได้มาผูกเข้ากับภารกิจ
  * - อิงจาก: Backend API POST /admin/rewards
  * - เชื่อมโยงกับ: AchievementFormModal.jsx -> prepareRewardImageFile() ใน rewardImage.js -> createAchievement() / updateAchievement()
@@ -120,11 +119,7 @@ async function resolvePayloadReward(payload) {
   // 1. กรณีผู้ใช้ระบุของรางวัลใหม่พร้อมภารกิจ (ชื่อรางวัล + ไฟล์/ประเภท)
   if (payload.item_name && !payload.reward_item_id) {
     try {
-      let fileToUpload = await prepareRewardImageFile(payload.imageFile);
-      if (fileToUpload && (fileToUpload.type === 'image/svg+xml' || fileToUpload.name?.toLowerCase().endsWith('.svg'))) {
-        // รักษาข้อมูลไฟล์ APNG และไฟล์รูปภาพอื่นแบบ byte-for-byte เพื่อคงความต่อเนื่องของแอนิเมชัน
-        fileToUpload = await convertSvgToPngFile(fileToUpload);
-      }
+      const fileToUpload = await prepareRewardImageFile(payload.imageFile);
 
       const rewardForm = new FormData();
       rewardForm.append("item_name", payload.item_name);
