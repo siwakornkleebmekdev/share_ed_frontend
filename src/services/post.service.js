@@ -90,12 +90,36 @@ export const postService = {
   // Fetch all posts (Active/Published)
   getAllPosts: async (params = {}) => {
     try {
-      const response = await api.get('/posts', { params, requiresAuth: false });
-      if (response.data.success) {
+      const hasExplicitPagination = params.page !== undefined || params.limit !== undefined;
+
+      if (hasExplicitPagination) {
+        const response = await api.get('/posts', { params, requiresAuth: false });
+        if (!response.data.success) return [];
         const posts = response.data.data.map(formatPostData);
         return await mergeBookmarkStatus(posts);
       }
-      return [];
+
+      // Home, Explore, and Trending paginate/filter on the client. Fetch every
+      // API page first so posts beyond the backend's default first 20 are not lost.
+      const pageSize = 50;
+      const allPosts = [];
+      let page = 1;
+      let hasNextPage = true;
+
+      while (hasNextPage) {
+        const response = await api.get('/posts', {
+          params: { ...params, page, limit: pageSize },
+          requiresAuth: false,
+        });
+        if (!response.data.success) break;
+
+        const pagePosts = Array.isArray(response.data.data) ? response.data.data : [];
+        allPosts.push(...pagePosts);
+        hasNextPage = Boolean(response.data.pagination?.hasNextPage);
+        page += 1;
+      }
+
+      return await mergeBookmarkStatus(allPosts.map(formatPostData));
     } catch (error) {
       console.error('Error fetching all posts:', error);
       throw error;
