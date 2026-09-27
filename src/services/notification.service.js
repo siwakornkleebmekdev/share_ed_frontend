@@ -1,6 +1,7 @@
 import api, { handleTokenExpiration } from '../utils/api';
 import { supabase } from '../utils/supabase';
 import useAuthStore from '../store/authStore';
+import { getValidSession } from '../utils/authSession';
 
 const checked = response => {
   if (response.data?.success === false) throw new Error('Notification request failed');
@@ -11,12 +12,7 @@ const options = { timeout: 15000 };
 const withAuthenticatedSession = async request => {
   let session = null;
   try {
-    const current = await supabase.auth.getSession();
-    session = current.data?.session || null;
-    if (!session?.access_token) {
-      const refreshed = await supabase.auth.refreshSession();
-      session = refreshed.data?.session || null;
-    }
+    session = await getValidSession();
   } catch {
     session = null;
   }

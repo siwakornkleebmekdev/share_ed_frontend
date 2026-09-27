@@ -1,5 +1,5 @@
 import { io } from 'socket.io-client';
-import { supabase } from './supabase.js';
+import { getValidSession } from './authSession.js';
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || (import.meta.env.VITE_API_BASE_URL
   ? import.meta.env.VITE_API_BASE_URL.replace(/\/api\/v1\/?$/, '')
@@ -34,8 +34,8 @@ export function connectSocket(userId) {
   const socket = io(SOCKET_URL, {
     auth: async callback => {
       try {
-        const { data, error } = await supabase.auth.getSession();
-        callback({ userId, token: error ? null : data?.session?.access_token || null });
+        const session = await getValidSession();
+        callback({ userId, token: session?.access_token || null });
       } catch {
         callback({ userId, token: null });
       }

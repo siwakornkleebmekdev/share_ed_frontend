@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { supabase } from './supabase.js';
+import { getValidSession } from './authSession.js';
 import useAuthStore from '../store/authStore.js';
 
 let isLoggingOut = false;
@@ -75,25 +76,8 @@ api.interceptors.request.use(
       return config;
     }
 
-    let token = null;
-    try {
-      let { data, error } = await supabase.auth.getSession();
-      let session = (!error && data?.session) || null;
-
-      // If token expired according to expires_at timestamp, invalidate current session object
-      if (session?.expires_at && session.expires_at * 1000 < Date.now()) {
-        session = null;
-      }
-
-      // If session exists but access_token is absent or expired, try refresh
-      if (!session?.access_token && typeof supabase.auth.refreshSession === 'function') {
-        const refreshed = await supabase.auth.refreshSession().catch(() => null);
-        session = refreshed?.data?.session || null;
-      }
-      token = session?.access_token || null;
-    } catch {
-      token = null;
-    }
+    const session = await getValidSession();
+    const token = session?.access_token || null;
 
     if (token) {
       if (config.headers && typeof config.headers.set === 'function') {
@@ -124,9 +108,9 @@ api.interceptors.response.use(
       if (originalRequest && !originalRequest._retry) {
         originalRequest._retry = true;
         try {
-          const { data, error: refreshErr } = await supabase.auth.refreshSession();
-          if (!refreshErr && data?.session?.access_token) {
-            const newToken = data.session.access_token;
+          const refreshedSession = await getValidSession({ forceRefresh: true });
+          if (refreshedSession?.access_token) {
+            const newToken = refreshedSession.access_token;
             if (originalRequest.headers && typeof originalRequest.headers.set === 'function') {
               originalRequest.headers.set('Authorization', `Bearer ${newToken}`);
             } else {
