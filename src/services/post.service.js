@@ -102,6 +102,20 @@ export const postService = {
     }
   },
 
+  // The API calculates the seven-day ranking and returns it in rank order.
+  getTrendingPosts: async (params = {}) => {
+    try {
+      const response = await api.get('/posts/trending', { params, requiresAuth: false });
+      if (response.data?.success && Array.isArray(response.data?.data)) {
+        return response.data.data.map(formatPostData);
+      }
+      return [];
+    } catch (error) {
+      console.error('Error fetching Trending Top 3:', error);
+      throw error;
+    }
+  },
+
   // Get categories helper
   getCategories: async () => {
     return await categoryService.getAllCategories();
