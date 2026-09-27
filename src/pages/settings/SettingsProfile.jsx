@@ -17,6 +17,9 @@ import FrameDecorationModal from "@/components/settings/FrameDecorationModal";
 import AvatarWithFrame from "@/components/profile/AvatarWithFrame";
 import { supabase } from "@/utils/supabase";
 
+const PROFILE_IMAGE_EXTENSIONS = ["jpg", "jpeg", "png", "apng"];
+const PROFILE_IMAGE_MIMES = ["image/jpeg", "image/jpg", "image/png", "image/apng"];
+
 const generateGradientFile = (filename, width, height, color1, color2) => {
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -46,6 +49,9 @@ const generateGradientFile = (filename, width, height, color1, color2) => {
 
 export default function SettingsProfile() {
   const { user, login } = useAuthStore();
+  const isAdmin = String(user?.role || "").toUpperCase() === "ADMIN";
+  const profileImageAccept = `.${[...PROFILE_IMAGE_EXTENSIONS, ...(isAdmin ? ["webp", "gif"] : [])].join(",.")}`;
+  const wallpaperAccept = ".jpg,.jpeg,.png,.webp,.apng,.gif,.mp4,video/mp4";
   const { milestones: storedMilestones, ownerId, fetchMilestones } = useAchievementStore();
   const [isSaving, setIsSaving] = useState(false);
   const [tagInput, setTagInput] = useState("");
@@ -173,20 +179,34 @@ export default function SettingsProfile() {
   const handleFileChange = (e, type) => {
     const file = e.target.files[0];
     if (!file) return;
+    const resetInput = () => { e.target.value = ""; };
 
     const maxSize = type === "wallpaper" ? 25 * 1024 * 1024 : 8 * 1024 * 1024;
     if (file.size > maxSize) {
       toast.error(`ไฟล์ต้องมีขนาดไม่เกิน ${type === "wallpaper" ? 25 : 8} MB`);
+      resetInput();
       return;
     }
 
-    if (type === "wallpaper") {
-      const isVideo = file.type.startsWith("video/mp4");
-      const isImage = file.type.startsWith("image/");
-      if (!isVideo && !isImage) {
-        toast.error("วอลเปเปอร์ต้องเป็นรูปภาพหรือวิดีโอ MP4 เท่านั้น");
-        return;
-      }
+    const extension = file.name?.split(".").pop()?.toLowerCase() || "";
+    const mimeType = String(file.type || "").toLowerCase();
+    const gifAllowed = type === "wallpaper" || isAdmin;
+    const allowedImageExtensions = [...PROFILE_IMAGE_EXTENSIONS, ...(gifAllowed ? ["webp", "gif"] : [])];
+    const allowedImageMimes = [...PROFILE_IMAGE_MIMES, ...(gifAllowed ? ["image/webp", "image/gif"] : [])];
+    const isImage = allowedImageExtensions.includes(extension)
+      && (!mimeType || allowedImageMimes.includes(mimeType));
+    const isWallpaperVideo = type === "wallpaper"
+      && extension === "mp4"
+      && (!mimeType || mimeType === "video/mp4");
+
+    if (!isImage && !isWallpaperVideo) {
+      toast.error(type === "wallpaper"
+        ? "ภาพพื้นหลังรองรับ JPG, PNG, WebP, APNG, GIF หรือ MP4 เท่านั้น"
+        : isAdmin
+          ? "รองรับ JPG, PNG, WebP, APNG หรือ GIF เท่านั้น"
+          : "รองรับ JPG, PNG หรือ APNG เท่านั้น");
+      resetInput();
+      return;
     }
 
     const url = URL.createObjectURL(file);
@@ -343,7 +363,7 @@ export default function SettingsProfile() {
                   <Upload className="h-4 w-4" /> แก้ไขรูปโปรไฟล์
                   <input
                     type="file"
-                    accept="image/*"
+                    accept={profileImageAccept}
                     className="hidden"
                     onChange={(e) => handleFileChange(e, "avatar")}
                   />
@@ -409,7 +429,7 @@ export default function SettingsProfile() {
                       <Upload className="h-4 w-4" /> เปลี่ยนพื้นหลัง
                       <input
                         type="file"
-                        accept="image/*,video/mp4"
+                        accept={wallpaperAccept}
                         className="hidden"
                         onChange={(e) => handleFileChange(e, "wallpaper")}
                       />
@@ -492,7 +512,7 @@ export default function SettingsProfile() {
                       <Upload className="h-4 w-4" /> เปลี่ยนแบนเนอร์
                       <input
                         type="file"
-                        accept="image/*"
+                        accept={profileImageAccept}
                         className="hidden"
                         onChange={(e) => handleFileChange(e, "banner")}
                       />

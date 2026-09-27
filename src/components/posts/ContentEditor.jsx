@@ -6,7 +6,7 @@ import { postService } from '@/services/post.service';
 
 const MAX_IMAGES = 5;
 const MAX_SIZE = 2 * 1024 * 1024;
-const imageTypes = ['image/jpeg', 'image/png', 'image/webp'];
+const baseImageTypes = ['image/jpeg', 'image/png', 'image/apng'];
 const editorFormats = [
   'header', 'bold', 'italic', 'underline', 'strike',
   'color', 'background', 'list', 'indent', 'align',
@@ -51,7 +51,7 @@ if (WidthStyle) {
   Quill.register(WidthStyle, true);
 }
 
-export default function ContentEditor({ value, onChange, error, onUploadingChange }) {
+export default function ContentEditor({ value, onChange, error, onUploadingChange, allowGif = false }) {
   const quillRef = useRef(null);
   const fileRef = useRef(null);
   const [uploads, setUploads] = useState([]);
@@ -61,6 +61,8 @@ export default function ContentEditor({ value, onChange, error, onUploadingChang
   const draggedImageRef = useRef(null);
   const selectedImageRef = useRef(null);
   const imageCount = ((value || '').match(/<img\b/gi) || []).length;
+  const imageTypes = allowGif ? [...baseImageTypes, 'image/webp', 'image/gif'] : baseImageTypes;
+  const allowedImageLabel = allowGif ? 'JPEG, PNG, APNG, WebP และ GIF' : 'JPEG, PNG และ APNG';
 
   const handleEditorChange = (nextValue) => {
     const container = document.createElement('div');
@@ -79,7 +81,7 @@ export default function ContentEditor({ value, onChange, error, onUploadingChang
     // Do not add impossible-to-retry validation failures to the upload list.
     // Otherwise selecting the same oversized image keeps duplicating errors.
     if (!imageTypes.includes(file.type) || file.size > MAX_SIZE) {
-      setValidationError('รองรับ JPEG, PNG และ WebP ขนาดไม่เกิน 2 MB กรุณาเลือกรูปที่เล็กลงแล้วลองอีกครั้ง');
+      setValidationError(`รองรับ ${allowedImageLabel} ขนาดไม่เกิน 2 MB กรุณาเลือกรูปที่เล็กลงแล้วลองอีกครั้ง`);
       return;
     }
     if (imageCount + uploads.filter(item => !item.error).length >= MAX_IMAGES) {
@@ -88,7 +90,7 @@ export default function ContentEditor({ value, onChange, error, onUploadingChang
     }
     setValidationError('');
     if (!imageTypes.includes(file.type) || file.size > MAX_SIZE) {
-      setUploads(items => [...items, { id: crypto.randomUUID(), file, error: 'รองรับ JPEG, PNG และ WebP ขนาดไม่เกิน 2 MB' }]);
+      setUploads(items => [...items, { id: crypto.randomUUID(), file, error: `รองรับ ${allowedImageLabel} ขนาดไม่เกิน 2 MB` }]);
       return;
     }
     if (imageCount + uploads.filter(item => !item.error).length >= MAX_IMAGES) {
@@ -314,9 +316,9 @@ export default function ContentEditor({ value, onChange, error, onUploadingChang
       <button type="button" title="จัดรูปกึ่งกลาง" onClick={() => alignSelectedImage('center')} className="content-image-action-button"><AlignCenter className="h-4 w-4" /> กึ่งกลาง</button>
       <button type="button" title="จัดรูปชิดขวา" onClick={() => alignSelectedImage('right')} className="content-image-action-button"><AlignRight className="h-4 w-4" /> ขวา</button>
     </div>}
-    <input test-data="content-image-file-input" ref={fileRef} className="hidden" type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => { pickFiles(e.target.files); e.target.value = ''; }} />
+    <input test-data="content-image-file-input" ref={fileRef} className="hidden" type="file" accept={`${baseImageTypes.join(',')}${allowGif ? ',image/webp,image/gif' : ''}`} onChange={(e) => { pickFiles(e.target.files); e.target.value = ''; }} />
     {selectedImage && selectionRect && <button type="button" aria-label="ลากเพื่อปรับขนาดรูปภาพ" onMouseDown={startResize} className="content-image-resize-handle fixed z-50 h-4 w-4 cursor-se-resize rounded-sm border-2 border-white bg-primary shadow" style={{ left: selectionRect.right - 8, top: selectionRect.bottom - 8 }} />}
-    <p className="mt-2 text-xs text-slate-500 flex items-center gap-1"><ImagePlus className="h-3.5 w-3.5" /> เพิ่มรูปจากปุ่มใน toolbar, ลากไฟล์ หรือวางจาก clipboard (สูงสุด 5 รูป, JPEG/PNG/WebP, รูปละไม่เกิน 2 MB)</p>
+    <p className="mt-2 text-xs text-slate-500 flex items-center gap-1"><ImagePlus className="h-3.5 w-3.5" /> เพิ่มรูปจากปุ่มใน toolbar, ลากไฟล์ หรือวางจาก clipboard (สูงสุด 5 รูป, {allowedImageLabel}, รูปละไม่เกิน 2 MB)</p>
     {validationError && <p className="mt-2 text-xs font-medium text-rose-500" role="alert">{validationError}</p>}
     {uploads.map(item => <div key={item.id} className={`mt-2 text-xs ${item.error ? 'text-rose-500' : 'text-primary'} flex items-center gap-2`}>
       {item.error ? <><span>{item.error}</span><button type="button" className="underline" onClick={() => { setUploads(items => items.filter(x => x.id !== item.id)); upload(item.file); }}><RotateCcw className="inline h-3.5 w-3.5" /> ลองใหม่</button></> : <><LoaderCircle className="h-3.5 w-3.5 animate-spin" /> กำลังอัปโหลด {item.file.name}</>}

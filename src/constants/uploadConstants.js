@@ -8,8 +8,19 @@ export const ALLOWED_PDF_EXTENSIONS = ['pdf'];
 export const MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
 export const MAX_IMAGE_SIZE_LABEL = 'ไม่เกิน 2 MB';
 export const MAX_SUPPORTING_IMAGES_COUNT = 5;
-export const ALLOWED_IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp', 'image/apng'];
-export const ALLOWED_IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'apng'];
+export const ALLOWED_IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/jpg', 'image/apng'];
+export const ALLOWED_IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'apng'];
+export const GIF_IMAGE_MIME_TYPE = 'image/gif';
+export const GIF_IMAGE_EXTENSION = 'gif';
+export const WEBP_IMAGE_MIME_TYPE = 'image/webp';
+export const WEBP_IMAGE_EXTENSION = 'webp';
+
+export function getPostImageAccept({ allowGif = false } = {}) {
+  return `.${[
+    ...ALLOWED_IMAGE_EXTENSIONS,
+    ...(allowGif ? [WEBP_IMAGE_EXTENSION, GIF_IMAGE_EXTENSION] : []),
+  ].join(',.')}`;
+}
 
 export const MAX_MEDIA_FILES_COUNT = 15;
 export const MAX_TOTAL_POST_BYTES = 50 * 1024 * 1024; // 50 MB
@@ -155,7 +166,7 @@ export function translateUploadError(error, fallbackMessage = 'เกิดข�
  * @param {boolean} [isCover=false]
  * @returns {{ valid: boolean, error?: string, code?: string }}
  */
-export function validateImageFile(file, isCover = false) {
+export function validateImageFile(file, isCover = false, { allowGif = false } = {}) {
   if (!file) {
     return { valid: false, error: isCover ? 'กรุณาเลือกรูปภาพหน้าปก' : 'กรุณาเลือกไฟล์รูปภาพ', code: 'INVALID_IMAGE' };
   }
@@ -165,15 +176,21 @@ export function validateImageFile(file, isCover = false) {
   const ext = lastDot !== -1 ? fileName.slice(lastDot + 1).toLowerCase() : '';
   const mimeType = (file.type || '').toLowerCase();
 
-  const isExtValid = ALLOWED_IMAGE_EXTENSIONS.includes(ext);
-  const isMimeValid = ALLOWED_IMAGE_MIME_TYPES.includes(mimeType) || !mimeType;
+  const allowedExtensions = allowGif
+    ? [...ALLOWED_IMAGE_EXTENSIONS, WEBP_IMAGE_EXTENSION, GIF_IMAGE_EXTENSION]
+    : ALLOWED_IMAGE_EXTENSIONS;
+  const allowedMimeTypes = allowGif
+    ? [...ALLOWED_IMAGE_MIME_TYPES, WEBP_IMAGE_MIME_TYPE, GIF_IMAGE_MIME_TYPE]
+    : ALLOWED_IMAGE_MIME_TYPES;
+  const isExtValid = allowedExtensions.includes(ext);
+  const isMimeValid = allowedMimeTypes.includes(mimeType) || !mimeType;
 
   if (!isExtValid || !isMimeValid) {
     return {
       valid: false,
       error: isCover
-        ? 'รูปภาพหน้าปกต้องเป็นไฟล์ .jpg, .jpeg, .png หรือ .webp เท่านั้น'
-        : 'รูปภาพต้องเป็นไฟล์ .jpg, .jpeg, .png หรือ .webp เท่านั้น',
+        ? `รูปภาพหน้าปกต้องเป็นไฟล์ .jpg, .jpeg, .png, .apng${allowGif ? ', .webp หรือ .gif' : ''} เท่านั้น`
+        : `รูปภาพต้องเป็นไฟล์ .jpg, .jpeg, .png, .apng${allowGif ? ', .webp หรือ .gif' : ''} เท่านั้น`,
       code: 'INVALID_IMAGE',
     };
   }
