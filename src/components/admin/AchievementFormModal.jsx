@@ -1,12 +1,10 @@
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
-import toast from "react-hot-toast";
 import {
   MILESTONE_TYPES,
   MILESTONE_TYPE_MAP,
   getMilestoneTypeInfo,
 } from "@/services/achievement.service";
-import { convertSvgToPngFile } from "@/utils/imageUtils";
 
 // Modal เพิ่มความสำเร็จ (milestone) — โครงสร้างเดียวกับ WidgetModal.jsx
 // (มี overlay, ปิดได้ด้วยการคลิก backdrop, พักข้อมูลไว้ใน local state)
@@ -267,36 +265,11 @@ export default function AchievementFormModal({ isOpen, onClose, onConfirm }) {
                   ) : (
                     <input
                       type="file"
-                      accept="image/png, image/apng, .apng, image/jpeg, image/webp, image/gif, image/svg+xml, .svg"
-                      onChange={async (e) => {
+                      accept="image/png,image/apng,.apng,image/jpeg,image/webp,image/gif,.png,.jpg,.jpeg,.webp,.gif"
+                      onChange={(e) => {
                         const file = e.target.files?.[0] || null;
-                        if (!file) {
-                          setImageFile(null);
-                          setNewImagePreview(null);
-                          return;
-                        }
-
-                        const isSvg =
-                          file.type === "image/svg+xml" ||
-                          file.name.toLowerCase().endsWith(".svg");
-
-                        if (isSvg) {
-                          try {
-                            const converted = await convertSvgToPngFile(file, 512, 512);
-                            setImageFile(converted);
-                            setNewImagePreview(URL.createObjectURL(converted));
-                            toast.success("แปลงไฟล์ SVG เป็นภาพโปร่งใสเรียบร้อย พร้อมใช้งาน!", {
-                              icon: "✨",
-                            });
-                          } catch (err) {
-                            console.warn("SVG instant conversion fallback:", err);
-                            setImageFile(file);
-                            setNewImagePreview(URL.createObjectURL(file));
-                          }
-                        } else {
-                          setImageFile(file);
-                          setNewImagePreview(URL.createObjectURL(file));
-                        }
+                        setImageFile(file);
+                        setNewImagePreview(file ? URL.createObjectURL(file) : null);
                       }}
                       className="w-full text-sm text-slate-600 file:mr-3 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:bg-primary/10 file:text-primary file:font-bold hover:file:bg-primary/20 transition-all cursor-pointer"
                     />
@@ -305,7 +278,7 @@ export default function AchievementFormModal({ isOpen, onClose, onConfirm }) {
 
                 {itemType === "FRAME" && (
                   <p className="text-[11px] text-primary/80 bg-primary/5 p-2.5 rounded-xl font-medium border border-primary/10">
-                    💡 แนะนำ <strong>APNG (.png)</strong> สำหรับกรอบเคลื่อนไหว และ PNG ปกติสำหรับกรอบนิ่ง ใช้พื้นหลังโปร่งใส สัดส่วน 1:1 ขนาดประมาณ 288×288 px และไฟล์ไม่เกินประมาณ 1 MB หากใช้ SVG ระบบจะแปลงเป็น PNG ซึ่งทำให้แอนิเมชัน SVG หายไป
+                    💡 แนะนำ <strong>APNG (.png)</strong> สำหรับกรอบเคลื่อนไหว และ PNG ปกติสำหรับกรอบนิ่ง ใช้พื้นหลังโปร่งใส สัดส่วน 1:1 ขนาดประมาณ 288×288 px
                   </p>
                 )}
                 <label className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl p-4 cursor-pointer">
