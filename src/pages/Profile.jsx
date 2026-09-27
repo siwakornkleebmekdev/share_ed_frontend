@@ -37,6 +37,7 @@ import AvatarWithFrame from "@/components/profile/AvatarWithFrame";
 import { getPlatformConfig } from "@/pages/settings/widgetConstants";
 import { getWidgetUrlError } from "@/utils/widgetUrl";
 import { getGlassColor, rgbToRgba } from "@/utils/colorUtils";
+import { isMp4Wallpaper } from "@/utils/wallpaperMedia";
 
 const ACHIEVEMENT_STATUS_META = {
   READY_TO_CLAIM: {
@@ -571,13 +572,23 @@ export default function Profile() {
   if (!isOtherUser && !hasEntered) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 relative overflow-hidden">
-        {user?.user_metadata?.wallpaper_url && (
-          <img
-            src={user.user_metadata.wallpaper_url}
-            alt=""
-            className="absolute inset-0 w-full h-full object-cover opacity-30"
-          />
-        )}
+        {user?.user_metadata?.wallpaper_url &&
+          (isMp4Wallpaper(user.user_metadata.wallpaper_url) ? (
+            <video
+              src={user.user_metadata.wallpaper_url}
+              className="absolute inset-0 w-full h-full object-cover opacity-30"
+              autoPlay
+              muted
+              loop
+              playsInline
+            />
+          ) : (
+            <img
+              src={user.user_metadata.wallpaper_url}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover opacity-30"
+            />
+          ))}
         <div className="relative z-10 max-w-md w-full text-center bg-slate-900/70 backdrop-blur-xl border border-white/10 rounded-3xl p-10 shadow-2xl">
           <DoorOpen className="h-10 w-10 text-primary mx-auto mb-4" />
           <h2 className="text-2xl font-extrabold text-white mb-3">
@@ -610,7 +621,7 @@ export default function Profile() {
       {/* พื้นหลังเต็มจอ */}
       <div className="fixed inset-0 z-0 overflow-hidden">
         {wallpaperUrl &&
-          (wallpaperUrl.endsWith(".mp4") ? (
+          (isMp4Wallpaper(wallpaperUrl) ? (
             <video
               src={wallpaperUrl}
               className="w-full h-full object-cover"

@@ -16,12 +16,10 @@ import { DEFAULT_THEME } from "./themeConstants";
 import FrameDecorationModal from "@/components/settings/FrameDecorationModal";
 import AvatarWithFrame from "@/components/profile/AvatarWithFrame";
 import { supabase } from "@/utils/supabase";
+import { MAX_WALLPAPER_SIZE_BYTES, isMp4Wallpaper, isSupportedWallpaperFile } from "@/utils/wallpaperMedia";
 
 const PROFILE_IMAGE_EXTENSIONS = ["jpg", "jpeg", "png"];
 const PROFILE_IMAGE_MIMES = ["image/jpeg", "image/jpg", "image/png"];
-const WALLPAPER_IMAGE_EXTENSIONS = [...PROFILE_IMAGE_EXTENSIONS, "webp", "gif"];
-const WALLPAPER_IMAGE_MIMES = [...PROFILE_IMAGE_MIMES, "image/webp", "image/gif"];
-const MAX_WALLPAPER_SIZE_BYTES = 10 * 1024 * 1024;
 const MAX_PROFILE_IMAGE_SIZE_BYTES = 2 * 1024 * 1024;
 const MAX_USERNAME_LENGTH = 16;
 const USERNAME_LENGTH_ERROR = `ชื่อผู้ใช้ต้องมีความยาวไม่เกิน ${MAX_USERNAME_LENGTH} ตัวอักษร`;
@@ -56,7 +54,7 @@ const generateGradientFile = (filename, width, height, color1, color2) => {
 export default function SettingsProfile() {
   const { user, login } = useAuthStore();
   const profileImageAccept = ".jpg,.jpeg,.png";
-  const wallpaperAccept = ".jpg,.jpeg,.png,.webp,.gif";
+  const wallpaperAccept = ".jpg,.jpeg,.png,.webp,.gif,.mp4,video/mp4";
   const { milestones: storedMilestones, ownerId, fetchMilestones } = useAchievementStore();
   const [isSaving, setIsSaving] = useState(false);
   const [profileImageError, setProfileImageError] = useState(false);
@@ -199,7 +197,7 @@ export default function SettingsProfile() {
         resetInput();
         return;
       }
-      toast.error(`ไฟล์ต้องมีขนาดไม่เกิน ${type === "wallpaper" ? 10 : 8} MB`);
+      toast.error(`ไฟล์ต้องมีขนาดไม่เกิน ${type === "wallpaper" ? 25 : 8} MB`);
       resetInput();
       return;
     }
@@ -210,17 +208,13 @@ export default function SettingsProfile() {
 
     const extension = file.name?.split(".").pop()?.toLowerCase() || "";
     const mimeType = String(file.type || "").toLowerCase();
-    const allowedImageExtensions = type === "wallpaper"
-      ? WALLPAPER_IMAGE_EXTENSIONS
-      : PROFILE_IMAGE_EXTENSIONS;
-    const allowedImageMimes = type === "wallpaper"
-      ? WALLPAPER_IMAGE_MIMES
-      : PROFILE_IMAGE_MIMES;
-    const isImage = allowedImageExtensions.includes(extension)
-      && (!mimeType || allowedImageMimes.includes(mimeType));
+    const isImage = type === "wallpaper"
+      ? isSupportedWallpaperFile(file)
+      : PROFILE_IMAGE_EXTENSIONS.includes(extension)
+        && (!mimeType || PROFILE_IMAGE_MIMES.includes(mimeType));
     if (!isImage) {
       toast.error(type === "wallpaper"
-        ? "ภาพพื้นหลังรองรับ JPG, JPEG, PNG, WebP หรือ GIF เท่านั้น"
+        ? "ภาพพื้นหลังรองรับ JPG, JPEG, PNG, WebP, GIF หรือ MP4 เท่านั้น"
         : "รองรับเฉพาะไฟล์ JPG, JPEG และ PNG เท่านั้น");
       resetInput();
       return;
@@ -424,19 +418,30 @@ export default function SettingsProfile() {
                   {!media.wallpaper?.remove &&
                     (media.wallpaper?.url ||
                       user?.user_metadata?.wallpaper_url) ? (
-                    <img
-                      src={
-                        media.wallpaper?.url ||
-                        user?.user_metadata?.wallpaper_url
-                      }
-                      alt="Wallpaper"
-                      className="w-full h-full object-cover"
-                    />
+                    isMp4Wallpaper(
+                      media.wallpaper?.url || user?.user_metadata?.wallpaper_url,
+                      media.wallpaper?.type,
+                    ) ? (
+                      <video
+                        src={media.wallpaper?.url || user?.user_metadata?.wallpaper_url}
+                        className="w-full h-full object-cover"
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                      />
+                    ) : (
+                      <img
+                        src={media.wallpaper?.url || user?.user_metadata?.wallpaper_url}
+                        alt="Wallpaper"
+                        className="w-full h-full object-cover"
+                      />
+                    )
                   ) : (
                     <div className="text-center">
                       <ImageIcon className="h-6 w-6 text-slate-400 mx-auto mb-1" />
                       <span className="text-slate-500 text-xs font-medium">
-                        รูปภาพหรือ GIF (ไม่เกิน 10 MB)
+                        รูปภาพ, GIF หรือ MP4 (ไม่เกิน 25 MB)
                       </span>
                     </div>
                   )}
@@ -462,7 +467,7 @@ export default function SettingsProfile() {
                   </div>
                 </div>
                 <p className="text-xs leading-relaxed text-slate-500">
-                  แนะนำภาพหรือ GIF แนวนอนขนาด 1920 × 1080 พิกเซล (16:9) วางรายละเอียดสำคัญไว้กลางภาพ เพราะหน้าจอแต่ละขนาดอาจตัดขอบภาพออก · ทุกไฟล์ต้องมีขนาดไม่เกิน 10 MB
+                  แนะนำรูปภาพ, GIF หรือ MP4 แนวนอนขนาด 1920 × 1080 พิกเซล (16:9) วางรายละเอียดสำคัญไว้กลางภาพ เพราะหน้าจอแต่ละขนาดอาจตัดขอบภาพออก · ทุกไฟล์ต้องมีขนาดไม่เกิน 25 MB
                 </p>
                 {claimedWallpapers.length > 0 && (
                   <div>
