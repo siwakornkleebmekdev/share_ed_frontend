@@ -17,8 +17,10 @@ import FrameDecorationModal from "@/components/settings/FrameDecorationModal";
 import AvatarWithFrame from "@/components/profile/AvatarWithFrame";
 import { supabase } from "@/utils/supabase";
 
-const PROFILE_IMAGE_EXTENSIONS = ["jpg", "jpeg", "png", "apng"];
-const PROFILE_IMAGE_MIMES = ["image/jpeg", "image/jpg", "image/png", "image/apng"];
+const PROFILE_IMAGE_EXTENSIONS = ["jpg", "jpeg", "png"];
+const PROFILE_IMAGE_MIMES = ["image/jpeg", "image/jpg", "image/png"];
+const WALLPAPER_IMAGE_EXTENSIONS = [...PROFILE_IMAGE_EXTENSIONS, "webp", "apng", "gif"];
+const WALLPAPER_IMAGE_MIMES = [...PROFILE_IMAGE_MIMES, "image/webp", "image/apng", "image/gif"];
 const MAX_PROFILE_IMAGE_SIZE_BYTES = 2 * 1024 * 1024;
 
 const generateGradientFile = (filename, width, height, color1, color2) => {
@@ -50,8 +52,7 @@ const generateGradientFile = (filename, width, height, color1, color2) => {
 
 export default function SettingsProfile() {
   const { user, login } = useAuthStore();
-  const isAdmin = String(user?.role || "").toUpperCase() === "ADMIN";
-  const profileImageAccept = `.${[...PROFILE_IMAGE_EXTENSIONS, ...(isAdmin ? ["webp", "gif"] : [])].join(",.")}`;
+  const profileImageAccept = ".jpg,.jpeg,.png";
   const wallpaperAccept = ".jpg,.jpeg,.png,.webp,.apng,.gif,.mp4,video/mp4";
   const { milestones: storedMilestones, ownerId, fetchMilestones } = useAchievementStore();
   const [isSaving, setIsSaving] = useState(false);
@@ -205,9 +206,12 @@ export default function SettingsProfile() {
 
     const extension = file.name?.split(".").pop()?.toLowerCase() || "";
     const mimeType = String(file.type || "").toLowerCase();
-    const gifAllowed = type === "wallpaper" || isAdmin;
-    const allowedImageExtensions = [...PROFILE_IMAGE_EXTENSIONS, ...(gifAllowed ? ["webp", "gif"] : [])];
-    const allowedImageMimes = [...PROFILE_IMAGE_MIMES, ...(gifAllowed ? ["image/webp", "image/gif"] : [])];
+    const allowedImageExtensions = type === "wallpaper"
+      ? WALLPAPER_IMAGE_EXTENSIONS
+      : PROFILE_IMAGE_EXTENSIONS;
+    const allowedImageMimes = type === "wallpaper"
+      ? WALLPAPER_IMAGE_MIMES
+      : PROFILE_IMAGE_MIMES;
     const isImage = allowedImageExtensions.includes(extension)
       && (!mimeType || allowedImageMimes.includes(mimeType));
     const isWallpaperVideo = type === "wallpaper"
@@ -217,9 +221,7 @@ export default function SettingsProfile() {
     if (!isImage && !isWallpaperVideo) {
       toast.error(type === "wallpaper"
         ? "ภาพพื้นหลังรองรับ JPG, PNG, WebP, APNG, GIF หรือ MP4 เท่านั้น"
-        : isAdmin
-          ? "รองรับ JPG, PNG, WebP, APNG หรือ GIF เท่านั้น"
-          : "รองรับ JPG, PNG หรือ APNG เท่านั้น");
+        : "รองรับเฉพาะไฟล์ JPG, JPEG และ PNG เท่านั้น");
       resetInput();
       return;
     }
