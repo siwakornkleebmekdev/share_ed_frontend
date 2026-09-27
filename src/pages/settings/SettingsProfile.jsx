@@ -19,6 +19,7 @@ import { supabase } from "@/utils/supabase";
 
 const PROFILE_IMAGE_EXTENSIONS = ["jpg", "jpeg", "png", "apng"];
 const PROFILE_IMAGE_MIMES = ["image/jpeg", "image/jpg", "image/png", "image/apng"];
+const MAX_PROFILE_IMAGE_SIZE_BYTES = 2 * 1024 * 1024;
 
 const generateGradientFile = (filename, width, height, color1, color2) => {
   const canvas = document.createElement("canvas");
@@ -54,6 +55,7 @@ export default function SettingsProfile() {
   const wallpaperAccept = ".jpg,.jpeg,.png,.webp,.apng,.gif,.mp4,video/mp4";
   const { milestones: storedMilestones, ownerId, fetchMilestones } = useAchievementStore();
   const [isSaving, setIsSaving] = useState(false);
+  const [profileImageError, setProfileImageError] = useState(false);
   const [tagInput, setTagInput] = useState("");
   const [isFrameModalOpen, setIsFrameModalOpen] = useState(false);
 
@@ -181,11 +183,24 @@ export default function SettingsProfile() {
     if (!file) return;
     const resetInput = () => { e.target.value = ""; };
 
-    const maxSize = type === "wallpaper" ? 25 * 1024 * 1024 : 8 * 1024 * 1024;
+    const maxSize = type === "wallpaper"
+      ? 25 * 1024 * 1024
+      : type === "avatar"
+        ? MAX_PROFILE_IMAGE_SIZE_BYTES
+        : 8 * 1024 * 1024;
     if (file.size > maxSize) {
+      if (type === "avatar") {
+        setProfileImageError(true);
+        resetInput();
+        return;
+      }
       toast.error(`ไฟล์ต้องมีขนาดไม่เกิน ${type === "wallpaper" ? 25 : 8} MB`);
       resetInput();
       return;
+    }
+
+    if (type === "avatar") {
+      setProfileImageError(false);
     }
 
     const extension = file.name?.split(".").pop()?.toLowerCase() || "";
@@ -348,16 +363,18 @@ export default function SettingsProfile() {
             </p>
             <div className="flex items-center gap-5 pt-2">
               {/* ซ่อนขอบรูปเมื่อมีกรอบตกแต่ง เพื่อไม่ให้เห็นวงขาวซ้อนใต้ภาพกรอบ */}
-              <AvatarWithFrame
-                avatarSrc={media.avatar?.url || user?.avatar_url}
-                frameSrc={equippedFrame?.reward?.previewUrl || user?.current_frame?.image_url || user?.current_frame?.previewUrl}
-                frameAlt={equippedFrame?.reward?.name || ''}
-                sizeClass="h-24 w-24"
-                className={equippedFrame?.reward?.previewUrl || user?.current_frame?.image_url || user?.current_frame?.previewUrl
-                  ? "bg-slate-100 shadow-sm"
-                  : "border-4 border-slate-50 bg-slate-100 shadow-sm"}
-                avatarFallback={<div className="flex h-full w-full items-center justify-center text-slate-400"><ImageIcon className="h-8 w-8" /></div>}
-              />
+              <div className="flex w-32 shrink-0 flex-col items-center gap-2 text-center">
+                <AvatarWithFrame
+                  avatarSrc={media.avatar?.url || user?.avatar_url}
+                  frameSrc={equippedFrame?.reward?.previewUrl || user?.current_frame?.image_url || user?.current_frame?.previewUrl}
+                  frameAlt={equippedFrame?.reward?.name || ''}
+                  sizeClass="h-24 w-24"
+                  className={equippedFrame?.reward?.previewUrl || user?.current_frame?.image_url || user?.current_frame?.previewUrl
+                    ? "bg-slate-100 shadow-sm"
+                    : "border-4 border-slate-50 bg-slate-100 shadow-sm"}
+                  avatarFallback={<div className="flex h-full w-full items-center justify-center text-slate-400"><ImageIcon className="h-8 w-8" /></div>}
+                />
+              </div>
               <div className="flex flex-col gap-2">
                 <label className="cursor-pointer px-5 py-2.5 bg-primary hover:bg-blue-600 rounded-xl text-sm font-bold text-white transition-colors flex items-center gap-2 shadow-sm">
                   <Upload className="h-4 w-4" /> แก้ไขรูปโปรไฟล์
@@ -377,6 +394,11 @@ export default function SettingsProfile() {
                 </button>
               </div>
             </div>
+            {profileImageError && (
+              <p className="pt-4 text-xs font-semibold text-red-500">
+                กรุณาเลือกรูปภาพที่มีขนาดไม่เกิน 2 MB
+              </p>
+            )}
 
           </div>
 
