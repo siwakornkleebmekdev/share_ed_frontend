@@ -1,16 +1,25 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { Mail, Lock, User, BookOpen, Loader2 } from 'lucide-react';
+import { Mail, Lock, User, BookOpen, Loader2, MailCheck, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { authService } from '@/services/auth.service';
 import useAuthStore from '@/store/authStore';
-import { supabase } from '@/utils/supabase';
 import {
   EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS,
   PENDING_VERIFICATION_EMAIL_KEY,
   VERIFICATION_RESEND_UNTIL_KEY,
 } from '@/constants/auth';
 import PasswordVisibilityButton from '@/components/forms/PasswordVisibilityButton';
+
+const MAX_USERNAME_LENGTH = 16;
+const USERNAME_LENGTH_ERROR = `ชื่อผู้ใช้ต้องมีความยาวไม่เกิน ${MAX_USERNAME_LENGTH} ตัวอักษร`;
+
+function maskEmail(value) {
+  const [local, domain] = String(value || '').split('@');
+  if (!local || !domain) return '';
+  const visible = local.slice(0, Math.min(3, local.length));
+  return `${visible}${'*'.repeat(Math.max(3, local.length - visible.length))}@${domain}`;
+}
 
 export default function Register() {
   const [isLoading, setIsLoading] = useState(false);
@@ -22,6 +31,17 @@ export default function Register() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [visiblePasswords, setVisiblePasswords] = useState({ password: false, confirmPassword: false });
+  const [verificationEmail, setVerificationEmail] = useState(
+    () => sessionStorage.getItem(PENDING_VERIFICATION_EMAIL_KEY) || '',
+  );
+  const [verificationToken, setVerificationToken] = useState('');
+  const [verificationError, setVerificationError] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const [secondsRemaining, setSecondsRemaining] = useState(() => {
+    const until = Number(sessionStorage.getItem(VERIFICATION_RESEND_UNTIL_KEY) || 0);
+    return Math.max(0, Math.ceil((until - Date.now()) / 1000));
+  });
 
   // Field Errors State for Inline Validation
   const [fieldErrors, setFieldErrors] = useState({});
@@ -37,11 +57,24 @@ export default function Register() {
     }
   }, [isAuthenticated, user, navigate]);
 
+  useEffect(() => {
+    if (secondsRemaining <= 0) return undefined;
+    const timer = window.setInterval(() => {
+      const until = Number(sessionStorage.getItem(VERIFICATION_RESEND_UNTIL_KEY) || 0);
+      setSecondsRemaining(Math.max(0, Math.ceil((until - Date.now()) / 1000)));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [secondsRemaining]);
+
   const checkAvailability = async ({ checkEmail = false, checkUsername = false } = {}) => {
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedUsername = username.trim();
 
     if ((checkEmail && !normalizedEmail) || (checkUsername && !normalizedUsername)) return true;
+    if (checkUsername && normalizedUsername.length > MAX_USERNAME_LENGTH) {
+      setFieldErrors(prev => ({ ...prev, username: USERNAME_LENGTH_ERROR }));
+      return false;
+    }
 
     try {
       const availability = await authService.checkRegistrationAvailability({
@@ -75,6 +108,8 @@ export default function Register() {
     const newErrors = {};
     if (!username || !username.trim()) {
       newErrors.username = 'กรุณากรอกชื่อผู้ใช้';
+    } else if (username.trim().length > MAX_USERNAME_LENGTH) {
+      newErrors.username = USERNAME_LENGTH_ERROR;
     }
     if (!email || !email.trim()) {
       newErrors.email = 'กรุณากรอกอีเมล';
@@ -144,8 +179,11 @@ export default function Register() {
           VERIFICATION_RESEND_UNTIL_KEY,
           String(Date.now() + EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS * 1000),
         );
-        toast.success('สมัครสมาชิกสำเร็จ กรุณาตรวจสอบอีเมลเพื่อรับรหัสยืนยัน');
-        navigate('/verify-email', { state: { email: verificationEmail }, replace: true });
+        setVerificationEmail(verificationEmail);
+        setSecondsRemaining(EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS);
+        setVerificationToken('');
+        setVerificationError('');
+        toast.success('ส่งรหัสยืนยันแล้ว กรุณาตรวจสอบอีเมล');
         return;
       }
 
@@ -185,19 +223,131 @@ export default function Register() {
     }
   };
 
-  const handleGoogleLogin = async () => {
+  const handleVerifyEmail = async (event) => {
+    event.preventDefault();
+    setVerificationError('');
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/home`
-        }
-      });
-      if (error) throw error;
+      setIsVerifying(true);
+      await authService.verifyEmailOtp({ email: verificationEmail, token: verificationToken });
+      const profile = await authService.getMe();
+      const verifiedUser = profile?.data || profile?.user || profile;
+      if (verifiedUser) loginAction(verifiedUser);
+      sessionStorage.removeItem(PENDING_VERIFICATION_EMAIL_KEY);
+      sessionStorage.removeItem(VERIFICATION_RESEND_UNTIL_KEY);
+      toast.success('ยืนยันอีเมลสำเร็จ ยินดีต้อนรับสู่ SHARE-ED');
+      navigate('/home', { replace: true });
     } catch (error) {
-      setFieldErrors({ general: error.message || 'ไม่สามารถสมัครสมาชิกด้วย Google ได้' });
+      setVerificationError(error?.message || 'ไม่สามารถยืนยันอีเมลได้');
+    } finally {
+      setIsVerifying(false);
     }
   };
+
+  const handleResendVerification = async () => {
+    setVerificationError('');
+    try {
+      setIsResending(true);
+      await authService.resendVerification(verificationEmail);
+      const resendAt = Date.now() + EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS * 1000;
+      sessionStorage.setItem(VERIFICATION_RESEND_UNTIL_KEY, String(resendAt));
+      setSecondsRemaining(EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS);
+      toast.success('ส่งรหัสยืนยันใหม่แล้ว กรุณาตรวจสอบกล่องจดหมาย');
+    } catch (error) {
+      setVerificationError(error?.message || 'ไม่สามารถส่งรหัสยืนยันใหม่ได้');
+    } finally {
+      setIsResending(false);
+    }
+  };
+
+  const handleChangeRegistrationEmail = () => {
+    sessionStorage.removeItem(PENDING_VERIFICATION_EMAIL_KEY);
+    sessionStorage.removeItem(VERIFICATION_RESEND_UNTIL_KEY);
+    setVerificationEmail('');
+    setVerificationToken('');
+    setVerificationError('');
+    setSecondsRemaining(0);
+    setEmail('');
+    setUsername('');
+    setFieldErrors(prev => ({ ...prev, email: null, username: null, general: null }));
+    toast('กรุณากรอกอีเมลและชื่อผู้ใช้ใหม่ เนื่องจากรายการเดิมถูกส่งไปสมัครแล้ว');
+  };
+
+  if (verificationEmail) {
+    return (
+      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-7 bg-white p-8 sm:p-10 rounded-2xl shadow-soft border border-slate-100">
+          <div className="text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-blue-50 text-primary">
+              <MailCheck className="h-7 w-7" aria-hidden="true" />
+            </div>
+            <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">ยืนยันอีเมลเพื่อสมัครสมาชิก</h2>
+            <p className="mt-2 text-sm text-slate-500">
+              กรอกรหัส 6 หลักที่ส่งไปยัง {maskEmail(verificationEmail)}
+            </p>
+          </div>
+
+          {verificationError && (
+            <div role="alert" className="p-3.5 rounded-xl bg-red-50 text-red-600 text-sm font-medium border border-red-100 text-center">
+              {verificationError}
+            </div>
+          )}
+
+          <form onSubmit={handleVerifyEmail} className="space-y-5" noValidate>
+            <div>
+              <label htmlFor="register-verification-token" className="block text-sm font-medium text-slate-700 mb-1">รหัสยืนยันอีเมล</label>
+              <input
+                id="register-verification-token"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                autoFocus
+                value={verificationToken}
+                onChange={(event) => {
+                  setVerificationToken(event.target.value.replace(/\D/g, '').slice(0, 6));
+                  setVerificationError('');
+                }}
+                className="block w-full px-4 py-3 border border-slate-200 rounded-lg text-center text-2xl font-bold tracking-[0.5em] text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                placeholder="000000"
+              />
+              <p className="mt-2 text-xs text-slate-500 text-center">กรุณายืนยันอีเมลให้สำเร็จก่อนเข้าใช้งาน</p>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isVerifying || isResending || verificationToken.length !== 6}
+              className="w-full flex justify-center items-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium text-white bg-primary hover:bg-blue-600 disabled:bg-blue-300 disabled:cursor-not-allowed transition-colors"
+            >
+              {isVerifying && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+              {isVerifying ? 'กำลังยืนยัน...' : 'ยืนยันและสมัครสมาชิกให้เสร็จสิ้น'}
+            </button>
+          </form>
+
+          <div className="space-y-3 text-center">
+            <button
+              type="button"
+              onClick={handleResendVerification}
+              disabled={isResending || isVerifying || secondsRemaining > 0}
+              className="inline-flex items-center justify-center gap-2 text-sm font-medium text-primary hover:text-blue-700 disabled:text-slate-400 disabled:cursor-not-allowed transition-colors"
+            >
+              <RefreshCw className={`h-4 w-4 ${isResending ? 'animate-spin' : ''}`} aria-hidden="true" />
+              {secondsRemaining > 0 ? `ส่งรหัสใหม่ได้ใน ${secondsRemaining} วินาที` : 'ส่งรหัสยืนยันใหม่'}
+            </button>
+            <div>
+              <button
+                type="button"
+                onClick={handleChangeRegistrationEmail}
+                disabled={isVerifying || isResending}
+                className="text-sm font-medium text-slate-500 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+              >
+                กลับหน้าสมัครสมาชิกใหม่
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8">
@@ -221,7 +371,12 @@ export default function Register() {
         <form className="mt-8 space-y-6" onSubmit={handleRegister} noValidate>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">ชื่อผู้ใช้ (Username) <span className="text-red-500">*</span></label>
+              <div className="mb-1 flex items-center justify-between gap-3">
+                <label className="block text-sm font-medium text-slate-700">ชื่อผู้ใช้ (Username) <span className="text-red-500">*</span></label>
+                <p className="shrink-0 text-xs text-slate-400" aria-live="polite">
+                  {username.length}/{MAX_USERNAME_LENGTH}
+                </p>
+              </div>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <User className={`h-5 w-5 ${fieldErrors.username ? 'text-red-400' : 'text-slate-400'}`} />
@@ -230,19 +385,26 @@ export default function Register() {
                   type="text"
                   value={username}
                   onChange={(e) => {
-                    setUsername(e.target.value);
+                    const nextUsername = e.target.value;
+                    if (nextUsername.length > MAX_USERNAME_LENGTH) {
+                      setFieldErrors(prev => ({ ...prev, username: USERNAME_LENGTH_ERROR }));
+                      return;
+                    }
+                    setUsername(nextUsername);
                     if (fieldErrors.username) setFieldErrors(prev => ({ ...prev, username: null }));
                   }}
                   onBlur={() => checkAvailability({ checkUsername: true })}
+                  aria-invalid={Boolean(fieldErrors.username)}
+                  aria-describedby={fieldErrors.username ? "register-username-error" : undefined}
                   className={`block w-full pl-10 pr-3 py-2.5 border rounded-lg focus:outline-none transition-colors ${fieldErrors.username
                     ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
                     : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
                     }`}
-                  placeholder="ตั้งชื่อผู้ใช้ของคุณ (เช่น JohnDoe)"
+                  placeholder="ชื่อผู้ใช้ เช่น JohnDoe"
                 />
               </div>
               {fieldErrors.username && (
-                <p className="mt-1 text-xs text-red-500 font-medium">{fieldErrors.username}</p>
+                <p id="register-username-error" className="mt-1 text-xs text-red-500 font-medium" role="alert">{fieldErrors.username}</p>
               )}
             </div>
 
@@ -268,7 +430,7 @@ export default function Register() {
                     ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
                     : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
                     }`}
-                  placeholder="กรอกอีเมลของคุณ (เช่น name@example.com)"
+                  placeholder="name@example.com"
                 />
               </div>
               {fieldErrors.email && (
@@ -328,7 +490,7 @@ export default function Register() {
                     ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
                     : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
                     }`}
-                  placeholder="อย่างน้อย 8 ตัว ใช้เฉพาะอักษรอังกฤษและตัวเลข"
+                  placeholder="รหัสผ่านอย่างน้อย 8 ตัว"
                 />
                 <PasswordVisibilityButton
                   visible={visiblePasswords.password}
@@ -368,7 +530,7 @@ export default function Register() {
                     ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
                     : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
                     }`}
-                  placeholder="กรอกรหัสผ่านอีกครั้งเพื่อยืนยัน"
+                  placeholder="กรอกรหัสผ่านอีกครั้ง"
                 />
                 <PasswordVisibilityButton
                   visible={visiblePasswords.confirmPassword}
@@ -397,27 +559,6 @@ export default function Register() {
           </button>
         </form>
 
-        <div className="mt-6">
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200" /></div>
-            <div className="relative flex justify-center text-sm"><span className="px-2 bg-white text-slate-500">หรือสมัครผ่านระบบ Google</span></div>
-          </div>
-          <div className="mt-6">
-            <button
-              onClick={handleGoogleLogin}
-              type="button"
-              className="w-full flex justify-center items-center gap-2 py-2.5 px-4 border border-slate-200 rounded-lg shadow-sm bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-            >
-              <svg className="h-5 w-5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-              </svg>
-              สมัครด้วย Google
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );

@@ -77,7 +77,7 @@ export default function Login() {
         const verificationEmail = error.email || email.trim().toLowerCase();
         sessionStorage.setItem(PENDING_VERIFICATION_EMAIL_KEY, verificationEmail);
         toast.error('กรุณายืนยันอีเมลก่อนเข้าสู่ระบบ');
-        navigate('/verify-email', { state: { email: verificationEmail } });
+        navigate('/register', { replace: true });
         return;
       }
       setFieldErrors({ general: error.message || error.response?.data?.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' });
@@ -177,15 +177,6 @@ export default function Login() {
               {fieldErrors.password && (
                 <p className="mt-1 text-xs text-red-500 font-medium">{fieldErrors.password}</p>
               )}
-            </div>
-            <div className="text-right">
-              <Link
-                to="/verify-email"
-                state={{ email: email.trim().toLowerCase() }}
-                className="text-sm font-medium text-primary hover:text-blue-700 transition-colors"
-              >
-                ยังไม่ได้ยืนยันอีเมล?
-              </Link>
             </div>
           </div>
 

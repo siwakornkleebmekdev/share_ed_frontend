@@ -109,7 +109,9 @@ export const authService = {
 
     if (error || !data?.session) {
       if (error?.code === 'otp_expired') {
-        throw new Error('รหัสยืนยันหมดอายุแล้ว กรุณาขอรหัสใหม่');
+        // Supabase can use otp_expired when an OTP is expired, invalid, or
+        // already consumed, so the client cannot safely claim one cause only.
+        throw new Error('รหัสยืนยันไม่ถูกต้องหรือหมดอายุแล้ว กรุณาตรวจสอบรหัสล่าสุด หรือขอรหัสใหม่');
       }
       throw new Error('รหัสยืนยันไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง');
     }

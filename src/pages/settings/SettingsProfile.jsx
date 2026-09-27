@@ -23,6 +23,8 @@ const WALLPAPER_IMAGE_EXTENSIONS = [...PROFILE_IMAGE_EXTENSIONS, "webp", "gif"];
 const WALLPAPER_IMAGE_MIMES = [...PROFILE_IMAGE_MIMES, "image/webp", "image/gif"];
 const MAX_WALLPAPER_SIZE_BYTES = 10 * 1024 * 1024;
 const MAX_PROFILE_IMAGE_SIZE_BYTES = 2 * 1024 * 1024;
+const MAX_USERNAME_LENGTH = 16;
+const USERNAME_LENGTH_ERROR = `ชื่อผู้ใช้ต้องมีความยาวไม่เกิน ${MAX_USERNAME_LENGTH} ตัวอักษร`;
 
 const generateGradientFile = (filename, width, height, color1, color2) => {
   const canvas = document.createElement("canvas");
@@ -58,6 +60,7 @@ export default function SettingsProfile() {
   const { milestones: storedMilestones, ownerId, fetchMilestones } = useAchievementStore();
   const [isSaving, setIsSaving] = useState(false);
   const [profileImageError, setProfileImageError] = useState(false);
+  const [usernameError, setUsernameError] = useState("");
   const [tagInput, setTagInput] = useState("");
   const [isFrameModalOpen, setIsFrameModalOpen] = useState(false);
 
@@ -256,6 +259,12 @@ export default function SettingsProfile() {
       toast.error("กรุณากรอกชื่อผู้ใช้ (Username)");
       return;
     }
+    if (trimmedUsername.length > MAX_USERNAME_LENGTH) {
+      setUsernameError(USERNAME_LENGTH_ERROR);
+      toast.error(USERNAME_LENGTH_ERROR);
+      return;
+    }
+    setUsernameError("");
     setIsSaving(true);
     try {
       const updatePayload = {
@@ -549,19 +558,37 @@ export default function SettingsProfile() {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
-                <label className="block text-sm font-semibold text-slate-600 mb-2">
-                  ชื่อผู้ใช้ (Username)
-                </label>
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <label className="block text-sm font-semibold text-slate-600">
+                    ชื่อผู้ใช้ (Username)
+                  </label>
+                  <p className="shrink-0 text-xs text-slate-400" aria-live="polite">
+                    {(formData.username || "").length}/{MAX_USERNAME_LENGTH}
+                  </p>
+                </div>
                 <input
                   type="text"
                   value={formData.username}
-                  onChange={(e) =>
-                    setFormData({ ...formData, username: e.target.value })
-                  }
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-slate-800 font-medium"
+                  onChange={(e) => {
+                    const nextUsername = e.target.value;
+                    if (nextUsername.length > MAX_USERNAME_LENGTH) {
+                      setUsernameError(USERNAME_LENGTH_ERROR);
+                      return;
+                    }
+                    setFormData({ ...formData, username: nextUsername });
+                    setUsernameError("");
+                  }}
+                  aria-invalid={Boolean(usernameError)}
+                  aria-describedby={usernameError ? "settings-username-error" : undefined}
+                  className={`w-full px-4 py-3 bg-slate-50 border rounded-xl focus:outline-none focus:ring-4 transition-all text-slate-800 font-medium ${usernameError ? "border-red-500 focus:ring-red-500/10 focus:border-red-500" : "border-slate-200 focus:ring-primary/10 focus:border-primary"}`}
                   placeholder="กรอกชื่อผู้ใช้ของคุณ"
                   required
                 />
+                {usernameError && (
+                  <p id="settings-username-error" className="mt-1 text-xs font-medium text-red-500" role="alert">
+                    {usernameError}
+                  </p>
+                )}
               </div>
 
               <div>
