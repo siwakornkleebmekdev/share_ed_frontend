@@ -6,8 +6,10 @@ import { postService } from '@/services/post.service';
 export default function Trending() {
   const [filterType, setFilterType] = useState('likes'); // 'likes' or 'views'
   const [posts, setPosts] = useState([]);
+  const [trendingPosts, setTrendingPosts] = useState([]);
   const [activeLevel, setActiveLevel] = useState('MIDDLE_SCHOOL');
   const [isLoading, setIsLoading] = useState(true);
+  const [isTrendingLoading, setIsTrendingLoading] = useState(true);
 
   const levels = [
     { id: 'MIDDLE_SCHOOL', label: 'มัธยมต้น', postLevel: 'มัธยมศึกษาตอนต้น' },
@@ -29,6 +31,29 @@ export default function Trending() {
     };
     fetchPosts();
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchTrendingPosts = async () => {
+      try {
+        setIsTrendingLoading(true);
+        const result = await postService.getTrendingPosts({
+          level: activeLevel,
+          window: '7d',
+          limit: 3,
+        });
+        if (!cancelled) setTrendingPosts(result);
+      } catch {
+        if (!cancelled) setTrendingPosts([]);
+      } finally {
+        if (!cancelled) setIsTrendingLoading(false);
+      }
+    };
+
+    fetchTrendingPosts();
+    return () => { cancelled = true; };
+  }, [activeLevel]);
 
   // Filter posts based on selected level
   const selectedLevelObj = levels.find(l => l.id === activeLevel);
@@ -63,13 +88,13 @@ export default function Trending() {
     });
   };
 
-  const top3 = [...postsOfLevel]
-    .sort(compareByViewsThenCreatedAt)
-    .slice(0, 3);
+  // Keep the API order: it is ranked by recent_view_count, latest_viewed_at,
+  // then post_id. The list API does not contain enough data to reproduce it.
+  const top3 = trendingPosts;
 
-  // Rest of the posts: All posts of this level, sorted, excluding those in top3
+  // Browse sections intentionally include posts that also appear in Top 3.
   const sortedAll = sortPosts(postsOfLevel);
-  const restPosts = sortedAll.filter(post => !top3.some(t => t.id === post.id));
+  const restPosts = sortedAll;
 
   if (isLoading) {
     return (
@@ -117,7 +142,11 @@ export default function Trending() {
           <Sparkles className="h-4 w-4 shrink-0 text-yellow-500 sm:h-5 sm:w-5" />
         </div>
 
-        {top3.length > 0 ? (
+        {isTrendingLoading ? (
+          <div className="flex justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        ) : top3.length > 0 ? (
           /* Top 3 Grid with special styling */
           <div className="grid grid-cols-3 items-stretch gap-2 px-0 min-[414px]:gap-3 sm:px-4 md:gap-6 md:px-8 lg:gap-10">
             {top3.map((post, index) => (
