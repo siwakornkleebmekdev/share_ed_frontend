@@ -32,7 +32,7 @@ function getStorageKeys(mode, postId) {
   };
 }
 
-export function useUploadWorkspace({ mode = 'create', postId = null, isEnabled = true } = {}) {
+export function useUploadWorkspace({ mode = 'create', postId = null, isEnabled = true, allowGif = false } = {}) {
   const { draftIdKey, sessionIdKey, idempotencyKeyKey } = useMemo(
     () => getStorageKeys(mode, postId),
     [mode, postId]
@@ -370,7 +370,7 @@ export function useUploadWorkspace({ mode = 'create', postId = null, isEnabled =
     (file) => {
       if (!file) return;
 
-      const validation = validateImageFile(file, true);
+      const validation = validateImageFile(file, true, { allowGif });
       if (!validation.valid) {
         toast.error(validation.error);
         return;
@@ -418,7 +418,7 @@ export function useUploadWorkspace({ mode = 'create', postId = null, isEnabled =
         })
         .catch(() => {});
     },
-    [coverFile, processSingleFileUpload, sessionId, updateCoverState]
+    [allowGif, coverFile, processSingleFileUpload, sessionId, updateCoverState]
   );
 
   /**
@@ -499,7 +499,7 @@ export function useUploadWorkspace({ mode = 'create', postId = null, isEnabled =
             removedExtraImages = true;
             continue;
           }
-          const imgVal = validateImageFile(file, false);
+          const imgVal = validateImageFile(file, false, { allowGif });
           if (!imgVal.valid) {
             toast.error(imgVal.error);
             continue;
@@ -555,7 +555,7 @@ export function useUploadWorkspace({ mode = 'create', postId = null, isEnabled =
           .catch(() => {});
       }
     },
-    [coverFile, limits.max_files, limits.max_total_bytes, mediaFiles, processSingleFileUpload, updateMediaState]
+    [allowGif, coverFile, limits.max_files, limits.max_total_bytes, mediaFiles, processSingleFileUpload, updateMediaState]
   );
 
   /**

@@ -29,6 +29,8 @@ import { getDefaultDraftCoverFile } from '@/utils/draftCover';
 import api from '../utils/api';
 import { useUploadWorkspace } from '@/hooks/useUploadWorkspace';
 import {
+  getPostImageAccept,
+  validateImageFile,
   validatePdfFile,
   translateUploadError,
   formatFileSize,
@@ -42,8 +44,10 @@ export default function EditPost() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, isAuthenticated, isInitializing } = useAuthStore();
+  const canUploadGif = String(user?.role || '').toUpperCase() === 'ADMIN';
+  const postImageAccept = getPostImageAccept({ allowGif: canUploadGif });
   const isV2 = isUploadWorkspaceV2Enabled();
-  const workspace = useUploadWorkspace({ mode: 'edit', postId: id, isEnabled: isV2 });
+  const workspace = useUploadWorkspace({ mode: 'edit', postId: id, isEnabled: isV2, allowGif: canUploadGif });
 
   // Loading states
   const [isPageLoading, setIsPageLoading] = useState(true);
@@ -266,20 +270,9 @@ export default function EditPost() {
     const file = e.target.files[0];
     if (!file) return;
 
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
-    const allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
-    const fileExtension = file.name ? file.name.split('.').pop().toLowerCase() : '';
-    const fileType = file.type ? file.type.toLowerCase() : '';
-
-    const isValidType = allowedTypes.includes(fileType) || allowedExtensions.includes(fileExtension);
-    if (!isValidType) {
-      toast.error('สามารถอัปโหลดไฟล์ .jpg,.jpeg,.png,.webp เท่านั้น');
-      e.target.value = '';
-      return;
-    }
-
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error('รูปปกต้องมีขนาดไม่เกิน 2 MB');
+    const validation = validateImageFile(file, true, { allowGif: canUploadGif });
+    if (!validation.valid) {
+      toast.error(validation.error);
       e.target.value = '';
       return;
     }
@@ -317,12 +310,7 @@ export default function EditPost() {
     const files = Array.from(e.target.files);
     if (!files.length) return;
 
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
-    const allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
-
     let newImages = [...images];
-    let hasOversized = false;
-    let hasInvalidType = false;
     let reachedLimit = false;
     const totalCount = existingImages.length;
 
@@ -332,17 +320,9 @@ export default function EditPost() {
         break;
       }
 
-      const fileExtension = file.name ? file.name.split('.').pop().toLowerCase() : '';
-      const fileType = file.type ? file.type.toLowerCase() : '';
-      const isValidType = allowedTypes.includes(fileType) || allowedExtensions.includes(fileExtension);
-
-      if (!isValidType) {
-        hasInvalidType = true;
-        continue;
-      }
-
-      if (file.size > 2 * 1024 * 1024) {
-        hasOversized = true;
+      const validation = validateImageFile(file, false, { allowGif: canUploadGif });
+      if (!validation.valid) {
+        toast.error(validation.error);
         continue;
       }
       newImages.push(file);
@@ -351,13 +331,6 @@ export default function EditPost() {
     if (reachedLimit) {
       toast.error('อัปโหลดรูปภาพประกอบได้สูงสุด 5 รูป ระบบนำรูปส่วนเกินออกแล้ว');
     }
-    if (hasInvalidType) {
-      toast.error('สามารถอัปโหลดไฟล์ .jpg,.jpeg,.png,.webp เท่านั้น');
-    }
-    if (hasOversized) {
-      toast.error('รูปภาพประกอบต้องมีขนาดไม่เกิน 2 MB');
-    }
-
     setImages(newImages);
     if (newImages.length > 0) {
       setFieldErrors(prev => ({ ...prev, media: null }));
@@ -927,7 +900,7 @@ export default function EditPost() {
                       test-data="edit-cover-file-input"
                       type="file"
                       className="hidden"
-                      accept=".jpg,.jpeg,.png,.webp"
+                      accept={postImageAccept}
                       onChange={(e) => {
                         const file = e.target.files[0];
                         if (file) workspace.setCover(file);
@@ -955,7 +928,7 @@ export default function EditPost() {
                       test-data="edit-cover-file-input"
                       type="file"
                       className="hidden"
-                      accept=".jpg,.jpeg,.png,.webp"
+                      accept={postImageAccept}
                       onChange={handleCoverUploadLegacy}
                     />
                   </label>
@@ -1164,6 +1137,7 @@ export default function EditPost() {
               <span className="text-rose-500">*</span>
             </label>
             <ContentEditor
+              allowGif={canUploadGif}
               value={content}
               onUploadingChange={setIsContentUploading}
               error={fieldErrors.content}
@@ -1392,7 +1366,7 @@ export default function EditPost() {
                         test-data="edit-supporting-images-file-input"
                         type="file"
                         className="hidden"
-                        accept=".jpg,.jpeg,.png,.webp"
+                        accept={postImageAccept}
                         multiple
                         onChange={(e) => {
                           const availableSlots = Math.max(
@@ -1487,7 +1461,7 @@ export default function EditPost() {
                         test-data="edit-supporting-images-file-input"
                         type="file"
                         className="hidden"
-                        accept=".jpg,.jpeg,.png,.webp"
+                        accept={postImageAccept}
                         multiple
                         onChange={handleImagesUploadLegacy}
                         disabled={existingImages.length + images.length >= 5}

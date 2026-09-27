@@ -54,6 +54,10 @@ test('Upload Workspace: Client-side Image validation enforces 2 MB and valid ima
   // Wrong format
   const wrongFormat = new File(['image'], 'photo.gif', { type: 'image/gif' });
   assert.equal(validateImageFile(wrongFormat, false).valid, false);
+  assert.equal(validateImageFile(wrongFormat, false, { allowGif: true }).valid, true);
+  const webp = new File(['image'], 'photo.webp', { type: 'image/webp' });
+  assert.equal(validateImageFile(webp, false).valid, false);
+  assert.equal(validateImageFile(webp, false, { allowGif: true }).valid, true);
 
   // Oversized (> 2 MB)
   const bigImgBlob = new Blob([new Uint8Array(MAX_IMAGE_SIZE_BYTES + 100)]);
