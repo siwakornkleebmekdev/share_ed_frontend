@@ -6,10 +6,12 @@ import useAuthStore from '@/store/authStore';
 import { authService } from '@/services/auth.service';
 import { supabase } from '@/utils/supabase';
 import { PENDING_VERIFICATION_EMAIL_KEY } from '@/constants/auth';
+import PasswordVisibilityButton from '@/components/forms/PasswordVisibilityButton';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
   const [searchParams, setSearchParams] = useSearchParams();
@@ -155,17 +157,21 @@ export default function Login() {
                 </div>
                 <input
                   id="password"
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => {
                     setPassword(e.target.value);
                     if (fieldErrors.password) setFieldErrors(prev => ({ ...prev, password: null }));
                   }}
-                  className={`block w-full pl-10 pr-3 py-2.5 border rounded-lg text-slate-900 focus:outline-none transition-colors ${fieldErrors.password
+                  className={`block w-full pl-10 pr-12 py-2.5 border rounded-lg text-slate-900 focus:outline-none transition-colors ${fieldErrors.password
                     ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
                     : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
                     }`}
                   placeholder="••••••••"
+                />
+                <PasswordVisibilityButton
+                  visible={showPassword}
+                  onToggle={() => setShowPassword(current => !current)}
                 />
               </div>
               {fieldErrors.password && (

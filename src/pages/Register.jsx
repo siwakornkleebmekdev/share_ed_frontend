@@ -10,6 +10,7 @@ import {
   PENDING_VERIFICATION_EMAIL_KEY,
   VERIFICATION_RESEND_UNTIL_KEY,
 } from '@/constants/auth';
+import PasswordVisibilityButton from '@/components/forms/PasswordVisibilityButton';
 
 export default function Register() {
   const [isLoading, setIsLoading] = useState(false);
@@ -20,6 +21,7 @@ export default function Register() {
   const [educationLevel, setEducationLevel] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [visiblePasswords, setVisiblePasswords] = useState({ password: false, confirmPassword: false });
 
   // Field Errors State for Inline Validation
   const [fieldErrors, setFieldErrors] = useState({});
@@ -314,7 +316,7 @@ export default function Register() {
                   <Lock className={`h-5 w-5 ${fieldErrors.password ? 'text-red-400' : 'text-slate-400'}`} />
                 </div>
                 <input
-                  type="password"
+                  type={visiblePasswords.password ? 'text' : 'password'}
                   pattern="[A-Za-z0-9]+"
                   title="ใช้ได้เฉพาะตัวอักษรภาษาอังกฤษและตัวเลขเท่านั้น"
                   value={password}
@@ -322,11 +324,15 @@ export default function Register() {
                     setPassword(e.target.value);
                     if (fieldErrors.password) setFieldErrors(prev => ({ ...prev, password: null }));
                   }}
-                  className={`block w-full pl-10 pr-3 py-2.5 border rounded-lg focus:outline-none transition-colors ${fieldErrors.password
+                  className={`block w-full pl-10 pr-12 py-2.5 border rounded-lg focus:outline-none transition-colors ${fieldErrors.password
                     ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
                     : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
                     }`}
                   placeholder="อย่างน้อย 8 ตัว ใช้เฉพาะอักษรอังกฤษและตัวเลข"
+                />
+                <PasswordVisibilityButton
+                  visible={visiblePasswords.password}
+                  onToggle={() => setVisiblePasswords(current => ({ ...current, password: !current.password }))}
                 />
               </div>
               <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
@@ -350,7 +356,7 @@ export default function Register() {
                   <Lock className={`h-5 w-5 ${fieldErrors.confirmPassword ? 'text-red-400' : 'text-slate-400'}`} />
                 </div>
                 <input
-                  type="password"
+                  type={visiblePasswords.confirmPassword ? 'text' : 'password'}
                   pattern="[A-Za-z0-9]+"
                   title="ใช้ได้เฉพาะตัวอักษรภาษาอังกฤษและตัวเลขเท่านั้น"
                   value={confirmPassword}
@@ -358,11 +364,15 @@ export default function Register() {
                     setConfirmPassword(e.target.value);
                     if (fieldErrors.confirmPassword) setFieldErrors(prev => ({ ...prev, confirmPassword: null }));
                   }}
-                  className={`block w-full pl-10 pr-3 py-2.5 border rounded-lg focus:outline-none transition-colors ${fieldErrors.confirmPassword
+                  className={`block w-full pl-10 pr-12 py-2.5 border rounded-lg focus:outline-none transition-colors ${fieldErrors.confirmPassword
                     ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
                     : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
                     }`}
                   placeholder="กรอกรหัสผ่านอีกครั้งเพื่อยืนยัน"
+                />
+                <PasswordVisibilityButton
+                  visible={visiblePasswords.confirmPassword}
+                  onToggle={() => setVisiblePasswords(current => ({ ...current, confirmPassword: !current.confirmPassword }))}
                 />
               </div>
               {fieldErrors.confirmPassword && (

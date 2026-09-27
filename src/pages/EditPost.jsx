@@ -26,6 +26,7 @@ import { uploadWorkspaceService } from '@/services/uploadWorkspace.service';
 import { categoryService, isValidCategoryUuid } from '@/services/category.service';
 import useAuthStore from '@/store/authStore';
 import { getDefaultDraftCoverFile } from '@/utils/draftCover';
+import { revealFirstInlineError } from '@/utils/inlineErrorFocus';
 import api from '../utils/api';
 import { useUploadWorkspace } from '@/hooks/useUploadWorkspace';
 import {
@@ -524,12 +525,16 @@ export default function EditPost() {
     }
 
     if (workspace.hasFailedFiles) {
-      setFieldErrors({ media: 'มีไฟล์ที่อัปโหลดไม่สำเร็จ กรุณาลบไฟล์นั้นหรือลองใหม่' });
+      const errors = { media: 'มีไฟล์ที่อัปโหลดไม่สำเร็จ กรุณาลบไฟล์นั้นหรือลองใหม่' };
+      setFieldErrors(errors);
+      revealFirstInlineError(errors);
       return;
     }
 
     if (!isDraft && isContentUploading) {
-      setFieldErrors({ content: 'กรุณารอให้อัปโหลดรูปในรายละเอียดเพิ่มเติมเสร็จก่อนเผยแพร่' });
+      const errors = { content: 'กรุณารอให้อัปโหลดรูปในรายละเอียดเพิ่มเติมเสร็จก่อนเผยแพร่' };
+      setFieldErrors(errors);
+      revealFirstInlineError(errors);
       return;
     }
 
@@ -561,6 +566,7 @@ export default function EditPost() {
 
     if (Object.keys(newErrors).length > 0) {
       setFieldErrors(newErrors);
+      revealFirstInlineError(newErrors);
       return;
     }
 
@@ -667,7 +673,9 @@ export default function EditPost() {
     const newErrors = {};
     const isDraft = status === 'DRAFT';
     if (!isDraft && isContentUploading) {
-      setFieldErrors({ content: 'กรุณารอให้อัปโหลดรูปในรายละเอียดเพิ่มเติมเสร็จก่อนเผยแพร่' });
+      const errors = { content: 'กรุณารอให้อัปโหลดรูปในรายละเอียดเพิ่มเติมเสร็จก่อนเผยแพร่' };
+      setFieldErrors(errors);
+      revealFirstInlineError(errors);
       return;
     }
     if (!isDraft) {
@@ -690,6 +698,7 @@ export default function EditPost() {
 
     if (Object.keys(newErrors).length > 0) {
       setFieldErrors(newErrors);
+      revealFirstInlineError(newErrors);
       return;
     }
 
@@ -960,7 +969,7 @@ export default function EditPost() {
               )}
 
               {fieldErrors.cover && (
-                <p className="mt-1.5 text-xs text-red-500 font-medium" role="alert">
+                <p className="mt-1.5 text-xs text-red-500 font-medium" role="alert" data-error-field="cover">
                   {fieldErrors.cover}
                 </p>
               )}
@@ -981,6 +990,7 @@ export default function EditPost() {
                 </span>
               </label>
               <input
+                data-error-field="title"
                 test-data="edit-post-title-input"
                 type="text"
                 maxLength={100}
@@ -1006,6 +1016,7 @@ export default function EditPost() {
                   <span className="text-rose-500">*</span>
                 </label>
                 <select
+                  data-error-field="level"
                   test-data="edit-education-level-select"
                   value={level}
                   onChange={(e) => {
@@ -1048,6 +1059,7 @@ export default function EditPost() {
               </span>
             </label>
             <textarea
+              data-error-field="summary"
               test-data="edit-post-summary-input"
               value={summary}
               onChange={(e) => {
@@ -1124,7 +1136,7 @@ export default function EditPost() {
               </button>
             </div>
             {fieldErrors.category && (
-              <p className="mt-2 text-xs font-medium text-rose-500" role="alert">
+              <p className="mt-2 text-xs font-medium text-rose-500" role="alert" data-error-field="category">
                 {fieldErrors.category}
               </p>
             )}
@@ -1477,7 +1489,7 @@ export default function EditPost() {
               )}
 
               {fieldErrors.media && (
-                <p className="mt-2 text-xs font-medium text-rose-500" role="alert">
+                <p className="mt-2 text-xs font-medium text-rose-500" role="alert" data-error-field="media">
                   {fieldErrors.media}
                 </p>
               )}

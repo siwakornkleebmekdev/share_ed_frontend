@@ -6,7 +6,7 @@ import { postService } from '@/services/post.service';
 
 const MAX_IMAGES = 5;
 const MAX_SIZE = 2 * 1024 * 1024;
-const baseImageTypes = ['image/jpeg', 'image/png', 'image/apng'];
+const baseImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
 const editorFormats = [
   'header', 'bold', 'italic', 'underline', 'strike',
   'color', 'background', 'list', 'indent', 'align',
@@ -61,8 +61,8 @@ export default function ContentEditor({ value, onChange, error, onUploadingChang
   const draggedImageRef = useRef(null);
   const selectedImageRef = useRef(null);
   const imageCount = ((value || '').match(/<img\b/gi) || []).length;
-  const imageTypes = allowGif ? [...baseImageTypes, 'image/webp', 'image/gif'] : baseImageTypes;
-  const allowedImageLabel = allowGif ? 'JPEG, PNG, APNG, WebP และ GIF' : 'JPEG, PNG และ APNG';
+  const imageTypes = allowGif ? [...baseImageTypes, 'image/webp'] : baseImageTypes;
+  const allowedImageLabel = allowGif ? 'JPEG, PNG, WebP' : 'JPEG, PNG และ WEBP';
 
   const handleEditorChange = (nextValue) => {
     const container = document.createElement('div');
@@ -319,10 +319,10 @@ export default function ContentEditor({ value, onChange, error, onUploadingChang
     <input test-data="content-image-file-input" ref={fileRef} className="hidden" type="file" accept={`${baseImageTypes.join(',')}${allowGif ? ',image/webp,image/gif' : ''}`} onChange={(e) => { pickFiles(e.target.files); e.target.value = ''; }} />
     {selectedImage && selectionRect && <button type="button" aria-label="ลากเพื่อปรับขนาดรูปภาพ" onMouseDown={startResize} className="content-image-resize-handle fixed z-50 h-4 w-4 cursor-se-resize rounded-sm border-2 border-white bg-primary shadow" style={{ left: selectionRect.right - 8, top: selectionRect.bottom - 8 }} />}
     <p className="mt-2 text-xs text-slate-500 flex items-center gap-1"><ImagePlus className="h-3.5 w-3.5" /> เพิ่มรูปจากปุ่มใน toolbar, ลากไฟล์ หรือวางจาก clipboard (สูงสุด 5 รูป, {allowedImageLabel}, รูปละไม่เกิน 2 MB)</p>
-    {validationError && <p className="mt-2 text-xs font-medium text-rose-500" role="alert">{validationError}</p>}
+    {validationError && <p className="mt-2 text-xs font-medium text-rose-500" role="alert" data-error-field="content">{validationError}</p>}
     {uploads.map(item => <div key={item.id} className={`mt-2 text-xs ${item.error ? 'text-rose-500' : 'text-primary'} flex items-center gap-2`}>
       {item.error ? <><span>{item.error}</span><button type="button" className="underline" onClick={() => { setUploads(items => items.filter(x => x.id !== item.id)); upload(item.file); }}><RotateCcw className="inline h-3.5 w-3.5" /> ลองใหม่</button></> : <><LoaderCircle className="h-3.5 w-3.5 animate-spin" /> กำลังอัปโหลด {item.file.name}</>}
     </div>)}
-    {error && <p className="mt-2 text-xs font-medium text-rose-500" role="alert">{error}</p>}
+    {error && <p className="mt-2 text-xs font-medium text-rose-500" role="alert" data-error-field="content">{error}</p>}
   </div>;
 }

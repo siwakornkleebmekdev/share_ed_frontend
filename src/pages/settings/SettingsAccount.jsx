@@ -2,6 +2,7 @@ import { useState } from "react";
 import { KeyRound } from "lucide-react";
 import toast from "react-hot-toast";
 import { authService } from "@/services/auth.service";
+import PasswordVisibilityButton from "@/components/forms/PasswordVisibilityButton";
 
 // Notification preferences UI removed per request
 
@@ -15,6 +16,11 @@ export default function SettingsAccount() {
   const [isCurrentPasswordVerified, setIsCurrentPasswordVerified] = useState(false);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState(null);
+  const [visiblePasswords, setVisiblePasswords] = useState({
+    currentPassword: false,
+    password: false,
+    confirmPassword: false,
+  });
   const handleVerifyCurrentPassword = async () => {
     setPasswordError(null);
     setIsVerifyingPassword(true);
@@ -102,21 +108,28 @@ export default function SettingsAccount() {
             ยืนยันรหัสผ่านเดิม
           </label>
           <div className="flex flex-col sm:flex-row gap-3">
-            <input
-              type="password"
-              value={passwords.currentPassword}
-              disabled={isCurrentPasswordVerified}
-              onChange={(e) => {
-                setPasswords((prev) => ({
-                  ...prev,
-                  currentPassword: e.target.value,
-                }));
-                setIsCurrentPasswordVerified(false);
-                if (passwordError) setPasswordError(null);
-              }}
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-slate-800 font-medium disabled:bg-slate-100 disabled:text-slate-500"
-              placeholder="กรอกรหัสผ่านเดิม"
-            />
+            <div className="relative flex-1">
+              <input
+                type={visiblePasswords.currentPassword ? "text" : "password"}
+                value={passwords.currentPassword}
+                disabled={isCurrentPasswordVerified}
+                onChange={(e) => {
+                  setPasswords((prev) => ({
+                    ...prev,
+                    currentPassword: e.target.value,
+                  }));
+                  setIsCurrentPasswordVerified(false);
+                  if (passwordError) setPasswordError(null);
+                }}
+                className="w-full px-4 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-slate-800 font-medium disabled:bg-slate-100 disabled:text-slate-500"
+                placeholder="กรอกรหัสผ่านเดิม"
+              />
+              <PasswordVisibilityButton
+                visible={visiblePasswords.currentPassword}
+                disabled={isCurrentPasswordVerified}
+                onToggle={() => setVisiblePasswords(current => ({ ...current, currentPassword: !current.currentPassword }))}
+              />
+            </div>
             <button
               type="button"
               onClick={handleVerifyCurrentPassword}
@@ -145,8 +158,9 @@ export default function SettingsAccount() {
             <label className="block text-sm font-semibold text-slate-600 mb-2">
               รหัสผ่านใหม่
             </label>
+            <div className="relative">
             <input
-              type="password"
+              type={visiblePasswords.password ? "text" : "password"}
               disabled={!isCurrentPasswordVerified}
               value={passwords.password}
               minLength={8}
@@ -156,12 +170,18 @@ export default function SettingsAccount() {
                 setPasswords((prev) => ({ ...prev, password: e.target.value }));
                 if (passwordError) setPasswordError(null);
               }}
-              className={`w-full px-4 py-3 bg-slate-50 border rounded-xl focus:outline-none transition-all text-slate-800 font-medium disabled:bg-slate-100 disabled:cursor-not-allowed ${passwordError
+              className={`w-full px-4 pr-12 py-3 bg-slate-50 border rounded-xl focus:outline-none transition-all text-slate-800 font-medium disabled:bg-slate-100 disabled:cursor-not-allowed ${passwordError
                 ? "border-red-500 focus:ring-4 focus:ring-red-500/10 focus:border-red-500"
                 : "border-slate-200 focus:ring-4 focus:ring-primary/10 focus:border-primary"
                 }`}
               placeholder="อย่างน้อย 8 ตัวอักษร"
             />
+            <PasswordVisibilityButton
+              visible={visiblePasswords.password}
+              disabled={!isCurrentPasswordVerified}
+              onToggle={() => setVisiblePasswords(current => ({ ...current, password: !current.password }))}
+            />
+            </div>
             <p className="text-xs text-slate-400 mt-2">
               ใช้ตัวอักษรภาษาอังกฤษและตัวเลข อย่างน้อยอย่างละ 1 ตัว
             </p>
@@ -170,8 +190,9 @@ export default function SettingsAccount() {
             <label className="block text-sm font-semibold text-slate-600 mb-2">
               ยืนยันรหัสผ่านใหม่
             </label>
+            <div className="relative">
             <input
-              type="password"
+              type={visiblePasswords.confirmPassword ? "text" : "password"}
               disabled={!isCurrentPasswordVerified}
               value={passwords.confirmPassword}
               onChange={(e) => {
@@ -181,12 +202,18 @@ export default function SettingsAccount() {
                 }));
                 if (passwordError) setPasswordError(null);
               }}
-              className={`w-full px-4 py-3 bg-slate-50 border rounded-xl focus:outline-none transition-all text-slate-800 font-medium disabled:bg-slate-100 disabled:cursor-not-allowed ${passwordError
+              className={`w-full px-4 pr-12 py-3 bg-slate-50 border rounded-xl focus:outline-none transition-all text-slate-800 font-medium disabled:bg-slate-100 disabled:cursor-not-allowed ${passwordError
                 ? "border-red-500 focus:ring-4 focus:ring-red-500/10 focus:border-red-500"
                 : "border-slate-200 focus:ring-4 focus:ring-primary/10 focus:border-primary"
                 }`}
               placeholder="กรอกรหัสผ่านใหม่อีกครั้ง"
             />
+            <PasswordVisibilityButton
+              visible={visiblePasswords.confirmPassword}
+              disabled={!isCurrentPasswordVerified}
+              onToggle={() => setVisiblePasswords(current => ({ ...current, confirmPassword: !current.confirmPassword }))}
+            />
+            </div>
           </div>
         </div>
         {passwordError && (

@@ -2,6 +2,12 @@
 
 @import "tailwindcss";
 
+/* Use the app's persistent password toggle instead of Edge's transient control. */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+
 /* Must come right after the "tailwindcss" import (so Tailwind's own
    `@layer theme, base, components, utilities;` declaration registers the
    layer order first) and before any non-import rule — @import statements

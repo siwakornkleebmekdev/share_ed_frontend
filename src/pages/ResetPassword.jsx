@@ -3,10 +3,12 @@ import { Lock, Loader2, KeyRound } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import toast from 'react-hot-toast';
 import { supabase } from '@/utils/supabase';
+import PasswordVisibilityButton from '@/components/forms/PasswordVisibilityButton';
 
 export default function ResetPassword() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [visiblePasswords, setVisiblePasswords] = useState({ password: false, confirmPassword: false });
   const [isLoading, setIsLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
   const navigate = useNavigate();
@@ -87,17 +89,21 @@ export default function ResetPassword() {
                 </div>
                 <input
                   id="password"
-                  type="password"
+                  type={visiblePasswords.password ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => {
                     setPassword(e.target.value);
                     if (fieldErrors.password) setFieldErrors(prev => ({ ...prev, password: null }));
                   }}
-                  className={`block w-full pl-10 pr-3 py-2.5 border rounded-lg text-slate-900 focus:outline-none transition-colors text-sm ${fieldErrors.password
+                  className={`block w-full pl-10 pr-12 py-2.5 border rounded-lg text-slate-900 focus:outline-none transition-colors text-sm ${fieldErrors.password
                     ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
                     : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
                     }`}
                   placeholder="ตั้งรหัสผ่านอย่างน้อย 8 ตัวอักษร"
+                />
+                <PasswordVisibilityButton
+                  visible={visiblePasswords.password}
+                  onToggle={() => setVisiblePasswords(current => ({ ...current, password: !current.password }))}
                 />
               </div>
               {fieldErrors.password && (
@@ -115,17 +121,21 @@ export default function ResetPassword() {
                 </div>
                 <input
                   id="confirmPassword"
-                  type="password"
+                  type={visiblePasswords.confirmPassword ? 'text' : 'password'}
                   value={confirmPassword}
                   onChange={(e) => {
                     setConfirmPassword(e.target.value);
                     if (fieldErrors.confirmPassword) setFieldErrors(prev => ({ ...prev, confirmPassword: null }));
                   }}
-                  className={`block w-full pl-10 pr-3 py-2.5 border rounded-lg text-slate-900 focus:outline-none transition-colors text-sm ${fieldErrors.confirmPassword
+                  className={`block w-full pl-10 pr-12 py-2.5 border rounded-lg text-slate-900 focus:outline-none transition-colors text-sm ${fieldErrors.confirmPassword
                     ? 'border-red-500 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
                     : 'border-slate-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
                     }`}
                   placeholder="กรอกรหัสผ่านใหม่อีกครั้งเพื่อยืนยัน"
+                />
+                <PasswordVisibilityButton
+                  visible={visiblePasswords.confirmPassword}
+                  onToggle={() => setVisiblePasswords(current => ({ ...current, confirmPassword: !current.confirmPassword }))}
                 />
               </div>
               {fieldErrors.confirmPassword && (
