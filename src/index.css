@@ -1,5 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800&display=swap');
-
+@import "./pages/admin/admin.css";
 @import "tailwindcss";
 
 /* Use the app's persistent password toggle instead of Edge's transient control. */
@@ -16,7 +16,6 @@ input[type="password"]::-ms-clear {
    instead of here let Vite concatenate it ahead of this declaration, which
    locked in a wrong global layer order and made Preflight's `@layer base`
    resets (padding, box-shadow) beat every admin.css component class. */
-@import "./pages/admin/admin.css";
 
 @theme {
   --color-background: #f8fafc;
@@ -61,6 +60,7 @@ input[type="password"]::-ms-clear {
 }
 
 @media (max-width: 430px) {
+
   input,
   select,
   textarea {
