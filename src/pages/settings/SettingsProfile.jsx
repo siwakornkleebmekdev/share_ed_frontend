@@ -19,8 +19,6 @@ import { supabase } from "@/utils/supabase";
 
 const PROFILE_IMAGE_EXTENSIONS = ["jpg", "jpeg", "png"];
 const PROFILE_IMAGE_MIMES = ["image/jpeg", "image/jpg", "image/png"];
-const WALLPAPER_IMAGE_EXTENSIONS = [...PROFILE_IMAGE_EXTENSIONS, "webp", "apng", "gif"];
-const WALLPAPER_IMAGE_MIMES = [...PROFILE_IMAGE_MIMES, "image/webp", "image/apng", "image/gif"];
 const MAX_PROFILE_IMAGE_SIZE_BYTES = 2 * 1024 * 1024;
 
 const generateGradientFile = (filename, width, height, color1, color2) => {
@@ -28,7 +26,7 @@ const generateGradientFile = (filename, width, height, color1, color2) => {
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext("2d");
-  
+
   if (color1 === "transparent") {
     ctx.clearRect(0, 0, width, height);
   } else {
@@ -38,7 +36,7 @@ const generateGradientFile = (filename, width, height, color1, color2) => {
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, width, height);
   }
-  
+
   const dataUrl = canvas.toDataURL("image/png");
   const byteString = atob(dataUrl.split(',')[1]);
   const ab = new ArrayBuffer(byteString.length);
@@ -52,8 +50,9 @@ const generateGradientFile = (filename, width, height, color1, color2) => {
 
 export default function SettingsProfile() {
   const { user, login } = useAuthStore();
-  const profileImageAccept = ".jpg,.jpeg,.png";
-  const wallpaperAccept = ".jpg,.jpeg,.png,.webp,.apng,.gif,.mp4,video/mp4";
+  const isAdmin = String(user?.role || "").toUpperCase() === "ADMIN";
+  const profileImageAccept = `.${[...PROFILE_IMAGE_EXTENSIONS, ...(isAdmin ? ["webp", "gif"] : [])].join(",.")}`;
+  const wallpaperAccept = ".jpg,.jpeg,.png,.webp";
   const { milestones: storedMilestones, ownerId, fetchMilestones } = useAchievementStore();
   const [isSaving, setIsSaving] = useState(false);
   const [profileImageError, setProfileImageError] = useState(false);
@@ -206,12 +205,9 @@ export default function SettingsProfile() {
 
     const extension = file.name?.split(".").pop()?.toLowerCase() || "";
     const mimeType = String(file.type || "").toLowerCase();
-    const allowedImageExtensions = type === "wallpaper"
-      ? WALLPAPER_IMAGE_EXTENSIONS
-      : PROFILE_IMAGE_EXTENSIONS;
-    const allowedImageMimes = type === "wallpaper"
-      ? WALLPAPER_IMAGE_MIMES
-      : PROFILE_IMAGE_MIMES;
+    const gifAllowed = type === "wallpaper" || isAdmin;
+    const allowedImageExtensions = [...PROFILE_IMAGE_EXTENSIONS, ...(gifAllowed ? ["webp", "gif"] : [])];
+    const allowedImageMimes = [...PROFILE_IMAGE_MIMES, ...(gifAllowed ? ["image/webp", "image/gif"] : [])];
     const isImage = allowedImageExtensions.includes(extension)
       && (!mimeType || allowedImageMimes.includes(mimeType));
     const isWallpaperVideo = type === "wallpaper"
@@ -220,8 +216,10 @@ export default function SettingsProfile() {
 
     if (!isImage && !isWallpaperVideo) {
       toast.error(type === "wallpaper"
-        ? "ภาพพื้นหลังรองรับ JPG, PNG, WebP, APNG, GIF หรือ MP4 เท่านั้น"
-        : "รองรับเฉพาะไฟล์ JPG, JPEG และ PNG เท่านั้น");
+        ? "ภาพพื้นหลังรองรับ JPG, PNG, WebP เท่านั้น"
+        : isAdmin
+          ? "รองรับ JPG, PNG, Web เท่านั้น"
+          : "รองรับ JPG, PNG หรือ APNG เท่านั้น");
       resetInput();
       return;
     }
@@ -241,14 +239,14 @@ export default function SettingsProfile() {
     }
     const url = URL.createObjectURL(file);
 
-    setMedia((prev) => ({ 
-      ...prev, 
-      [type]: { 
-        file, 
-        url, 
-        type: file.type, 
-        remove: true 
-      } 
+    setMedia((prev) => ({
+      ...prev,
+      [type]: {
+        file,
+        url,
+        type: file.type,
+        remove: true
+      }
     }));
   };
 
@@ -416,10 +414,10 @@ export default function SettingsProfile() {
                 </label>
                 <div className="relative h-32 w-full rounded-2xl bg-slate-100 overflow-hidden border border-slate-200 flex items-center justify-center group shadow-sm">
                   {!media.wallpaper?.remove &&
-                  (media.wallpaper?.url ||
-                  user?.user_metadata?.wallpaper_url) ? (
+                    (media.wallpaper?.url ||
+                      user?.user_metadata?.wallpaper_url) ? (
                     media.wallpaper?.type?.startsWith("video") ||
-                    user?.user_metadata?.wallpaper_url?.endsWith(".mp4") ? (
+                      user?.user_metadata?.wallpaper_url?.endsWith(".mp4") ? (
                       <video
                         src={
                           media.wallpaper?.url ||
