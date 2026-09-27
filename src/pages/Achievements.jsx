@@ -99,111 +99,82 @@ export default function Achievements() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      {/* Hero Header Section */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 p-6 sm:p-10 text-white shadow-2xl mb-10 border border-white/10">
-        {/* Background glow & accents */}
-        <div className="absolute -right-16 -top-16 w-80 h-80 rounded-full bg-amber-500/15 blur-3xl pointer-events-none" />
-        <div className="absolute -left-16 -bottom-16 w-80 h-80 rounded-full bg-blue-500/15 blur-3xl pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
-          {/* Title & Subtitle */}
+      <section className="mb-8 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-400/10 border border-amber-400/20 text-amber-300 text-xs font-extrabold mb-3 backdrop-blur-md">
-              <Sparkles className="h-3.5 w-3.5" /> ภารกิจและรางวัลพิเศษ
+            <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1.5 text-sm font-bold text-amber-800">
+              <Sparkles className="h-4 w-4" /> ภารกิจและรางวัล
             </div>
-            <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white flex items-center gap-3">
-              <Trophy className="h-9 w-9 text-amber-400 shrink-0 drop-shadow-[0_2px_12px_rgba(251,191,36,0.5)]" />
-              Achievements
+            <h1 className="flex items-center gap-3 text-3xl font-black text-slate-900 sm:text-4xl">
+              <Trophy className="h-9 w-9 shrink-0 text-amber-500" />
+              ความสำเร็จของคุณ
             </h1>
-            <p className="text-slate-300 text-sm sm:text-base mt-2 max-w-xl leading-relaxed">
-              ทำภารกิจการแบ่งปันความรู้ให้สำเร็จ เพื่อปลดล็อกกรอบรูปโปรไฟล์ระดับพรีเมียมและของรางวัลสุดพิเศษ!
+            <p className="mt-2 max-w-2xl text-base leading-7 text-slate-600">
+              ดูเงื่อนไขและความคืบหน้าของแต่ละภารกิจ เมื่อทำครบแล้วสามารถกดรับและใช้งานรางวัลได้ทันที
             </p>
-          </div>
-
-          {/* Quick Stats Banner Card */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 bg-white/5 backdrop-blur-md border border-white/10 p-4 sm:p-5 rounded-2xl shrink-0">
-            <div className="flex items-center gap-6 px-2">
-              <div className="text-center">
-                <div className="text-2xl sm:text-3xl font-black text-amber-400">
-                  {claimedCount}
-                  <span className="text-sm font-semibold text-slate-400">/{totalCount}</span>
-                </div>
-                <div className="text-[11px] font-bold text-slate-400 mt-0.5">ปลดล็อกแล้ว</div>
-              </div>
-
-              <div className="h-10 w-[1px] bg-white/15" />
-
-              <div className="text-center">
-                <div className="text-2xl sm:text-3xl font-black text-emerald-400">
-                  {overallProgress}%
-                </div>
-                <div className="text-[11px] font-bold text-slate-400 mt-0.5">ความสำเร็จรวม</div>
-              </div>
-
-              {readyCount > 0 && (
-                <>
-                  <div className="h-10 w-[1px] bg-white/15" />
-                  <div className="text-center">
-                    <div className="text-2xl sm:text-3xl font-black text-orange-400 animate-pulse">
-                      {readyCount}
-                    </div>
-                    <div className="text-[11px] font-bold text-orange-300 mt-0.5">พร้อมรับ</div>
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* Mini Master Progress Bar */}
-            <div className="sm:w-36 flex flex-col justify-center">
-              <div className="h-2.5 w-full bg-white/10 rounded-full overflow-hidden p-0.5">
-                <div
-                  className="h-full bg-gradient-to-r from-amber-400 via-orange-400 to-emerald-400 rounded-full transition-all duration-700"
-                  style={{ width: `${overallProgress}%` }}
-                />
-              </div>
-              <span className="text-[10px] text-slate-400 font-medium mt-1 text-center sm:text-right">
-                เหลืออีก {totalCount - claimedCount} ภารกิจ
-              </span>
-            </div>
           </div>
         </div>
 
-        {/* Filter Tabs */}
-        <div className="relative z-10 flex items-center gap-2 mt-8 overflow-x-auto pb-1 scrollbar-none">
+        <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {[
+            { label: 'ภารกิจทั้งหมด', value: totalCount, tone: 'text-slate-900', icon: Award },
+            { label: 'กำลังทำ', value: lockedCount, tone: 'text-blue-700', icon: Zap },
+            { label: 'พร้อมรับรางวัล', value: readyCount, tone: 'text-amber-700', icon: Gift },
+            { label: 'รับรางวัลแล้ว', value: claimedCount, tone: 'text-emerald-700', icon: CheckCircle2 },
+          ].map(({ label, value, tone, icon: StatIcon }) => (
+            <div key={label} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-center gap-2 text-sm font-bold text-slate-600">
+                <StatIcon className={`h-4 w-4 ${tone}`} /> {label}
+              </div>
+              <div className={`mt-2 text-3xl font-black ${tone}`}>{value}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-5 rounded-2xl border border-slate-200 p-4">
+          <div className="mb-2 flex items-center justify-between gap-4 text-sm font-bold">
+            <span className="text-slate-700">ความสำเร็จรวม</span>
+            <span className="text-slate-900">{overallProgress}%</span>
+          </div>
+          <div className="h-3 overflow-hidden rounded-full bg-slate-100">
+            <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${overallProgress}%` }} />
+          </div>
+          <p className="mt-2 text-sm text-slate-600">เหลืออีก {totalCount - claimedCount} ภารกิจ</p>
+        </div>
+
+        <div className="mt-6 flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none" aria-label="กรองภารกิจตามสถานะ">
           <button
             type="button"
             onClick={() => setFilterTab('ALL')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+            className={`px-4 py-2.5 rounded-xl border text-sm font-bold transition-colors whitespace-nowrap cursor-pointer ${
               filterTab === 'ALL'
-                ? 'bg-white text-slate-900 shadow-md'
-                : 'bg-white/10 text-slate-300 hover:bg-white/15 hover:text-white'
+                ? 'border-primary bg-primary text-white'
+                : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
             }`}
           >
             ทั้งหมด ({totalCount})
           </button>
 
-          {readyCount > 0 && (
-            <button
+          <button
               type="button"
               onClick={() => setFilterTab('READY')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+              className={`px-4 py-2.5 rounded-xl border text-sm font-bold transition-colors whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
                 filterTab === 'READY'
-                  ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-400/20'
-                  : 'bg-amber-500/20 text-amber-300 hover:bg-amber-500/30'
+                  ? 'border-primary bg-primary text-white'
+                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
               }`}
             >
               <Zap className="h-3.5 w-3.5 fill-current" />
               พร้อมรับรางวัล ({readyCount})
-            </button>
-          )}
+          </button>
 
           <button
             type="button"
             onClick={() => setFilterTab('CLAIMED')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+            className={`px-4 py-2.5 rounded-xl border text-sm font-bold transition-colors whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
               filterTab === 'CLAIMED'
-                ? 'bg-emerald-500 text-white shadow-md'
-                : 'bg-white/10 text-slate-300 hover:bg-white/15 hover:text-white'
+                ? 'border-primary bg-primary text-white'
+                : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
             }`}
           >
             <CheckCircle2 className="h-3.5 w-3.5" />
@@ -213,17 +184,17 @@ export default function Achievements() {
           <button
             type="button"
             onClick={() => setFilterTab('LOCKED')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+            className={`px-4 py-2.5 rounded-xl border text-sm font-bold transition-colors whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
               filterTab === 'LOCKED'
-                ? 'bg-slate-700 text-white shadow-md'
-                : 'bg-white/10 text-slate-300 hover:bg-white/15 hover:text-white'
+                ? 'border-primary bg-primary text-white'
+                : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
             }`}
           >
             <Lock className="h-3.5 w-3.5" />
             ยังไม่ปลดล็อก ({lockedCount})
           </button>
         </div>
-      </div>
+      </section>
 
       {/* Main Content Area */}
       {isLoading ? (
@@ -261,7 +232,11 @@ export default function Achievements() {
             const isReady = milestone.status === 'READY_TO_CLAIM';
             const isLocked = milestone.status === 'LOCKED';
 
-            const progress = Math.min(100, (milestone.current / milestone.target) * 100);
+            const currentValue = Math.max(0, Number(milestone.current) || 0);
+            const targetValue = Math.max(0, Number(milestone.target) || 0);
+            const progress = targetValue > 0
+              ? Math.min(100, (currentValue / targetValue) * 100)
+              : 0;
             const hasReward = !!milestone.reward;
             const isFrameReward = hasReward && milestone.reward.type === 'FRAME';
             const hasImageReward =
@@ -278,13 +253,7 @@ export default function Achievements() {
             return (
               <div
                 key={milestone.id}
-                className={`group relative rounded-3xl bg-white border transition-all duration-300 flex flex-col ${
-                  isReady
-                    ? 'border-amber-300 ring-2 ring-amber-400/40 shadow-xl shadow-amber-500/10 hover:shadow-2xl hover:shadow-amber-500/20 hover:-translate-y-1'
-                    : isClaimed
-                    ? 'border-slate-200/90 shadow-sm hover:shadow-xl hover:border-emerald-200/90 hover:-translate-y-1'
-                    : 'border-slate-200/70 shadow-xs hover:shadow-md hover:border-slate-300 hover:-translate-y-0.5'
-                }`}
+                className="group relative flex flex-col rounded-3xl border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-md"
               >
                 {/* Banner Header Area */}
                 <div className="relative h-36 rounded-t-3xl overflow-hidden">
@@ -293,11 +262,11 @@ export default function Achievements() {
                       <img
                         src={milestone.reward.previewUrl}
                         alt={milestone.reward.name}
-                        className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${
+                        className={`w-full h-full object-cover ${
                           isLocked ? 'grayscale brightness-75' : ''
                         }`}
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+                      <div className="absolute inset-0 bg-black/25" />
                     </div>
                   ) : isClaimed ? (
                     <div className="w-full h-full bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 relative overflow-hidden">
@@ -312,7 +281,7 @@ export default function Achievements() {
                     </div>
                   ) : isReady ? (
                     <div className="w-full h-full bg-gradient-to-r from-amber-500 via-orange-400 to-amber-500 relative overflow-hidden">
-                      <div className="absolute inset-0 bg-radial from-white/30 to-transparent pointer-events-none animate-pulse" />
+                      <div className="absolute inset-0 bg-radial from-white/30 to-transparent pointer-events-none" />
                       <div className="absolute right-4 bottom-3 opacity-20 text-white pointer-events-none">
                         <Sparkles className="h-24 w-24" />
                       </div>
@@ -330,18 +299,18 @@ export default function Achievements() {
                   {/* Status Badge in Top Right */}
                   <div className="absolute top-3.5 right-3.5 z-10">
                     {isClaimed && (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-500/95 text-white shadow-md shadow-emerald-950/20 backdrop-blur-md">
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-white px-3 py-1.5 text-sm font-bold text-emerald-700 shadow-sm">
                         <CheckCircle2 className="h-3.5 w-3.5" /> ได้รับแล้ว
                       </span>
                     )}
                     {isReady && (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/40 animate-pulse">
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-white px-3 py-1.5 text-sm font-bold text-amber-700 shadow-sm">
                         <Sparkles className="h-3.5 w-3.5" /> พร้อมรับรางวัล
                       </span>
                     )}
                     {isLocked && (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-900/60 text-slate-200 backdrop-blur-md border border-white/15">
-                        <Lock className="h-3 w-3 text-slate-300" /> ยังไม่ปลดล็อก
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-bold text-slate-700 shadow-sm">
+                        <Lock className="h-3.5 w-3.5 text-slate-600" /> ยังไม่ปลดล็อก
                       </span>
                     )}
                   </div>
@@ -351,19 +320,14 @@ export default function Achievements() {
                 {hasReward && (
                   <div className="absolute left-6 top-[104px] z-20">
                     <div className="relative flex items-center justify-center">
-                      {/* Glow effect for Ready-to-claim */}
-                      {isReady && (
-                        <div className="absolute -inset-3 rounded-full bg-amber-400/50 blur-lg animate-pulse -z-10" />
-                      )}
-
                       {/* รูปโปรไฟล์เป็นวงกลม และซ่อนวงขอบเมื่อรางวัลเป็นกรอบตกแต่ง */}
                       <div
                         className={`relative h-20 w-20 rounded-full shadow-xl flex items-center justify-center ${isFrameReward ? '' : 'ring-4'} ${
-                          isReady
-                            ? 'ring-amber-400 bg-amber-50 shadow-amber-500/25'
+                            isReady
+                            ? 'ring-white bg-amber-50'
                             : isClaimed
-                            ? 'ring-white bg-slate-900 shadow-slate-900/15'
-                            : 'ring-white/95 bg-slate-900 shadow-slate-900/10'
+                            ? 'ring-white bg-slate-900'
+                            : 'ring-white bg-slate-900'
                         }`}
                       >
                         {isFrameReward ? (
@@ -403,8 +367,8 @@ export default function Achievements() {
                           <img
                             src={milestone.reward.previewUrl}
                             alt={milestone.reward.name}
-                            className={`absolute inset-0 h-full w-full scale-125 max-w-none pointer-events-none object-contain drop-shadow-xl z-10 select-none transition-all duration-300 ${
-                              isLocked ? 'grayscale opacity-50' : isReady ? 'animate-pulse' : ''
+                            className={`absolute inset-0 h-full w-full scale-125 max-w-none pointer-events-none object-contain drop-shadow-xl z-10 select-none ${
+                              isLocked ? 'grayscale opacity-50' : ''
                             }`}
                           />
                         )}
@@ -416,7 +380,7 @@ export default function Achievements() {
                           </div>
                         )}
                         {isReady && (
-                          <div className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 border-2 border-white shadow-md flex items-center justify-center text-white z-20 animate-bounce">
+                          <div className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-amber-500 border-2 border-white shadow-md flex items-center justify-center text-white z-20">
                             <Sparkles className="h-3.5 w-3.5" />
                           </div>
                         )}
@@ -433,18 +397,18 @@ export default function Achievements() {
                 {/* Card Body Section */}
                 <div className={`${hasReward ? 'pt-16' : 'pt-6'} px-6 pb-6 flex flex-col flex-1`}>
                   {/* Title & Description */}
-                  <h3 className="font-black text-slate-800 text-base sm:text-lg group-hover:text-primary transition-colors line-clamp-1">
+                  <h3 className="text-lg font-black leading-7 text-slate-900">
                     {milestone.title}
                   </h3>
-                  <p className="text-xs sm:text-sm text-slate-500 mt-1.5 line-clamp-2 leading-relaxed break-words break-all">
+                  <p className="mt-2 text-sm leading-6 text-slate-600 break-words">
                     {milestone.description}
                   </p>
 
                   {/* Reward Info Pill */}
                   {hasReward && (
-                    <div className="inline-flex items-center gap-1.5 mt-3.5 px-3 py-1.5 rounded-xl bg-amber-50/90 border border-amber-200/70 text-amber-800 text-xs font-bold w-fit max-w-full shadow-2xs">
-                      <Gift className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-                      <span className="truncate">
+                    <div className="mt-4 flex w-full items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm font-bold text-amber-900">
+                      <Gift className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
+                      <span className="break-words">
                         {milestone.reward.type === 'FRAME' ? 'กรอบรูป' : 'รางวัล'}
                         : {milestone.reward.name}
                       </span>
@@ -452,57 +416,37 @@ export default function Achievements() {
                   )}
 
                   {/* Progress Indicator */}
-                  {isLocked ? (
-                    <div className="mt-4">
-                      <div className="flex items-center justify-between text-xs font-semibold text-slate-500 mb-1.5">
-                        <span>ความคืบหน้า</span>
-                        <span className="font-extrabold text-slate-700">
-                          {milestone.current} / {milestone.target} ({Math.round(progress)}%)
-                        </span>
-                      </div>
-                      <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden p-0.5">
-                        <div
-                          className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full transition-all duration-500"
-                          style={{ width: `${progress}%` }}
-                        />
-                      </div>
+                  <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-3.5">
+                    <div className="flex items-center justify-between gap-3 text-sm font-bold">
+                      <span className="text-slate-700">
+                        {isClaimed ? 'ทำสำเร็จและรับรางวัลแล้ว' : isReady ? 'ทำสำเร็จแล้ว พร้อมรับรางวัล' : 'ความคืบหน้าภารกิจ'}
+                      </span>
+                      <span className="shrink-0 text-slate-900">{Math.round(progress)}%</span>
                     </div>
-                  ) : isReady ? (
-                    <div className="mt-4">
-                      <div className="flex items-center justify-between text-xs font-semibold text-amber-700 mb-1.5">
-                        <span className="flex items-center gap-1 font-bold">
-                          <Sparkles className="h-3.5 w-3.5 text-amber-500" /> ภารกิจสำเร็จแล้ว!
-                        </span>
-                        <span className="font-extrabold text-amber-800">
-                          {milestone.target} / {milestone.target} (100%)
-                        </span>
-                      </div>
-                      <div className="h-2 w-full bg-amber-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full w-full shadow-xs" />
-                      </div>
+                    <div className="mt-2 h-3 w-full overflow-hidden rounded-full bg-slate-200">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          isClaimed ? 'bg-emerald-500' : isReady ? 'bg-amber-500' : 'bg-primary'
+                        }`}
+                        style={{ width: `${isClaimed || isReady ? 100 : progress}%` }}
+                      />
                     </div>
-                  ) : (
-                    <div className="mt-4">
-                      <div className="flex items-center justify-between text-xs font-semibold text-emerald-700 mb-1.5">
-                        <span className="flex items-center gap-1 font-bold">
-                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> ได้รับรางวัลแล้ว
-                        </span>
-                        <span className="font-extrabold text-emerald-800">100%</span>
-                      </div>
-                      <div className="h-2 w-full bg-emerald-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-emerald-500 rounded-full w-full" />
-                      </div>
+                    <div className="mt-2 flex items-center justify-between gap-3 text-sm text-slate-600">
+                      <span>ทำแล้ว</span>
+                      <span className="font-bold text-slate-800">
+                        {isClaimed || isReady ? targetValue : currentValue} จาก {targetValue}
+                      </span>
                     </div>
-                  )}
+                  </div>
 
                   {/* Card Action Footer */}
-                  <div className="mt-auto pt-5 border-t border-slate-100">
+                  <div className="mt-auto border-t border-slate-100 pt-5">
                     {isReady && (
                       <button
                         type="button"
                         onClick={() => handleClaim(milestone.id)}
                         disabled={claimingId === milestone.id}
-                        className="w-full py-3 rounded-2xl font-extrabold text-sm bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
+                        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-amber-500 py-3 text-sm font-extrabold text-white transition-colors hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {claimingId === milestone.id ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
@@ -517,7 +461,7 @@ export default function Achievements() {
                     {isClaimed && (
                       isFrameReward ? (
                         isEquipped ? (
-                          <div className="w-full py-2.5 rounded-2xl font-bold text-sm bg-blue-50 border border-blue-200 text-primary flex items-center justify-center gap-2 shadow-2xs">
+                          <div className="flex w-full items-center justify-center gap-2 rounded-2xl border border-blue-200 bg-blue-50 py-3 text-sm font-bold text-primary">
                             <Check className="h-4 w-4 stroke-[2.5]" /> กำลังใช้งานกรอบนี้
                           </div>
                         ) : (
@@ -525,7 +469,7 @@ export default function Achievements() {
                             type="button"
                             onClick={() => handleEquipFrame(milestone)}
                             disabled={!milestoneFrameId || equippingId === milestoneFrameId}
-                            className="w-full py-2.5 rounded-2xl font-bold text-sm bg-emerald-50 border border-emerald-200/80 text-emerald-700 hover:bg-emerald-100/90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
+                            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-emerald-300 bg-emerald-50 py-3 text-sm font-bold text-emerald-800 transition-colors hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             {equippingId === milestoneFrameId ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
@@ -537,7 +481,7 @@ export default function Achievements() {
                           </button>
                         )
                       ) : (
-                        <div className="w-full py-2.5 rounded-2xl font-bold text-sm bg-emerald-50 border border-emerald-200/80 text-emerald-700 flex items-center justify-center gap-2 shadow-2xs">
+                        <div className="flex w-full items-center justify-center gap-2 rounded-2xl border border-emerald-300 bg-emerald-50 py-3 text-sm font-bold text-emerald-800">
                           <CheckCircle2 className="h-4 w-4 text-emerald-600" /> รับรางวัลแล้ว
                         </div>
                       )
@@ -547,7 +491,7 @@ export default function Achievements() {
                       <button
                         type="button"
                         disabled
-                        className="w-full py-2.5 rounded-2xl font-semibold text-sm bg-slate-100 text-slate-400 cursor-not-allowed flex items-center justify-center gap-2"
+                        className="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-slate-100 py-3 text-sm font-bold text-slate-600"
                       >
                         <Lock className="h-3.5 w-3.5" /> ยังไม่ปลดล็อก
                       </button>
