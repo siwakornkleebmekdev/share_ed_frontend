@@ -23,6 +23,7 @@ import {
 import toast from "react-hot-toast";
 import PostCard from "@/components/PostCard";
 import FollowListModal from "@/components/profile/FollowListModal";
+import { subscribeSocketEvent } from "@/utils/socket";
 
 import useAuthStore from "@/store/authStore";
 import useHeroThemeStore from "@/store/heroThemeStore";
@@ -211,6 +212,22 @@ export default function Profile() {
         : posts.filter((post) => String(post.id) !== String(postId)),
     );
   };
+
+  useEffect(() => {
+    if (isOtherUser) return undefined;
+
+    return subscribeSocketEvent("post_deleted", (payload = {}) => {
+      const deletedPostId = payload.postId || payload.post_id;
+      if (!deletedPostId) return;
+
+      setBookmarks((posts) =>
+        posts.filter((post) => String(post.id) !== String(deletedPostId)),
+      );
+      setMyPosts((posts) =>
+        posts.filter((post) => String(post.id) !== String(deletedPostId)),
+      );
+    });
+  }, [isOtherUser]);
 
   const theme = isOtherUser ? {} : user?.user_metadata?.theme_settings || {};
 
