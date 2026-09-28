@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useSearchParams, useParams } from "react-router";
 import {
   Image as ImageIcon,
@@ -38,6 +38,7 @@ import { getPlatformConfig } from "@/pages/settings/widgetConstants";
 import { getWidgetUrlError } from "@/utils/widgetUrl";
 import { getGlassColor, rgbToRgba } from "@/utils/colorUtils";
 import { isMp4Wallpaper } from "@/utils/wallpaperMedia";
+import { createProfileRequestScope } from "@/utils/profileRequestScope";
 
 const ACHIEVEMENT_STATUS_META = {
   READY_TO_CLAIM: {
@@ -156,7 +157,7 @@ function ProfileSkeleton({ dark = false }) {
   );
 }
 
-export default function Profile() {
+function ProfileContent() {
   const navigate = useNavigate();
   const { userId } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -180,6 +181,7 @@ export default function Profile() {
   const [myPosts, setMyPosts] = useState([]);
   const [drafts, setDrafts] = useState([]);
   const [bookmarks, setBookmarks] = useState([]);
+  const bookmarkedIdsRef = useRef(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(() =>
     typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches
@@ -187,6 +189,7 @@ export default function Profile() {
       : 6,
   );
   const [isLoading, setIsLoading] = useState(true);
+  const [tabLoading, setTabLoading] = useState({ posts: true, drafts: true, bookmarks: true });
   const [followCounts, setFollowCounts] = useState({
     followersCount: 0,
     followingCount: 0,
@@ -200,6 +203,8 @@ export default function Profile() {
   };
 
   const handleBookmarkChange = (postId, isBookmarked) => {
+    if (isBookmarked) bookmarkedIdsRef.current.add(String(postId));
+    else bookmarkedIdsRef.current.delete(String(postId));
     setMyPosts((posts) =>
       posts.map((post) =>
         String(post.id) === String(postId) ? { ...post, isBookmarked } : post,
@@ -353,79 +358,78 @@ export default function Profile() {
 
   // ดึงข้อมูลโปรไฟล์ (แยกเคส: ตัวเอง vs คนอื่น)
   useEffect(() => {
+    const scope = createProfileRequestScope();
+    const loadTab = (tab, request, update) => scope.run(
+      request,
+      update,
+      (error) => {
+        toast.error("เกิดข้อผิดพลาดในการโหลดข้อมูลโปรไฟล์");
+        console.error(`Error loading profile ${tab}:`, error);
+      },
+      () => setTabLoading((state) => ({ ...state, [tab]: false })),
+    );
+
+    setMyPosts([]);
+    setDrafts([]);
+    setBookmarks([]);
+    bookmarkedIdsRef.current = new Set();
+    setOwnProfile(null);
+    setOtherProfile(null);
+    setUserNotFound(false);
+    setTabLoading({ posts: true, drafts: true, bookmarks: true });
+
     if (isOtherUser) {
-      const loadOtherUser = async () => {
-        setIsLoading(true);
-        setUserNotFound(false);
-        try {
-          const profileData = await profileService.getUserProfile(userId);
-
-          if (!profileData) {
-            setUserNotFound(true);
-            return;
-          }
-
-          const profileUserId = profileData.id || profileData.user_id || profileData._id;
-          const userPosts = profileUserId
-            ? await profileService.getUserPosts(profileUserId)
-            : [];
-
-          setOtherProfile(profileData);
-          setIsFollowing(Boolean(profileData.isFollowing));
-          setFollowCounts(normalizeFollowCounts(profileData));
-          setMyPosts(userPosts);
-        } catch (err) {
-          console.error("Error loading other user profile:", err);
+      setIsLoading(true);
+      profileService.getUserProfile(userId).then((profileData) => {
+        if (!scope.isActive()) return;
+        if (!profileData) {
           setUserNotFound(true);
-        } finally {
-          setIsLoading(false);
+          return;
         }
-      };
-      loadOtherUser();
+        setOtherProfile(profileData);
+        setIsFollowing(Boolean(profileData.isFollowing));
+        setFollowCounts(normalizeFollowCounts(profileData));
+        const profileUserId = profileData.id || profileData.user_id || profileData._id;
+        loadTab("posts", () => profileUserId
+          ? profileService.getUserPosts(profileUserId)
+          : Promise.resolve([]), setMyPosts);
+      }).catch((error) => {
+        if (scope.isActive()) {
+          console.error("Error loading other user profile:", error);
+          setUserNotFound(true);
+        }
+      }).finally(() => {
+        if (scope.isActive()) setIsLoading(false);
+      });
     } else {
-      if (!user) {
-        setIsLoading(false);
-        return;
-      }
-
-      const loadMyProfileData = async () => {
-        setIsLoading(true);
-        try {
-          const targetId = user?.user_id || user?.id;
-          if (!targetId) return;
-
-          const draftsRequest = profileService.getDrafts(targetId);
-          const postsRequest = profileService.getMyPosts(targetId);
-          const bookmarksRequest = profileService.getBookmarks(targetId);
-          const profileRequest = profileService.getUserProfile(targetId).catch(() => null);
-
-          // Show the draft list as soon as it arrives; other profile sections
-          // should not hold up the destination after saving a draft.
-          if (searchParams.get('tab') === 'drafts') {
-            setDrafts(await draftsRequest);
-            setIsLoading(false);
+      setIsLoading(false);
+      if (currentUserId) {
+        profileService.getUserProfile(currentUserId).then((profileData) => {
+          if (scope.isActive() && profileData) {
+            setOwnProfile(profileData);
+            setFollowCounts(normalizeFollowCounts(profileData));
           }
-
-          const [fetchedPosts, fetchedDrafts, fetchedBookmarks, fetchedOwnProfile] =
-            await Promise.all([postsRequest, draftsRequest, bookmarksRequest, profileRequest]);
-
-          setMyPosts(fetchedPosts);
+        }).catch((error) => console.error("Error loading own profile:", error));
+        loadTab("posts", () => profileService.getMyPostCollections(), ({ posts, drafts: fetchedDrafts }) => {
+          setMyPosts(posts.map((post) => ({
+            ...post, isBookmarked: bookmarkedIdsRef.current.has(String(post.id))
+          })));
           setDrafts(fetchedDrafts);
-          setBookmarks(fetchedBookmarks);
-          if (fetchedOwnProfile) {
-            setOwnProfile(fetchedOwnProfile);
-            setFollowCounts(normalizeFollowCounts(fetchedOwnProfile));
-          }
-        } catch (error) {
-          toast.error("เกิดข้อผิดพลาดในการโหลดข้อมูลโปรไฟล์");
-          console.error(error);
-        } finally {
-          setIsLoading(false);
-        }
-      };
-      loadMyProfileData();
+        }).finally(() => {
+          if (scope.isActive()) setTabLoading((state) => ({ ...state, drafts: false }));
+        });
+        loadTab("bookmarks", () => profileService.getBookmarks(currentUserId), (savedPosts) => {
+          const ids = new Set(savedPosts.map((post) => String(post.id)));
+          bookmarkedIdsRef.current = ids;
+          setBookmarks(savedPosts);
+          setMyPosts((posts) => posts.map((post) => ({
+            ...post, isBookmarked: ids.has(String(post.id))
+          })));
+        });
+      }
     }
-  }, [userId, isOtherUser, user, navigate]);
+    return () => scope.cancel();
+  }, [userId, isOtherUser, currentUserId]);
 
   // ฟังก์ชัน Follow / Unfollow ผู้ใช้อื่น
   const handleToggleFollow = async () => {
@@ -610,7 +614,7 @@ export default function Profile() {
   }
 
   // แสดง Skeleton หากกำลังโหลดข้อมูลโปรไฟล์เริ่มต้น
-  if (isLoading && !otherProfile && !ownProfile && myPosts.length === 0) {
+  if (isLoading && isOtherUser && !otherProfile) {
     return <ProfileSkeleton dark={isDarkHero} />;
   }
 
@@ -905,7 +909,7 @@ export default function Profile() {
 
         {/* เนื้อหาของแต่ละแท็บ */}
         <div className="min-h-[400px]">
-          {isLoading ? (
+          {tabLoading[activeTab] ? (
             <ProfilePostsSkeleton dark={isDarkHero} />
           ) : (
             <>
@@ -1214,4 +1218,11 @@ export default function Profile() {
       />
     </div>
   );
+}
+
+export default function Profile() {
+  const { userId } = useParams();
+  const currentUserId = useAuthStore((state) => state.user?.user_id || state.user?.id);
+  // A different account or profile URL gets fresh local state and ignores late results.
+  return <ProfileContent key={`${currentUserId || "guest"}:${userId || "self"}`} />;
 }

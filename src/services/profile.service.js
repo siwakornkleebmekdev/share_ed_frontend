@@ -2,6 +2,17 @@ import api from "../utils/api";
 import { supabase } from "../utils/supabase";
 
 export const profileService = {
+  // Fetch the owner's posts and drafts once; bookmark data can arrive separately.
+  getMyPostCollections: async () => {
+    const response = await api.get("/posts/user/my-posts");
+    const rows = response.data?.success && Array.isArray(response.data.data)
+      ? response.data.data : [];
+    return {
+      posts: formatPosts(rows.filter((post) => post.post_status === "ACTIVE")),
+      drafts: formatPosts(rows.filter((post) => post.post_status === "DRAFT")),
+    };
+  },
+
   // ดึงรายการโพสต์ของฉัน (สถานะเผยแพร่ ACTIVE)
   getMyPosts: async () => {
     try {
