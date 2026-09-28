@@ -202,7 +202,7 @@ export async function convertSvgToPngFile(svgFile, width = 512, height = 512) {
 /**
  * Fetches an SVG URL from the web/public folder and converts it to a transparent PNG File.
  *
- * @param {string} svgUrl - The URL of the SVG (e.g. /frames/frame-gold-luxury.svg)
+ * @param {string} svgUrl - The URL of the SVG frame
  * @param {string} fileName - Destination filename
  * @param {number} width - Output width (default: 512)
  * @param {number} height - Output height (default: 512)
