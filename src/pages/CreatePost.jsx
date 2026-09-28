@@ -29,6 +29,8 @@ import useAuthStore from '@/store/authStore';
 import {
   getPostImageAccept,
   validateImageFile,
+  validateSupportingImageFile,
+  SUPPORTING_IMAGE_ACCEPT,
   validatePdfFile,
   translateUploadError,
   formatFileSize,
@@ -181,7 +183,7 @@ export default function CreatePost() {
         break;
       }
 
-      const validation = validateImageFile(file, false, { allowGif: canUploadGif });
+      const validation = validateSupportingImageFile(file);
       if (!validation.valid) {
         toast.error(validation.error);
         continue;
@@ -1104,10 +1106,15 @@ export default function CreatePost() {
                         test-data="other-images-file-input"
                         type="file"
                         className="hidden"
-                        accept={postImageAccept}
+                        accept={SUPPORTING_IMAGE_ACCEPT}
                         multiple
                         onChange={(e) => {
-                          workspace.addMediaFiles(e.target.files);
+                          const validFiles = Array.from(e.target.files || []).filter((file) => {
+                            const validation = validateSupportingImageFile(file);
+                            if (!validation.valid) toast.error(validation.error);
+                            return validation.valid;
+                          });
+                          workspace.addMediaFiles(validFiles);
                           e.target.value = '';
                         }}
                       />
@@ -1159,7 +1166,7 @@ export default function CreatePost() {
                         test-data="supporting-images-file-input"
                         type="file"
                         className="hidden"
-                        accept={postImageAccept}
+                        accept={SUPPORTING_IMAGE_ACCEPT}
                         multiple
                         onChange={handleImagesUploadLegacy}
                         disabled={images.length >= 5}

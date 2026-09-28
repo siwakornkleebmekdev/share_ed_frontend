@@ -214,7 +214,7 @@ export default function SettingsProfile() {
         && (!mimeType || PROFILE_IMAGE_MIMES.includes(mimeType));
     if (!isImage) {
       toast.error(type === "wallpaper"
-        ? "ภาพพื้นหลังรองรับ JPG, JPEG, PNG, WebP, GIF หรือ MP4 เท่านั้น"
+        ? "ไม่รองรับไฟล์ประเภทนี้ กรุณาเลือกไฟล์ JPG, PNG GIF หรือ MP4"
         : "รองรับเฉพาะไฟล์ JPG, JPEG และ PNG เท่านั้น");
       resetInput();
       return;

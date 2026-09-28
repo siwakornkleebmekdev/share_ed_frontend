@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   validatePdfFile,
   validateImageFile,
+  validateSupportingImageFile,
   translateUploadError,
   isRetryableError,
   BACKEND_ERROR_MAP,
@@ -69,6 +70,13 @@ test('Upload Workspace: Client-side Image validation enforces 2 MB and valid ima
   // Valid JPG / PNG / WebP
   const validImg = new File([new Blob([new Uint8Array(1024)])], 'cover.png', { type: 'image/png' });
   assert.equal(validateImageFile(validImg, true).valid, true);
+});
+
+test('Post supporting images only allow JPG/JPEG and PNG', () => {
+  assert.equal(validateSupportingImageFile(new File(['image'], 'photo.jpg', { type: 'image/jpeg' })).valid, true);
+  assert.equal(validateSupportingImageFile(new File(['image'], 'photo.png', { type: 'image/png' })).valid, true);
+  assert.equal(validateSupportingImageFile(new File(['image'], 'photo.apng', { type: 'image/apng' })).valid, false);
+  assert.equal(validateSupportingImageFile(new File(['image'], 'photo.gif', { type: 'image/gif' })).valid, false);
 });
 
 test('Upload Workspace: Thai error mapping maps all backend codes accurately', () => {
