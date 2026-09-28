@@ -1,8 +1,51 @@
 import axios from 'axios';
+import Swal from 'sweetalert2';
 import { supabase } from './supabase.js';
 import useAuthStore from '../store/authStore.js';
 
 let isLoggingOut = false;
+let isShowingBannedAlert = false;
+
+const isBannedAccountResponse = (error) => {
+  if (error?.response?.status !== 403) return false;
+
+  const message = String(error?.response?.data?.message || '').toLowerCase();
+  return (
+    (message.includes('บัญชี') && message.includes('ระงับ')) ||
+    (message.includes('account') &&
+      (message.includes('banned') || message.includes('suspended')))
+  );
+};
+
+const handleBannedAccount = async () => {
+  if (isShowingBannedAlert) return;
+  isShowingBannedAlert = true;
+
+  await Swal.fire({
+    icon: 'warning',
+    title: 'บัญชีคุณถูกระงับ!',
+    confirmButtonText: 'ตกลง',
+    allowOutsideClick: false,
+    allowEscapeKey: false,
+  });
+
+  try {
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem('manual_logout', 'true');
+    }
+    await supabase.auth.signOut({ scope: 'global' }).catch(() =>
+      supabase.auth.signOut()
+    );
+  } catch (err) {
+    console.error('Supabase signout error for banned account:', err);
+  } finally {
+    useAuthStore.getState().logout();
+    if (typeof window !== 'undefined') {
+      window.location.replace('/login');
+    }
+  }
+};
+
 export const handleTokenExpiration = async () => {
   if (isLoggingOut) return;
   isLoggingOut = true;
@@ -117,6 +160,11 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     const status = error.response?.status;
+
+    if (isBannedAccountResponse(error)) {
+      await handleBannedAccount();
+      return Promise.reject(error);
+    }
 
     // 401 Unauthorized handling
     if (status === 401) {
