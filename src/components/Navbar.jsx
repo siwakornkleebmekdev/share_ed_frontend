@@ -1,6 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router";
 import {
-  BookOpen,
   Search,
   Bell,
   User,
@@ -188,7 +187,11 @@ export default function Navbar() {
           className={`w-full flex justify-between items-center transition-all duration-500 ${isScrolled ? "h-12" : "h-14"}`}
         >
           <Link to="/" className="flex min-w-0 items-center gap-1.5 group flex-shrink sm:gap-2">
-            <BookOpen className="text-primary transition-transform duration-300 group-hover:scale-110 h-7 w-7 sm:h-8 sm:w-8" />
+            <img
+              src="/sharelogo.png"
+              alt=""
+              className="h-7 w-7 shrink-0 object-contain transition-transform duration-300 group-hover:scale-110 sm:h-8 sm:w-8"
+            />
             <span
               className={`truncate font-bold tracking-tight text-base min-[414px]:text-lg sm:text-xl ${isDarkHero ? "text-white" : "text-slate-800"}`}
             >
