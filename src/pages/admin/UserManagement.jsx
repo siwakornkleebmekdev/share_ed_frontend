@@ -57,35 +57,6 @@ export default function UserManagement() {
     });
   }, [users, search, roleFilter, statusFilter]);
 
-  // เปลี่ยน role ของผู้ใช้ (MEMBER/ADMIN) — ต้องยืนยันก่อนทุกครั้ง
-  const handleRoleChange = async (targetUser, nextRole) => {
-    if (nextRole === targetUser.role) return;
-    const result = await Swal.fire({
-      title: "เปลี่ยนสิทธิ์ผู้ใช้งาน?",
-      text: `เปลี่ยนสิทธิ์ของ ${targetUser.username || targetUser.email} เป็น ${nextRole}`,
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#3b82f6",
-      cancelButtonColor: "#64748b",
-      confirmButtonText: "ยืนยัน",
-      cancelButtonText: "ยกเลิก",
-    });
-    if (!result.isConfirmed) return;
-
-    setBusyUserId(targetUser.id);
-    try {
-      await adminService.updateUserRole(targetUser.id, nextRole);
-      toast.success("เปลี่ยนสิทธิ์ผู้ใช้งานสำเร็จ");
-      await fetchUsers();
-    } catch (error) {
-      toast.error(
-        error?.response?.data?.message || "ไม่สามารถเปลี่ยนสิทธิ์ผู้ใช้งานได้",
-      );
-    } finally {
-      setBusyUserId(null);
-    }
-  };
-
   // "ระงับ" ผู้ใช้ — ฝั่ง backend คือ ban (เปลี่ยนสถานะเป็น BANNED)
   // เก็บเหตุผลจากช่อง input ของ Swal ได้ (ไม่บังคับกรอก)
   const handleSuspend = async (targetUser) => {
@@ -150,7 +121,7 @@ export default function UserManagement() {
       <div>
         <h1 className="admin-page-title">จัดการผู้ใช้งาน</h1>
         <p className="admin-page-subtitle">
-          ดูรายชื่อผู้ใช้งานทั้งหมด เปลี่ยนสิทธิ์ ระงับ หรือคืนสิทธิ์การใช้งาน
+          ดูรายชื่อ บทบาท และสถานะของผู้ใช้งานทั้งหมด
         </p>
       </div>
 
@@ -190,7 +161,71 @@ export default function UserManagement() {
       </div>
 
       <div className="admin-table-card">
-        <div className="overflow-x-auto">
+        <div className="divide-y divide-slate-100 md:hidden">
+          {isLoading ? (
+            <p className="px-4 py-10 text-center text-sm text-slate-400">กำลังโหลดข้อมูล...</p>
+          ) : filteredUsers.length === 0 ? (
+            <p className="px-4 py-10 text-center text-sm text-slate-400">ไม่พบผู้ใช้งานที่ตรงกับเงื่อนไข</p>
+          ) : (
+            filteredUsers.map((u) => (
+              <article
+                key={u.id}
+                onClick={() => navigate(`/admin/users/${u.id}`)}
+                className="cursor-pointer space-y-4 p-4 transition-colors hover:bg-slate-50"
+              >
+                <div className="min-w-0">
+                  <p className="truncate font-bold text-slate-800">
+                    {u.username || u.nickname || "ไม่ระบุชื่อ"}
+                  </p>
+                  <p className="mt-0.5 break-all text-xs text-slate-500">{u.email}</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <p className="mb-1.5 font-semibold text-slate-400">บทบาท</p>
+                    <span className="admin-badge admin-badge-default">{u.role || "MEMBER"}</span>
+                  </div>
+                  <div>
+                    <p className="mb-1.5 font-semibold text-slate-400">สถานะ</p>
+                    <span className={`admin-badge ${STATUS_BADGE_CLASS[u.status] || "admin-badge-default"}`}>
+                      {u.status}
+                    </span>
+                  </div>
+                  <div className="col-span-2">
+                    <p className="font-semibold text-slate-400">สมัครเมื่อ</p>
+                    <p className="mt-1 font-semibold text-slate-700">
+                      {u.created_at ? new Date(u.created_at).toLocaleDateString("th-TH") : "-"}
+                    </p>
+                  </div>
+                </div>
+
+                <div onClick={(event) => event.stopPropagation()}>
+                  {u.status === "BANNED" ? (
+                    <button
+                      type="button"
+                      onClick={() => handleReactivate(u)}
+                      disabled={busyUserId === u.id}
+                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-50 px-4 py-2.5 text-sm font-bold text-emerald-600 disabled:opacity-50"
+                    >
+                      <RotateCcw className="h-4 w-4" /> คืนสิทธิ์การใช้งาน
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleSuspend(u)}
+                      disabled={busyUserId === u.id || u.role === "ADMIN"}
+                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-50 px-4 py-2.5 text-sm font-bold text-red-600 disabled:opacity-40"
+                    >
+                      <Ban className="h-4 w-4" /> ระงับการใช้งาน
+                    </button>
+                  )}
+                </div>
+              </article>
+            ))
+          )}
+        </div>
+
+        <div className="hidden overflow-x-auto md:block">
           <table className="admin-table">
             <thead>
               <tr>
@@ -228,20 +263,10 @@ export default function UserManagement() {
                       </p>
                       <p className="text-xs text-slate-400">{u.email}</p>
                     </td>
-                    {/* stopPropagation กันไม่ให้คลิก select/ปุ่มใน cell นี้ ไปสั่ง navigate ที่ tr ด้วย */}
-                    <td onClick={(e) => e.stopPropagation()}>
-                      <select
-                        value={u.role}
-                        disabled={busyUserId === u.id}
-                        onChange={(e) => handleRoleChange(u, e.target.value)}
-                        className="admin-select-sm"
-                      >
-                        {ROLE_OPTIONS.map((role) => (
-                          <option key={role} value={role}>
-                            {role}
-                          </option>
-                        ))}
-                      </select>
+                    <td>
+                      <span className="admin-badge admin-badge-default">
+                        {u.role || "MEMBER"}
+                      </span>
                     </td>
                     <td>
                       <span

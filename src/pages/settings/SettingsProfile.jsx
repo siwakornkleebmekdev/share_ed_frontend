@@ -336,7 +336,7 @@ export default function SettingsProfile() {
 
   return (
     <div className="max-w-6xl">
-      <div className="flex items-center justify-between mb-8">
+      <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-800">โปรไฟล์</h1>
           <p className="text-slate-500 mt-1">ข้อมูลพื้นฐานและรูปภาพของคุณ</p>
@@ -345,7 +345,7 @@ export default function SettingsProfile() {
           type="submit"
           form="settings-profile-form"
           disabled={isSaving}
-          className="px-6 py-2.5 rounded-xl font-bold text-white bg-primary hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-all shrink-0"
+          className="w-full rounded-xl bg-primary px-6 py-2.5 font-bold text-white shadow-sm transition-all hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:shrink-0"
         >
           {isSaving ? "กำลังบันทึก..." : "บันทึกข้อมูล"}
         </button>
@@ -355,7 +355,7 @@ export default function SettingsProfile() {
         <form
           id="settings-profile-form"
           onSubmit={handleSubmit}
-          className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 sm:p-10 space-y-10"
+          className="space-y-8 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm sm:space-y-10 sm:rounded-3xl sm:p-10"
         >
           {/* Media Section */}
           <div className="space-y-4">
@@ -363,7 +363,7 @@ export default function SettingsProfile() {
             <p className="text-sm text-slate-500 -mt-2">
               อัปโหลดรูป และเลือกรูปทรง avatar
             </p>
-            <div className="flex items-center gap-5 pt-2">
+            <div className="flex flex-col items-center gap-5 pt-2 sm:flex-row sm:items-center">
               {/* ซ่อนขอบรูปเมื่อมีกรอบตกแต่ง เพื่อไม่ให้เห็นวงขาวซ้อนใต้ภาพกรอบ */}
               <div className="flex w-32 shrink-0 flex-col items-center gap-2 text-center">
                 <AvatarWithFrame
@@ -377,7 +377,7 @@ export default function SettingsProfile() {
                   avatarFallback={<div className="flex h-full w-full items-center justify-center text-slate-400"><ImageIcon className="h-8 w-8" /></div>}
                 />
               </div>
-              <div className="flex flex-col gap-2">
+              <div className="flex w-full flex-col gap-2 sm:w-auto">
                 <label className="cursor-pointer px-5 py-2.5 bg-primary hover:bg-blue-600 rounded-xl text-sm font-bold text-white transition-colors flex items-center gap-2 shadow-sm">
                   <Upload className="h-4 w-4" /> แก้ไขรูปโปรไฟล์
                   <input

@@ -4,6 +4,26 @@ import { prepareRewardImageFile } from "../utils/rewardImage";
 // การตั้งค่าและข้อมูลอธิบายประเภทภารกิจความสำเร็จ (Milestone / Achievement Types)
 export const MILESTONE_TYPES = [
   {
+    key: "POSTS_CREATED",
+    label: "โพสต์ที่สร้าง (Posts Created)",
+    shortLabel: "สร้างโพสต์",
+    achievementDescription: "จำนวนโพสต์ที่สร้าง",
+    unit: "โพสต์",
+    description: "ระบบจะนับจำนวนโพสต์ที่สมาชิกสร้างและเผยแพร่",
+    placeholder: "เช่น 5",
+    color: "bg-violet-50 text-violet-700 border-violet-200",
+  },
+  {
+    key: "COMMENTS_CREATED",
+    label: "คอมเมนต์ที่สร้าง (Comments Created)",
+    shortLabel: "สร้างคอมเมนต์",
+    achievementDescription: "จำนวนคอมเมนต์ที่สร้าง",
+    unit: "คอมเมนต์",
+    description: "ระบบจะนับจำนวนคอมเมนต์ที่สมาชิกสร้าง",
+    placeholder: "เช่น 10",
+    color: "bg-cyan-50 text-cyan-700 border-cyan-200",
+  },
+  {
     key: "FOLLOWERS_COUNT",
     label: "👥 จำนวนผู้ติดตาม (Followers)",
     shortLabel: "ผู้ติดตาม",
@@ -22,6 +42,16 @@ export const MILESTONE_TYPES = [
     description: "ระบบจะรวมยอดถูกใจสะสมจากทุกโพสต์ที่สมาชิกเผยแพร่โดยอัตโนมัติ",
     placeholder: "เช่น 50",
     color: "bg-rose-50 text-rose-700 border-rose-200",
+  },
+  {
+    key: "LIKES_GIVEN",
+    label: "กดไลก์โพสต์ (Likes Given)",
+    shortLabel: "กดไลก์โพสต์",
+    achievementDescription: "จำนวนโพสต์ที่กดไลก์",
+    unit: "ไลก์",
+    description: "ระบบจะนับจำนวนโพสต์ที่สมาชิกกดไลก์อยู่ในปัจจุบัน",
+    placeholder: "เช่น 20",
+    color: "bg-pink-50 text-pink-700 border-pink-200",
   },
 ];
 

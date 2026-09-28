@@ -6,8 +6,6 @@ import Swal from "sweetalert2";
 import { adminService } from "@/services/admin.service";
 import { mapEducationLevel } from "@/services/profile.service";
 
-const ROLE_OPTIONS = ["MEMBER", "ADMIN"];
-
 const STATUS_BADGE_CLASS = {
   ACTIVE: "admin-badge-active",
   SUSPENDED: "admin-badge-suspended",
@@ -40,34 +38,6 @@ export default function UserDetails() {
     fetchUser();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
-
-  const handleRoleChange = async (nextRole) => {
-    if (!user || nextRole === user.role) return;
-    const result = await Swal.fire({
-      title: "เปลี่ยนสิทธิ์ผู้ใช้งาน?",
-      text: `เปลี่ยนสิทธิ์ของ ${user.username || user.email} เป็น ${nextRole}`,
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#3b82f6",
-      cancelButtonColor: "#64748b",
-      confirmButtonText: "ยืนยัน",
-      cancelButtonText: "ยกเลิก",
-    });
-    if (!result.isConfirmed) return;
-
-    setIsBusy(true);
-    try {
-      await adminService.updateUserRole(user.id, nextRole);
-      toast.success("เปลี่ยนสิทธิ์ผู้ใช้งานสำเร็จ");
-      await fetchUser();
-    } catch (error) {
-      toast.error(
-        error?.response?.data?.message || "ไม่สามารถเปลี่ยนสิทธิ์ผู้ใช้งานได้",
-      );
-    } finally {
-      setIsBusy(false);
-    }
-  };
 
   const handleSuspend = async () => {
     const result = await Swal.fire({
@@ -182,18 +152,9 @@ export default function UserDetails() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 text-sm">
           <div>
             <p className="admin-field-label">สิทธิ์การใช้งาน</p>
-            <select
-              value={user.role}
-              disabled={isBusy}
-              onChange={(e) => handleRoleChange(e.target.value)}
-              className="admin-select"
-            >
-              {ROLE_OPTIONS.map((role) => (
-                <option key={role} value={role}>
-                  {role}
-                </option>
-              ))}
-            </select>
+            <p className="admin-field-value">
+              <span className="admin-badge admin-badge-default">{user.role || "MEMBER"}</span>
+            </p>
           </div>
           <div>
             <p className="admin-field-label">ระดับการศึกษา</p>

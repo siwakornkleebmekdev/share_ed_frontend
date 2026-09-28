@@ -158,7 +158,7 @@ export default function AchievementManagement() {
               <tr>
                 <th>ชื่อภารกิจ</th>
                 <th>เป้าหมาย</th>
-                <th>ประเภทภารกิจ</th>
+                <th className="hidden lg:table-cell">ประเภทภารกิจ</th>
                 <th>รางวัล</th>
                 <th className="text-right">การจัดการ</th>
               </tr>
@@ -183,11 +183,23 @@ export default function AchievementManagement() {
 
                   return (
                     <tr key={a.id} className="admin-table-row">
-                      <td>
+                      <td className="min-w-48">
                         <div className="flex items-center gap-2">
                           <p className="font-bold text-slate-800">{a.title}</p>
                         </div>
                         <p className="text-xs text-slate-400 line-clamp-1">{a.description}</p>
+                        <div className="mt-2 flex items-center gap-1.5 lg:hidden">
+                          <span className="text-[10px] font-semibold text-slate-400">
+                            ภารกิจ:
+                          </span>
+                          <span
+                            className={`inline-flex items-center rounded-lg border px-2 py-0.5 text-[10px] font-bold ${
+                              typeInfo?.color || "bg-slate-100 text-slate-700 border-slate-200"
+                            }`}
+                          >
+                            {typeInfo?.shortLabel || rawType}
+                          </span>
+                        </div>
                       </td>
                       <td className="text-slate-700">
                         <div className="flex items-baseline gap-1">
@@ -199,7 +211,7 @@ export default function AchievementManagement() {
                           </span>
                         </div>
                       </td>
-                      <td>
+                      <td className="hidden lg:table-cell">
                         <div className="inline-flex flex-col items-start gap-0.5">
                           <span
                             className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold border ${
@@ -210,23 +222,25 @@ export default function AchievementManagement() {
                           </span>
                         </div>
                       </td>
-                    <td className="text-slate-600">
+                    <td className="min-w-64 text-slate-600">
                       {a.reward_item ? (
-                        <div className="flex items-center gap-2.5">
-                          <div className="h-9 w-9 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center shadow-inner">
+                        <div className="flex items-center justify-start gap-4">
+                          <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-[radial-gradient(circle_at_center,_#ffffff_0%,_#e2e8f0_70%,_#cbd5e1_100%)] shadow-inner">
                             {getValidImageUrl(a.reward_item.image_url) ? (
                               a.reward_item.item_type === "FRAME" ? (
-                                <div className="relative w-7 h-7 rounded-full overflow-hidden bg-slate-200">
-                                  <img
-                                    src="https://ui-avatars.com/api/?name=User&background=1e293b&color=38bdf8"
-                                    alt=""
-                                    className="w-full h-full object-cover"
-                                  />
+                                <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-white/80 shadow-md ring-1 ring-slate-300/80">
+                                  <div className="h-14 w-14 overflow-hidden rounded-full bg-slate-200 ring-2 ring-white">
+                                    <img
+                                      src="https://ui-avatars.com/api/?name=User&background=1e293b&color=38bdf8"
+                                      alt=""
+                                      className="h-full w-full object-cover"
+                                    />
+                                  </div>
                                   <img
                                     src={getValidImageUrl(a.reward_item.image_url)}
                                     alt={a.reward_item.item_name}
                                     onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                                    className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+                                    className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-contain drop-shadow-[0_4px_6px_rgba(15,23,42,0.5)]"
                                   />
                                 </div>
                               ) : (
@@ -234,19 +248,19 @@ export default function AchievementManagement() {
                                   src={getValidImageUrl(a.reward_item.image_url)}
                                   alt={a.reward_item.item_name}
                                   onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                                  className="w-full h-full object-cover"
+                                  className="h-full w-full rounded-2xl object-contain p-2"
                                 />
                               )
                             ) : (
-                              <Gift className="h-4 w-4 text-slate-400" />
+                              <Gift className="h-8 w-8 text-slate-400" />
                             )}
                           </div>
-                          <div className="min-w-0">
-                            <p className="font-semibold text-xs text-slate-800 truncate max-w-[150px]">
+                          <div className="flex min-w-0 items-center gap-2">
+                            <p className="max-w-40 truncate text-sm font-bold text-slate-800">
                               {a.reward_item.item_name}
                             </p>
                             <span
-                              className={`inline-block text-[9px] font-extrabold px-1.5 py-0.2 rounded-full ${
+                              className={`inline-block shrink-0 text-[9px] font-extrabold px-1.5 py-0.5 rounded-full ${
                                 a.reward_item.item_type === "FRAME"
                                   ? "bg-amber-100 text-amber-700"
                                   : "bg-indigo-100 text-indigo-700"
