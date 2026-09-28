@@ -15,6 +15,9 @@ import useAchievementStore from '@/store/achievementStore';
 import useAuthStore from '@/store/authStore';
 import { profileService } from '@/services/profile.service';
 import { getMilestoneTypeInfo } from '@/services/achievement.service';
+import Pagination from '@/components/Pagination';
+
+const ACHIEVEMENTS_PER_PAGE = 6;
 
 const FILTERS = [
   { id: 'ALL', label: 'ทั้งหมด', icon: Award },
@@ -248,6 +251,7 @@ export default function AchievementsModern() {
   const [filterTab, setFilterTab] = useState('ALL');
   const [claimingId, setClaimingId] = useState(null);
   const [equippingId, setEquippingId] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const currentUserId = user?.id || user?.user_id || null;
   const milestones = useMemo(
@@ -289,6 +293,20 @@ export default function AchievementsModern() {
     }),
     [filterTab, milestones],
   );
+
+  const totalPages = Math.ceil(filteredMilestones.length / ACHIEVEMENTS_PER_PAGE);
+  const paginatedMilestones = filteredMilestones.slice(
+    (currentPage - 1) * ACHIEVEMENTS_PER_PAGE,
+    currentPage * ACHIEVEMENTS_PER_PAGE,
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterTab]);
+
+  useEffect(() => {
+    setCurrentPage(page => Math.min(page, Math.max(totalPages, 1)));
+  }, [totalPages]);
 
   const overallProgress = counts.ALL > 0 ? Math.round((counts.CLAIMED / counts.ALL) * 100) : 0;
 
@@ -401,7 +419,7 @@ export default function AchievementsModern() {
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
-              {filteredMilestones.map((milestone) => (
+              {paginatedMilestones.map((milestone) => (
                 <AchievementCard
                   key={milestone.id}
                   milestone={milestone}
@@ -414,6 +432,14 @@ export default function AchievementsModern() {
                 />
               ))}
             </div>
+          )}
+          {!isLoading && !error && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              className="mt-8"
+            />
           )}
         </section>
       </div>

@@ -4,6 +4,7 @@ import { Link } from 'react-router';
 import Categories from '@/components/Categories';
 import { postService } from '@/services/post.service';
 import heroImage from '@/assets/home-hero.webp';
+import Pagination from '@/components/Pagination';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('ALL');
@@ -49,12 +50,6 @@ export default function Home() {
     };
     fetchPosts();
   }, []);
-
-  useEffect(() => {
-    if (currentPage > 1) {
-      document.getElementById('latest-posts-section')?.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [currentPage]);
 
   return (
     <main className="min-h-screen bg-background">
@@ -200,40 +195,13 @@ export default function Home() {
         )}
 
         {/* Pagination Controls */}
-        {totalPages > 1 && (
-          <div className="mt-14 flex justify-center items-center gap-2">
-            <button
-              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1}
-              className="px-4 py-2 rounded-xl border border-slate-200 bg-white font-bold text-slate-600 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 hover:text-primary transition-colors"
-            >
-              ก่อนหน้า
-            </button>
-
-            <div className="flex gap-1 hidden sm:flex mx-2">
-              {Array.from({ length: totalPages }).map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setCurrentPage(i + 1)}
-                  className={`w-10 h-10 rounded-xl font-bold transition-all shadow-sm ${currentPage === i + 1
-                    ? 'bg-slate-900 text-white'
-                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:text-primary'
-                    }`}
-                >
-                  {i + 1}
-                </button>
-              ))}
-            </div>
-
-            <button
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-              disabled={currentPage === totalPages}
-              className="px-4 py-2 rounded-xl border border-slate-200 bg-white font-bold text-slate-600 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 hover:text-primary transition-colors"
-            >
-              ถัดไป
-            </button>
-          </div>
-        )}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          scrollTargetId="latest-posts-section"
+          className="mt-14"
+        />
       </section>
     </main>
   );

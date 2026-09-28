@@ -5,6 +5,9 @@ import PostCard from '@/components/PostCard';
 import { postService } from '@/services/post.service';
 import { categoryService } from '@/services/category.service';
 import { Loader2 } from 'lucide-react';
+import Pagination from '@/components/Pagination';
+
+const POSTS_PER_PAGE = 9;
 
 const normalizeSearchText = (value) =>
   String(value ?? '').normalize('NFKC').toLocaleLowerCase('th-TH').trim();
@@ -30,6 +33,7 @@ export default function Explore() {
   const [selectedSubjects, setSelectedSubjects] = useState(initialSubject ? [initialSubject] : []);
   const [selectedTags, setSelectedTags] = useState(initialTag ? [initialTag.replace(/^#+/, '')] : []);
   const [searchQuery, setSearchQuery] = useState(initialSearch);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const subjectParam = searchParams.get('subject');
@@ -147,6 +151,20 @@ export default function Explore() {
     
     return matchSearch && matchLevel && matchSubject && matchTag;
   });
+
+  const totalPages = Math.ceil(filteredPosts.length / POSTS_PER_PAGE);
+  const paginatedPosts = filteredPosts.slice(
+    (currentPage - 1) * POSTS_PER_PAGE,
+    currentPage * POSTS_PER_PAGE,
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedLevels, selectedSubjects, selectedTags]);
+
+  useEffect(() => {
+    setCurrentPage(page => Math.min(page, Math.max(totalPages, 1)));
+  }, [totalPages]);
 
   // Unique list of subject names from categories or posts
   const subjectList = categories.length > 0 
@@ -281,7 +299,7 @@ export default function Explore() {
               : "flex flex-col gap-4"
             }>
               {filteredPosts.length > 0 ? (
-                filteredPosts.map(post => (
+                paginatedPosts.map(post => (
                   <PostCard key={post.id} post={post} viewMode={viewMode} />
                 ))
               ) : (
@@ -292,6 +310,14 @@ export default function Explore() {
                 </div>
               )}
             </div>
+          )}
+          {!isLoading && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              className="mt-8"
+            />
           )}
         </div>
       </div>
