@@ -77,7 +77,7 @@ export default function AdminDashboard() {
   ), [reports]);
 
   return (
-    <div className="max-w-6xl space-y-6">
+    <div className="mx-auto w-full max-w-6xl space-y-5 sm:space-y-6">
       <div>
         <h1 className="admin-page-title">แดชบอร์ด</h1>
         <p className="admin-page-subtitle">ภาพรวมผู้ใช้งานและสถานการณ์รีพอร์ตในระบบ</p>
@@ -113,7 +113,7 @@ export default function AdminDashboard() {
           </button>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[
             { label: "โพสต์ที่ถูกรายงาน", value: reportStats.reportedPosts, icon: FileWarning, color: "text-rose-500", bg: "bg-rose-50" },
             { label: "รายงานทั้งหมด", value: reportStats.totalReports, icon: ShieldAlert, color: "text-amber-500", bg: "bg-amber-50" },
@@ -141,7 +141,7 @@ export default function AdminDashboard() {
                     type="button"
                     key={post.id}
                     onClick={() => navigate(`/admin/reports?post=${encodeURIComponent(post.id)}`)}
-                    className="flex w-full items-center justify-between gap-4 px-4 py-3 text-left transition-colors hover:bg-slate-50 cursor-pointer"
+                    className="flex w-full flex-col items-start gap-2 px-4 py-3 text-left transition-colors hover:bg-slate-50 cursor-pointer sm:flex-row sm:items-center sm:justify-between sm:gap-4"
                   >
                     <div className="min-w-0">
                       <p className="truncate text-sm font-bold text-slate-800">{post.title || "โพสต์ไม่มีชื่อ"}</p>
@@ -170,7 +170,7 @@ export default function AdminDashboard() {
               <div
                 key={u.id}
                 onClick={() => navigate(`/admin/users/${u.id}`)}
-                className="admin-recent-row"
+                className="admin-recent-row gap-3"
               >
                 <div>
                   <p className="font-bold text-slate-800 text-sm">

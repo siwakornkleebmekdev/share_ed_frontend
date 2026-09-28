@@ -6,9 +6,9 @@ import SettingsSidebar from '@/components/settings/SettingsSidebar';
 // brand header, navigation, and a "back to home"/logout footer.
 export default function SettingsLayout() {
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex min-h-screen flex-col bg-slate-50 lg:flex-row">
       <SettingsSidebar />
-      <main className="flex-1 min-w-0 p-6 sm:p-10">
+      <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:p-10">
         <Outlet />
       </main>
     </div>

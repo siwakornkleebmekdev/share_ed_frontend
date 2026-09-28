@@ -77,9 +77,9 @@ export default function AdminSidebar() {
           const visibleItems = group.items.filter((item) => item.roles.includes(role));
           if (visibleItems.length === 0) return null;
           return (
-            <div key={group.label}>
+            <div key={group.label} className="shrink-0 lg:shrink">
               <p className="admin-sidebar-group-label">{group.label}</p>
-              <div className="space-y-1">
+              <div className="flex gap-1 lg:block lg:space-y-1">
                 {visibleItems.map((item) => {
                   const Icon = item.icon;
                   return (
@@ -104,9 +104,9 @@ export default function AdminSidebar() {
           );
         })}
 
-        <div>
+        <div className="shrink-0 lg:shrink">
           <p className="admin-sidebar-group-label">ระบบ</p>
-          <div className="space-y-1">
+          <div className="flex gap-1 lg:block lg:space-y-1">
             <Link to="/home" className="admin-sidebar-link">
               <Undo2 className="h-4 w-4 shrink-0" />
               กลับหน้าหลัก

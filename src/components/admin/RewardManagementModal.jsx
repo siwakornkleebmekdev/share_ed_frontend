@@ -4,11 +4,15 @@ import toast from "react-hot-toast";
 import Swal from "sweetalert2";
 import { achievementService } from "@/services/achievement.service";
 import { getValidImageUrl } from "@/utils/imageUtils";
+import Pagination from "@/components/Pagination";
+
+const REWARDS_PER_PAGE = 6;
 
 export default function RewardManagementModal({ isOpen, onClose, onRewardDeleted }) {
   const [rewards, setRewards] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const [busyId, setBusyId] = useState(null);
   const [isCreating, setIsCreating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -39,6 +43,7 @@ export default function RewardManagementModal({ isOpen, onClose, onRewardDeleted
   useEffect(() => {
     if (isOpen) {
       setSearch("");
+      setCurrentPage(1);
       loadRewards();
     }
   }, [isOpen]);
@@ -53,6 +58,13 @@ export default function RewardManagementModal({ isOpen, onClose, onRewardDeleted
         (r.item_description && r.item_description.toLowerCase().includes(q))
     );
   }, [rewards, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredRewards.length / REWARDS_PER_PAGE));
+  const displayedPage = Math.min(currentPage, totalPages);
+  const paginatedRewards = useMemo(() => {
+    const start = (displayedPage - 1) * REWARDS_PER_PAGE;
+    return filteredRewards.slice(start, start + REWARDS_PER_PAGE);
+  }, [filteredRewards, displayedPage]);
 
   const handleDelete = async (item) => {
     const result = await Swal.fire({
@@ -119,11 +131,11 @@ export default function RewardManagementModal({ isOpen, onClose, onRewardDeleted
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col"
+        className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-5xl max-h-[92vh] sm:max-h-[88vh] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 shrink-0">
+        <div className="flex flex-col gap-4 px-4 py-4 border-b border-slate-100 shrink-0 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-5">
           <div className="flex items-center gap-2.5">
             <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
               <Gift className="h-5 w-5" />
@@ -135,7 +147,7 @@ export default function RewardManagementModal({ isOpen, onClose, onRewardDeleted
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-end gap-2">
             <button type="button" onClick={() => setIsCreating((value) => !value)} className="flex items-center gap-1 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-white hover:bg-blue-600"><Plus className="h-4 w-4" /> เพิ่มของรางวัล</button>
             <button type="button" onClick={onClose} aria-label="ปิด" className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors"><X className="h-5 w-5" /></button>
           </div>
@@ -164,20 +176,26 @@ export default function RewardManagementModal({ isOpen, onClose, onRewardDeleted
         )}
 
         {/* Search Bar */}
-        <div className="p-6 pb-3 border-b border-slate-100/60 bg-slate-50/50 shrink-0">
+        <div id="reward-list" className="p-4 pb-3 border-b border-slate-100/60 bg-slate-50/50 shrink-0 sm:p-6 sm:pb-3">
           <div className="relative">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input
               type="text"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setCurrentPage(1);
+              }}
               placeholder="ค้นหาตามชื่อรางวัล หรือประเภท FRAME..."
               className="w-full pl-10 pr-9 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-slate-800 shadow-sm"
             />
             {search && (
               <button
                 type="button"
-                onClick={() => setSearch("")}
+                onClick={() => {
+                  setSearch("");
+                  setCurrentPage(1);
+                }}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
               >
                 <X className="h-3.5 w-3.5" />
@@ -187,7 +205,7 @@ export default function RewardManagementModal({ isOpen, onClose, onRewardDeleted
         </div>
 
         {/* Rewards List Grid */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           {isLoading ? (
             <div className="py-16 text-center text-sm text-slate-400">
               กำลังโหลดรายการของรางวัล...
@@ -197,27 +215,29 @@ export default function RewardManagementModal({ isOpen, onClose, onRewardDeleted
               ไม่พบของรางวัลที่ค้นหา
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {filteredRewards.map((item) => (
+            <div className="grid grid-cols-1 gap-4">
+              {paginatedRewards.map((item) => (
                 <div
                   key={item.id}
-                  className="flex items-center gap-3.5 p-3 rounded-2xl border border-slate-200/80 bg-white hover:border-slate-300 hover:shadow-sm transition-all"
+                  className="group flex min-h-52 overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg sm:min-h-64"
                 >
                   {/* Thumbnail / Frame Preview */}
-                  <div className="h-14 w-14 rounded-2xl bg-slate-100 border border-slate-200 overflow-hidden shrink-0 relative flex items-center justify-center shadow-inner">
+                  <div className="relative flex w-40 shrink-0 items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_center,_#ffffff_0%,_#e2e8f0_58%,_#cbd5e1_100%)] sm:w-64">
                     {getValidImageUrl(item.image_url) ? (
                       item.item_type === "FRAME" ? (
-                        <div className="relative w-11 h-11 rounded-full overflow-hidden bg-slate-200">
-                          <img
-                            src="https://ui-avatars.com/api/?name=User&background=1e293b&color=38bdf8"
-                            alt=""
-                            className="w-full h-full object-cover"
-                          />
+                        <div className="relative flex h-36 w-36 items-center justify-center rounded-full bg-white/80 shadow-[0_12px_35px_rgba(15,23,42,0.22)] ring-1 ring-slate-300/80 sm:h-52 sm:w-52">
+                          <div className="h-24 w-24 overflow-hidden rounded-full bg-slate-200 shadow-inner ring-4 ring-white sm:h-36 sm:w-36">
+                            <img
+                              src="https://ui-avatars.com/api/?name=User&background=1e293b&color=38bdf8"
+                              alt=""
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
                           <img
                             src={getValidImageUrl(item.image_url)}
                             alt={item.item_name}
                             onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                            className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+                            className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-contain drop-shadow-[0_7px_10px_rgba(15,23,42,0.5)]"
                           />
                         </div>
                       ) : (
@@ -225,50 +245,47 @@ export default function RewardManagementModal({ isOpen, onClose, onRewardDeleted
                           src={getValidImageUrl(item.image_url)}
                           alt={item.item_name}
                           onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                          className="w-full h-full object-cover"
+                          className="h-full w-full object-contain p-5"
                         />
                       )
                     ) : (
-                      <Gift className="h-6 w-6 text-slate-400" />
+                      <Gift className="h-12 w-12 text-slate-300" />
                     )}
+                    <span className="absolute right-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-extrabold text-amber-700 shadow-sm backdrop-blur">
+                      {item.item_type === "FRAME" ? "กรอบรูป" : item.item_type || "ของรางวัล"}
+                    </span>
                   </div>
 
                   {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-sm text-slate-800 truncate">
+                  <div className="flex min-w-0 flex-1 flex-col justify-center p-4 sm:p-6">
+                    <p className="line-clamp-2 text-base font-extrabold text-slate-800 sm:text-lg">
                       {item.item_name}
                     </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span
-                        className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
-                          item.item_type === "FRAME"
-                            ? "bg-amber-100 text-amber-700"
-                            : "bg-indigo-100 text-indigo-700"
-                        }`}
-                      >
-                        {item.item_type === "FRAME" ? "กรอบรูป" : item.item_type || "ธีม"}
-                      </span>
-                      {item.item_description && (
-                        <span className="text-xs text-slate-400 truncate">
-                          {item.item_description}
-                        </span>
-                      )}
-                    </div>
+                    <p className="mt-1 line-clamp-2 min-h-10 text-xs leading-5 text-slate-500">
+                      {item.item_description || "ของรางวัลสำหรับมอบให้ผู้ใช้เมื่อทำภารกิจสำเร็จ"}
+                    </p>
+                    <button
+                      type="button"
+                      disabled={busyId === item.id}
+                      onClick={() => handleDelete(item)}
+                      className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-xs font-bold text-red-600 transition-colors hover:bg-red-100 disabled:opacity-50"
+                    >
+                      <Trash2 className="h-4 w-4" /> ลบของรางวัล
+                    </button>
                   </div>
-
-                  {/* Delete Button */}
-                  <button
-                    type="button"
-                    disabled={busyId === item.id}
-                    onClick={() => handleDelete(item)}
-                    title="ลบของรางวัลนี้"
-                    className="p-2.5 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 disabled:opacity-50 transition-colors shrink-0"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
                 </div>
               ))}
             </div>
+          )}
+
+          {!isLoading && filteredRewards.length > 0 && (
+            <Pagination
+              currentPage={displayedPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              scrollTargetId="reward-list"
+              className="mt-6"
+            />
           )}
         </div>
 

@@ -98,7 +98,7 @@ export default function SettingsAccount() {
       <form
         onSubmit={handleSavePassword}
         noValidate
-        className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 sm:p-8 space-y-4"
+        className="space-y-4 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-8"
       >
         <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
           <KeyRound className="h-5 w-5 text-slate-400" /> รหัสผ่าน
@@ -229,7 +229,7 @@ export default function SettingsAccount() {
             !passwords.password ||
             !passwords.confirmPassword
           }
-          className="px-6 py-2.5 rounded-xl font-bold text-white bg-primary hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-all"
+          className="w-full rounded-xl bg-primary px-6 py-2.5 font-bold text-white shadow-sm transition-all hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
         >
           {isSavingPassword ? "กำลังบันทึก..." : "เปลี่ยนรหัสผ่าน"}
         </button>

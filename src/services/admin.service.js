@@ -12,17 +12,6 @@ export const adminService = {
     }
   },
 
-  // Change a user's role to MEMBER or ADMIN
-  updateUserRole: async (userId, role) => {
-    try {
-      const response = await api.patch(`/admin/users/${userId}/role`, { role });
-      return response.data?.data || response.data;
-    } catch (error) {
-      console.error("Error updating user role:", error);
-      throw error;
-    }
-  },
-
   // "Suspend" a user — backend calls this ban; sets status to BANNED.
   // Backend rejects banning an ADMIN account.
   banUser: async (userId, reason) => {

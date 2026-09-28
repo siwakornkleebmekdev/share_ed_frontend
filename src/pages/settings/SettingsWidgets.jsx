@@ -71,7 +71,7 @@ export default function SettingsWidgets() {
         <p className="text-slate-500 mt-1">เพิ่มลิงก์โซเชียลของคุณเป็นการ์ดวิดเจ็ตที่แสดงบนโปรไฟล์</p>
       </div>
 
-      <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 space-y-3">
+      <div className="space-y-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
         <p className="text-sm font-semibold text-slate-600">เลือกแพลตฟอร์มที่ต้องการเพิ่ม</p>
         <div className="flex flex-wrap gap-3">
           {WIDGET_PLATFORMS.map((platform) => {
@@ -82,7 +82,7 @@ export default function SettingsWidgets() {
                 key={platform.id}
                 type="button"
                 onClick={() => setModalPlatformId(platform.id)}
-                className="flex items-center gap-2 pl-3 pr-4 py-2.5 rounded-full font-bold text-sm text-white shadow-sm hover:opacity-90 transition-opacity"
+                className="flex flex-1 items-center justify-center gap-2 rounded-full py-2.5 pl-3 pr-4 text-sm font-bold text-white shadow-sm transition-opacity hover:opacity-90 sm:flex-none"
                 style={{ backgroundColor: platform.brandColor }}
                 title={exists ? `แก้ไข ${platform.label}` : `เพิ่ม ${platform.label}`}
               >
@@ -107,7 +107,7 @@ export default function SettingsWidgets() {
               return (
                 <div key={widget.id} className="relative group">
                   <WidgetCard platform={platform} url={widget.url} cardTheme={cardTheme} />
-                  <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute right-2 top-2 flex gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
                     <button onClick={() => setModalPlatformId(widget.platformId)} className="p-1.5 rounded-lg bg-white/90 text-slate-600 hover:text-primary shadow-sm">
                       <Pencil className="h-3.5 w-3.5" />
                     </button>
