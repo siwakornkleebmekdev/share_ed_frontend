@@ -369,7 +369,20 @@ export default function PostDetails() {
 
     try {
       setIsReporting(true);
-      await postService.reportPost(post.id, reportReason);
+      const result = await postService.reportPost(post.id, reportReason);
+      if (result?.postStatus === 'UNACTIVED') {
+        toast.success('ส่งรายงานแล้ว โพสต์นี้ถูกระงับชั่วคราวและรอแอดมินตรวจสอบ');
+        navigate('/home');
+        return;
+      }
+      // The server owns the unique-reporter count and the suspension decision.
+      // Refresh from it so the fifth reporter immediately sees the new status.
+      try {
+        const updatedPost = await postService.getPostById(post.id);
+        if (updatedPost) setPost(updatedPost);
+      } catch {
+        // A suspended post may no longer be readable to the reporter.
+      }
       toast.success('ส่งรายงานโพสต์เรียบร้อยแล้ว');
       setShowReportModal(false);
       setReportReason('');
