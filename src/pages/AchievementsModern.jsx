@@ -268,11 +268,8 @@ export default function AchievementsModern() {
     )}&background=3b82f6&color=ffffff`;
 
   useEffect(() => {
-    fetchMilestones({ force: true });
-    const refreshMilestones = () => fetchMilestones({ force: true });
-    window.addEventListener('achievement_completed', refreshMilestones);
-    return () => window.removeEventListener('achievement_completed', refreshMilestones);
-  }, [fetchMilestones]);
+    fetchMilestones();
+  }, [currentUserId, fetchMilestones]);
 
   const counts = useMemo(
     () => ({

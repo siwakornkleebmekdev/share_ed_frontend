@@ -47,7 +47,7 @@ const useAchievementStore = create((set, get) => ({
     if (
       !force &&
       state.ownerId === userId &&
-      state.milestones.length > 0 &&
+      state.lastFetchedAt > 0 &&
       Date.now() - state.lastFetchedAt < CACHE_TTL_MS
     ) {
       return state.milestones;
