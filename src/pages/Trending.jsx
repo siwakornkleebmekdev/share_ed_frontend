@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { TrendingUp, Flame, Eye, Sparkles, BookOpen } from 'lucide-react';
 import PostCard from '@/components/PostCard';
 import { postService } from '@/services/post.service';
+import Pagination from '@/components/Pagination';
+
+const POSTS_PER_PAGE = 6;
 
 export default function Trending() {
   const [filterType, setFilterType] = useState('likes'); // 'likes' or 'views'
@@ -10,6 +13,7 @@ export default function Trending() {
   const [activeLevel, setActiveLevel] = useState('MIDDLE_SCHOOL');
   const [isLoading, setIsLoading] = useState(true);
   const [isTrendingLoading, setIsTrendingLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const levels = [
     { id: 'MIDDLE_SCHOOL', label: 'มัธยมต้น', postLevel: 'มัธยมศึกษาตอนต้น' },
@@ -95,6 +99,19 @@ export default function Trending() {
   // Browse sections intentionally include posts that also appear in Top 3.
   const sortedAll = sortPosts(postsOfLevel);
   const restPosts = sortedAll;
+  const totalPages = Math.ceil(restPosts.length / POSTS_PER_PAGE);
+  const paginatedPosts = restPosts.slice(
+    (currentPage - 1) * POSTS_PER_PAGE,
+    currentPage * POSTS_PER_PAGE,
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeLevel, filterType]);
+
+  useEffect(() => {
+    setCurrentPage(page => Math.min(page, Math.max(totalPages, 1)));
+  }, [totalPages]);
 
   if (isLoading) {
     return (
@@ -191,7 +208,7 @@ export default function Trending() {
       {/* Rest of the posts */}
       {restPosts.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          {restPosts.map(post => (
+          {paginatedPosts.map(post => (
             <PostCard key={post.id} post={post} viewMode="grid" />
           ))}
         </div>
@@ -201,6 +218,12 @@ export default function Trending() {
           <p className="text-slate-500 font-bold">ไม่มีโพสต์อื่นเพิ่มเติมในระดับชั้นนี้</p>
         </div>
       )}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+        className="mt-10"
+      />
     </div>
   );
 }
