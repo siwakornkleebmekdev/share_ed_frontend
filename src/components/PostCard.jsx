@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { postService } from '../services/post.service';
 import { profileService } from '../services/profile.service';
 import useAuthStore from '../store/authStore';
+import useBookmarkStatusStore from '../store/bookmarkStatusStore';
 import useHeroThemeStore from '../store/heroThemeStore';
 import { getGlassColor, rgbToRgba } from '../utils/colorUtils';
 import AvatarWithFrame from './profile/AvatarWithFrame';
@@ -35,15 +36,37 @@ export default function PostCard({ post, viewMode, rank = null, dark = false, on
   const [fetchedAuthorProfile, setFetchedAuthorProfile] = useState(null);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const user = useAuthStore((state) => state.user);
+  const currentUserId = user?.id || user?.user_id;
+  const bookmarkOwnerId = useBookmarkStatusStore((state) => state.ownerId);
+  const bookmarkLoaded = useBookmarkStatusStore((state) => state.loaded);
+  const savedBookmark = useBookmarkStatusStore((state) => state.ids.has(String(post.id)));
+  const ensureBookmarksLoaded = useBookmarkStatusStore((state) => state.ensureLoaded);
+  const setStoredBookmark = useBookmarkStatusStore((state) => state.setBookmarked);
   const navigate = useNavigate();
   const displayTitle = String(post.title ?? '').trim();
   const displaySummary = String(post.description ?? post.summary ?? '').trim();
 
   useEffect(() => {
     setIsLiked(Boolean(post.isLiked || post.is_liked));
-    setIsBookmarked(Boolean(post.isBookmarked || post.is_bookmarked));
     setLikesCount(post.likes);
-  }, [post.id, post.isLiked, post.is_liked, post.isBookmarked, post.is_bookmarked, post.likes]);
+  }, [post.id, post.isLiked, post.is_liked, post.likes]);
+
+  useEffect(() => {
+    setIsBookmarked(Boolean(post.isBookmarked || post.is_bookmarked));
+  }, [post.id, post.isBookmarked, post.is_bookmarked]);
+
+  useEffect(() => {
+    if (isAuthenticated && currentUserId) ensureBookmarksLoaded();
+    else setIsBookmarked(false);
+  }, [isAuthenticated, currentUserId, ensureBookmarksLoaded]);
+
+  useEffect(() => {
+    if (isAuthenticated && bookmarkLoaded && bookmarkOwnerId === currentUserId) {
+      setIsBookmarked(savedBookmark);
+    } else if (!isAuthenticated || bookmarkOwnerId !== currentUserId) {
+      setIsBookmarked(false);
+    }
+  }, [isAuthenticated, currentUserId, bookmarkOwnerId, bookmarkLoaded, savedBookmark]);
   // `dark` cards sit on a page with a full-bleed hero background (Profile) —
   // tint their glass to match that background's color instead of a flat
   // neutral overlay.
@@ -172,7 +195,10 @@ export default function PostCard({ post, viewMode, rank = null, dark = false, on
 
     try {
       setIsBookmarking(true);
+      const requestUserId = currentUserId;
       const response = await postService.bookmarkPost(post.id);
+      const activeUser = useAuthStore.getState().user;
+      if ((activeUser?.id || activeUser?.user_id) !== requestUserId) return;
       const resData = response?.data || response;
       const newIsBookmarked = resData?.isBookmarked !== undefined 
         ? resData.isBookmarked 
@@ -181,6 +207,7 @@ export default function PostCard({ post, viewMode, rank = null, dark = false, on
           : (resData?.bookmarked !== undefined ? resData.bookmarked : !isBookmarked));
 
       setIsBookmarked(newIsBookmarked);
+      setStoredBookmark(post.id, newIsBookmarked);
       onBookmarkChange?.(post.id, newIsBookmarked);
       if (newIsBookmarked) {
         toast('เพิ่มบุ๊คมาร์กเรียบร้อย', { icon: <Bookmark className="h-5 w-5 text-amber-500 fill-amber-500" /> });

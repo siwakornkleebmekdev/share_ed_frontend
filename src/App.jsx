@@ -9,6 +9,7 @@ import AdminLayout from "./layouts/AdminLayout";
 import { authService } from "./services/auth.service";
 import { supabase } from "./utils/supabase";
 import { handleTokenExpiration } from "./utils/api";
+import useBookmarkStatusStore from "./store/bookmarkStatusStore";
 
 const LandingPage = lazy(() => import("./pages/LandingPage"));
 const Home = lazy(() => import("./pages/Home"));
@@ -197,20 +198,8 @@ function App() {
       setRoleLoading(false);
     };
 
-    // Initial check of Supabase session
-    supabase.auth
-      .getSession()
-      .then(({ data: { session } }) => {
-        handleSession(session);
-      })
-      .catch(() => {
-        sessionVersion.current += 1;
-        logoutAction();
-        setInitializing(false);
-        setRoleLoading(false);
-      });
-
-    // Listen to Supabase Auth state changes
+    // INITIAL_SESSION already supplies the persisted session. A separate
+    // getSession() here would start a second /auth/me request on page load.
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
@@ -218,12 +207,19 @@ function App() {
         sessionVersion.current += 1;
         const wasAuthenticated = useAuthStore.getState().isAuthenticated;
         const isManual = typeof sessionStorage !== "undefined" && sessionStorage.getItem("manual_logout");
+        useBookmarkStatusStore.getState().clear();
         logoutAction();
         setInitializing(false);
         setRoleLoading(false);
         if (wasAuthenticated && !isManual) {
           handleTokenExpiration();
         }
+      } else if (event === "INITIAL_SESSION" && !session) {
+        sessionVersion.current += 1;
+        useBookmarkStatusStore.getState().clear();
+        logoutAction();
+        setInitializing(false);
+        setRoleLoading(false);
       } else if (session) {
         if (typeof sessionStorage !== "undefined") {
           sessionStorage.removeItem("manual_logout");
@@ -236,7 +232,10 @@ function App() {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      sessionVersion.current += 1;
+      subscription.unsubscribe();
+    };
   }, [loginAction, logoutAction, setInitializing, setRoleLoading]);
 
   // เชื่อมต่อ Socket.IO เมื่อ login และตัดการเชื่อมต่อเมื่อ logout

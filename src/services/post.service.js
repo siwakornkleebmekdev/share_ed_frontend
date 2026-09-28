@@ -95,8 +95,7 @@ export const postService = {
       if (hasExplicitPagination) {
         const response = await api.get('/posts', { params, requiresAuth: false });
         if (!response.data.success) return [];
-        const posts = response.data.data.map(formatPostData);
-        return await mergeBookmarkStatus(posts);
+        return response.data.data.map(formatPostData);
       }
 
       // Home, Explore, and Trending paginate/filter on the client. Fetch every
@@ -119,7 +118,7 @@ export const postService = {
         page += 1;
       }
 
-      return await mergeBookmarkStatus(allPosts.map(formatPostData));
+      return allPosts.map(formatPostData);
     } catch (error) {
       console.error('Error fetching all posts:', error);
       throw error;
@@ -357,7 +356,8 @@ export const postService = {
     if (new Set(allImages).size !== allImages.length) throw new Error('ไม่สามารถแนบไฟล์รูปภาพซ้ำได้');
     for (const file of allImages) {
       const maxBytes = 2 * 1024 * 1024;
-      if (!file.size || file.size > maxBytes) throw new Error('รูปภาพต้องมีขนาดไม่เกิน 2 MB');
+      if (!file.size) throw new Error('ไฟล์รูปภาพว่างเปล่า');
+      if (file.size > maxBytes) throw new Error('รูปภาพต้องมีขนาดไม่เกิน 2 MB');
       if (file.type && !['image/jpeg', 'image/png', 'image/jpg', 'image/webp'].includes(file.type)) {
         throw new Error('ชนิดไฟล์รูปภาพไม่รองรับ');
       }
@@ -587,40 +587,6 @@ export const postService = {
     }
   }
 };
-
-// Public post endpoints cannot know which user is viewing the list.  When a
-// user is signed in, merge their persisted bookmarks into the formatted posts
-// so a refresh/navigation does not reset every bookmark icon to false.
-async function mergeBookmarkStatus(posts) {
-  if (!posts.length) {
-    return posts;
-  }
-
-  try {
-    const { data, error } = await supabase.auth.getSession();
-    if (error || !data?.session) return posts;
-
-    const response = await api.get('/bookmarks');
-    const bookmarks = response.data?.success && Array.isArray(response.data?.data)
-      ? response.data.data
-      : [];
-    const bookmarkedIds = new Set(
-      bookmarks
-        .map(bookmark => bookmark.post_id || bookmark.postId || bookmark.post?.id)
-        .filter(Boolean)
-        .map(String)
-    );
-
-    return posts.map(post => ({
-      ...post,
-      isBookmarked: bookmarkedIds.has(String(post.id)),
-    }));
-  } catch (error) {
-    // The post list should still render if bookmark status cannot be loaded.
-    console.error('Error merging bookmark status:', error);
-    return posts;
-  }
-}
 
 export const KNOWN_SUBJECTS = [
   'คณิตศาสตร์',

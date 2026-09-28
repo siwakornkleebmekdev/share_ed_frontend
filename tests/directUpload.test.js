@@ -16,15 +16,16 @@ function config(type) {
   };
 }
 
-test('post files request signatures once and upload with a maximum concurrency of four', async () => {
+test('post images upload with four workers while PDF uses Supabase Storage', async () => {
   const originalPost = api.post;
   const originalFetch = globalThis.fetch;
+  const originalPdfUpload = postService.uploadPdfToSupabase;
   try {
     let signatureCalls = 0;
     api.post = async (url, body) => {
       signatureCalls++;
       assert.equal(url, '/posts/upload-signatures');
-      assert.deepEqual(body, { types: ['cover', 'pdf', 'media'] });
+      assert.deepEqual(body, { types: ['cover', 'media'] });
       return {
         data: {
           success: true,
@@ -41,6 +42,13 @@ test('post files request signatures once and upload with a maximum concurrency o
     let maximumActive = 0;
     let uploadNumber = 0;
     const sentForms = [];
+    let pdfCalls = 0;
+    postService.uploadPdfToSupabase = async (file, options) => {
+      pdfCalls++;
+      assert.equal(file.name, 'lesson.pdf');
+      assert.equal(options.sessionId, 'session-123');
+      return { path: 'posts/lesson.pdf' };
+    };
     globalThis.fetch = async (url, options) => {
       active++;
       maximumActive = Math.max(maximumActive, active);
@@ -48,8 +56,8 @@ test('post files request signatures once and upload with a maximum concurrency o
       const current = uploadNumber++;
       await new Promise(resolve => setTimeout(resolve, 10));
       active--;
-      const resourceType = url.endsWith('/pdf') ? 'raw' : 'image';
-      const format = resourceType === 'raw' ? 'pdf' : 'png';
+      const resourceType = 'image';
+      const format = 'png';
       return {
         ok: true,
         json: async () => ({
@@ -66,14 +74,16 @@ test('post files request signatures once and upload with a maximum concurrency o
 
     const result = await postService.uploadPostFilesDirect({
       coverImage: new Blob(['cover']),
-      pdfFile: new Blob(['pdf']),
+      pdfFile: new File(['%PDF-1.4'], 'lesson.pdf', { type: 'application/pdf' }),
       images: [new Blob(['1']), new Blob(['2']), new Blob(['3']), new Blob(['4'])],
     });
 
     assert.equal(signatureCalls, 1);
-    assert.equal(uploadNumber, 6);
+    assert.equal(uploadNumber, 5);
     assert.equal(maximumActive, 4);
-    assert.equal(result.mediaUploads.length, 5);
+    assert.equal(result.mediaUploads.length, 4);
+    assert.equal(pdfCalls, 1);
+    assert.deepEqual(result.pdfUpload, { path: 'posts/lesson.pdf' });
     assert.equal(result.coverUpload.resource_type, 'image');
     assert.equal(result.uploadSessionId, 'session-123');
     assert.equal(sentForms[0].get('api_key'), 'test-key');
@@ -82,6 +92,7 @@ test('post files request signatures once and upload with a maximum concurrency o
   } finally {
     api.post = originalPost;
     globalThis.fetch = originalFetch;
+    postService.uploadPdfToSupabase = originalPdfUpload;
   }
 });
 
@@ -161,7 +172,7 @@ test('invalid files are rejected before requesting upload signatures', async () 
   try {
     const cover=new Blob(['cover'],{type:'image/png'});
     await assert.rejects(postService.uploadPostFilesDirect({coverImage:cover,images:Array.from({length:16},()=>new Blob(['x']))}),/15/);
-    await assert.rejects(postService.uploadPostFilesDirect({coverImage:new Blob([])}),/ไฟล์ว่าง/);
+    await assert.rejects(postService.uploadPostFilesDirect({coverImage:new Blob([])}),/ว่างเปล่า/);
     await assert.rejects(postService.uploadPostFilesDirect({coverImage:new Blob(['x'],{type:'text/html'})}),/ชนิดไฟล์/);
     await assert.rejects(postService.uploadPostFilesDirect({coverImage:cover,images:[cover]}),/ซ้ำ/);
     await assert.rejects(postService.uploadPostFilesDirect({coverImage:new Blob([new Uint8Array(2*1024*1024+1)])}),/ขนาด/);

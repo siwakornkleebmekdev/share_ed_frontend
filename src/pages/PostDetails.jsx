@@ -5,6 +5,7 @@ import { postService } from '@/services/post.service';
 import { profileService } from '@/services/profile.service';
 import { moderationService } from '@/services/moderation.service';
 import useAuthStore from '@/store/authStore';
+import useBookmarkStatusStore from '@/store/bookmarkStatusStore';
 import useAchievementStore from '@/store/achievementStore';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
@@ -89,6 +90,7 @@ export default function PostDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuthStore();
+  const setStoredBookmark = useBookmarkStatusStore((state) => state.setBookmarked);
   const { milestones, fetchMilestones } = useAchievementStore();
   const [isLiked, setIsLiked] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
@@ -445,7 +447,10 @@ export default function PostDetails() {
     if (isBookmarking || !post) return;
     try {
       setIsBookmarking(true);
+      const requestUserId = user?.id || user?.user_id;
       const response = await postService.bookmarkPost(post.id);
+      const activeUser = useAuthStore.getState().user;
+      if ((activeUser?.id || activeUser?.user_id) !== requestUserId) return;
       const resData = response?.data || response;
       const newIsBookmarked = resData?.isBookmarked !== undefined
         ? resData.isBookmarked
@@ -454,6 +459,7 @@ export default function PostDetails() {
           : (resData?.bookmarked !== undefined ? resData.bookmarked : !isBookmarked));
 
       setIsBookmarked(newIsBookmarked);
+      setStoredBookmark(post.id, newIsBookmarked);
       if (newIsBookmarked) {
         toast('เพิ่มบุ๊คมาร์กเรียบร้อย', { icon: <Bookmark className="h-5 w-5 text-amber-500 fill-amber-500" /> });
       } else {
