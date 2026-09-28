@@ -32,6 +32,8 @@ import { useUploadWorkspace } from '@/hooks/useUploadWorkspace';
 import {
   getPostImageAccept,
   validateImageFile,
+  validateSupportingImageFile,
+  SUPPORTING_IMAGE_ACCEPT,
   validatePdfFile,
   translateUploadError,
   formatFileSize,
@@ -321,7 +323,7 @@ export default function EditPost() {
         break;
       }
 
-      const validation = validateImageFile(file, false, { allowGif: canUploadGif });
+      const validation = validateSupportingImageFile(file);
       if (!validation.valid) {
         toast.error(validation.error);
         continue;
@@ -1378,7 +1380,7 @@ export default function EditPost() {
                         test-data="edit-supporting-images-file-input"
                         type="file"
                         className="hidden"
-                        accept={postImageAccept}
+                        accept={SUPPORTING_IMAGE_ACCEPT}
                         multiple
                         onChange={(e) => {
                           const availableSlots = Math.max(
@@ -1386,7 +1388,12 @@ export default function EditPost() {
                             5 - existingImages.length - workspace.imageFileItems.length
                           );
                           const selectedFiles = Array.from(e.target.files || []);
-                          workspace.addMediaFiles(selectedFiles.slice(0, availableSlots));
+                          const validFiles = selectedFiles.slice(0, availableSlots).filter((file) => {
+                            const validation = validateSupportingImageFile(file);
+                            if (!validation.valid) toast.error(validation.error);
+                            return validation.valid;
+                          });
+                          workspace.addMediaFiles(validFiles);
                           if (selectedFiles.length > availableSlots) {
                             toast.error('อัปโหลดรูปภาพประกอบได้สูงสุด 5 รูป ระบบนำรูปส่วนเกินออกแล้ว');
                           }
@@ -1473,7 +1480,7 @@ export default function EditPost() {
                         test-data="edit-supporting-images-file-input"
                         type="file"
                         className="hidden"
-                        accept={postImageAccept}
+                        accept={SUPPORTING_IMAGE_ACCEPT}
                         multiple
                         onChange={handleImagesUploadLegacy}
                         disabled={existingImages.length + images.length >= 5}

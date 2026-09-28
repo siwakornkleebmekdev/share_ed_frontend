@@ -14,6 +14,7 @@ export const GIF_IMAGE_MIME_TYPE = 'image/gif';
 export const GIF_IMAGE_EXTENSION = 'gif';
 export const WEBP_IMAGE_MIME_TYPE = 'image/webp';
 export const WEBP_IMAGE_EXTENSION = 'webp';
+export const SUPPORTING_IMAGE_ACCEPT = '.jpg,.jpeg,.png,image/jpeg,image/png';
 
 export function getPostImageAccept({ allowGif = false } = {}) {
   return `.${[
@@ -203,6 +204,27 @@ export function validateImageFile(file, isCover = false, { allowGif = false } = 
     return {
       valid: false,
       error: isCover ? 'รูปหน้าปกต้องมีขนาดไม่เกิน 2 MB' : 'รูปภาพประกอบต้องมีขนาดไม่เกิน 2 MB',
+      code: 'INVALID_IMAGE',
+    };
+  }
+
+  return { valid: true };
+}
+
+/** Validates post supporting images, which intentionally only allow JPG/JPEG and PNG. */
+export function validateSupportingImageFile(file) {
+  const validation = validateImageFile(file, false);
+  if (!validation.valid) return validation;
+
+  const extension = (file.name || '').split('.').pop()?.toLowerCase();
+  const mimeType = (file.type || '').toLowerCase();
+  const allowedExtensions = ['jpg', 'jpeg', 'png'];
+  const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+
+  if (!allowedExtensions.includes(extension) || (mimeType && !allowedMimeTypes.includes(mimeType))) {
+    return {
+      valid: false,
+      error: 'รูปภาพประกอบต้องเป็นไฟล์ JPG, JPEG หรือ PNG เท่านั้น',
       code: 'INVALID_IMAGE',
     };
   }
