@@ -53,7 +53,7 @@ export default function SettingsSidebar() {
     }`;
 
   return (
-    <aside className="w-full shrink-0 bg-white border-b border-slate-100 flex flex-col lg:sticky lg:top-0 lg:h-screen lg:w-72 lg:border-b-0 lg:border-r">
+    <aside className="flex w-full shrink-0 flex-col border-b border-slate-100 bg-white lg:h-dvh lg:w-72 lg:self-start lg:overflow-hidden lg:border-b-0 lg:border-r">
       <div className="px-4 sm:px-6 h-16 lg:h-20 flex items-center gap-2 border-b border-slate-100 shrink-0">
         <img src="/sharelogo.png" alt="SHARE-ED" className="h-7 w-7 shrink-0 object-contain" />
         <span className="font-bold tracking-tight text-lg text-slate-800">

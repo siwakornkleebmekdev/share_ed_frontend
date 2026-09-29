@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Upload,
   Image as ImageIcon,
@@ -61,6 +61,7 @@ export default function SettingsProfile() {
   const [usernameError, setUsernameError] = useState("");
   const [tagInput, setTagInput] = useState("");
   const [isFrameModalOpen, setIsFrameModalOpen] = useState(false);
+  const usernameEditRef = useRef({ userId: null, isDirty: false });
 
   const [formData, setFormData] = useState({
     username: "",
@@ -172,13 +173,23 @@ export default function SettingsProfile() {
   useEffect(() => {
     if (!user) return;
     const meta = user.user_metadata || {};
-    setFormData({
-      username: user.username || user.display_name || user.name || "",
+    const nextUserId = String(user.id || user.user_id || "");
+    const isSameUser = usernameEditRef.current.userId === nextUserId;
+    const preserveEditedUsername = isSameUser && usernameEditRef.current.isDirty;
+
+    setFormData((currentFormData) => ({
+      username: preserveEditedUsername
+        ? currentFormData.username
+        : user.username || user.display_name || user.name || "",
       bio: user.bio || "",
       education_level: user.education_level || "HIGH_SCHOOL",
       // Preserve appearance settings while standardizing avatar shape.
       theme_settings: { ...DEFAULT_THEME, ...(meta.theme_settings || {}), avatarShape: 'circle' },
-    });
+    }));
+
+    if (!isSameUser) {
+      usernameEditRef.current = { userId: nextUserId, isDirty: false };
+    }
   }, [user]);
 
   const handleFileChange = (e, type) => {
@@ -292,6 +303,12 @@ export default function SettingsProfile() {
         } catch (sbErr) {
           console.warn("Supabase updateUser metadata notice:", sbErr);
         }
+
+        usernameEditRef.current.isDirty = false;
+        setFormData((currentFormData) => ({
+          ...currentFormData,
+          username: trimmedUsername,
+        }));
 
         login({
           ...user,
@@ -580,7 +597,11 @@ export default function SettingsProfile() {
                       setUsernameError(USERNAME_LENGTH_ERROR);
                       return;
                     }
-                    setFormData({ ...formData, username: nextUsername });
+                    usernameEditRef.current.isDirty = true;
+                    setFormData((currentFormData) => ({
+                      ...currentFormData,
+                      username: nextUsername,
+                    }));
                     setUsernameError("");
                   }}
                   aria-invalid={Boolean(usernameError)}
