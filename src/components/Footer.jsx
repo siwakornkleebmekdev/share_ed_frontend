@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { BookOpen, MessageCircle, Info, Shield, Users } from 'lucide-react';
+import { MessageCircle, Info, Shield, Users } from 'lucide-react';
 import useHeroThemeStore from "@/store/heroThemeStore";
 import { getGlassColor, rgbToRgba } from "@/utils/colorUtils";
 
@@ -26,7 +26,7 @@ export default function Footer() {
           {/* Logo & Copyright */}
           <div className="flex flex-col items-center md:items-start text-center md:text-left">
             <div className="flex items-center gap-2 mb-2">
-              <BookOpen className={`h-8 w-8 ${isDarkHero ? 'text-white' : 'text-primary'}`} />
+              <img src="/sharelogo.png" alt="SHARE-ED" className="h-8 w-8 object-contain" />
               <span className={`font-bold text-2xl tracking-tight ${titleClass}`}>SHARE-ED</span>
             </div>
             <p className={`text-sm font-medium ${textClass}`}>พื้นที่สำหรับแบ่งปันความรู้ดีๆ <br /> เพื่อการศึกษาไทย</p>

@@ -1,6 +1,5 @@
 import { NavLink, Link, useNavigate } from "react-router";
 import {
-  BookOpen,
   LayoutDashboard,
   Users,
   Award,
@@ -66,7 +65,7 @@ export default function AdminSidebar() {
   return (
     <aside className="admin-sidebar">
       <div className="admin-sidebar-brand">
-        <BookOpen className="text-primary h-7 w-7" />
+        <img src="/sharelogo.png" alt="SHARE-ED" className="h-7 w-7 shrink-0 object-contain" />
         <span className="font-bold tracking-tight text-lg text-slate-800">
           SHARE-ED
         </span>

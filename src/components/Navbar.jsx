@@ -16,6 +16,7 @@ import {
   Bookmark,
   UserPlus,
   Newspaper,
+  BookOpen,
   X,
   Menu,
 } from "lucide-react";
@@ -189,7 +190,7 @@ export default function Navbar() {
           <Link to="/" className="flex min-w-0 items-center gap-1.5 group flex-shrink sm:gap-2">
             <img
               src="/sharelogo.png"
-              alt=""
+              alt="SHARE-ED"
               className="h-7 w-7 shrink-0 object-contain transition-transform duration-300 group-hover:scale-110 sm:h-8 sm:w-8"
             />
             <span
