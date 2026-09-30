@@ -394,7 +394,12 @@ function formatPosts(data) {
       subject: resolveCategoryName(post),
       views: formatNumber(post.view_count),
       likes: post._count?.likes || (typeof post.likes === 'number' ? post.likes : 0),
-      isLiked: Boolean(post.is_liked || post.isLiked || post.has_liked),
+      isLiked: Boolean(
+        post.is_liked ||
+        post.isLiked ||
+        post.has_liked ||
+        (Array.isArray(post.likes) && post.likes.length > 0)
+      ),
       isBookmarked: Boolean(post.is_bookmarked || post.isBookmarked || post.has_bookmarked),
       image:
         post.cover_image ||
