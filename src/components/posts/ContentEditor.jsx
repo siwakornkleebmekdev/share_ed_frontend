@@ -10,7 +10,7 @@ const baseImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
 const editorFormats = [
   'header', 'bold', 'italic', 'underline', 'strike',
   'color', 'background', 'list', 'indent', 'align',
-  'blockquote', 'link', 'image',
+  'blockquote', 'link', 'image', 'width',
 ];
 const Quill = ReactQuill.Quill;
 const BaseImage = Quill.import('formats/image');
@@ -46,10 +46,6 @@ class AlignedImage extends BaseImage {
 }
 
 Quill.register(AlignedImage, true);
-const WidthStyle = Quill.import('attributors/style/width');
-if (WidthStyle) {
-  Quill.register(WidthStyle, true);
-}
 
 export default function ContentEditor({ value, onChange, error, onUploadingChange, allowGif = false }) {
   const quillRef = useRef(null);

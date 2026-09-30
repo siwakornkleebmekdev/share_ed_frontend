@@ -5,7 +5,7 @@ import Swal from "sweetalert2";
 import {
   achievementService,
   getMilestoneTypeInfo,
-  MILESTONE_TYPES,
+  ADMIN_MILESTONE_TYPES,
 } from "@/services/achievement.service";
 import AchievementFormModal from "@/components/admin/AchievementFormModal";
 import useAchievementStore from "@/store/achievementStore";
@@ -143,7 +143,7 @@ export default function AchievementManagement() {
           className="admin-select"
         >
           <option value="ALL">ทุกประเภทภารกิจ</option>
-          {MILESTONE_TYPES.map((type) => (
+          {ADMIN_MILESTONE_TYPES.map((type) => (
             <option key={type.key} value={type.key}>
               {type.label}
             </option>

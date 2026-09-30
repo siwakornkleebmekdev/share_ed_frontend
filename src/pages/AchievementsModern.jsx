@@ -99,6 +99,7 @@ function AchievementCard({
   const calculatedProgress = targetValue > 0 ? Math.min(100, (currentValue / targetValue) * 100) : 0;
   const progress = isClaimed || isReady ? 100 : calculatedProgress;
   const isFrameReward = milestone.reward?.type === 'FRAME';
+  const rewardDescription = String(milestone.reward?.description || '').trim();
   const frameId = milestone.reward_item_id || milestone.reward_item?.id || milestone.reward?.id;
   const isEquipped = isClaimed && isFrameReward && currentEquippedFrameId === frameId;
   const { targetRef: previewRef, shouldLoad: shouldLoadPreview } = useLoadWhenVisible();
@@ -194,6 +195,13 @@ function AchievementCard({
             <p className="text-xs font-semibold text-slate-400">รางวัล</p>
             <p className="truncate font-bold text-slate-700">{milestone.reward?.name || 'รางวัลความสำเร็จ'}</p>
           </div>
+        </div>
+
+        <div className="mt-3 rounded-2xl border border-blue-100 bg-blue-50/70 px-4 py-3">
+          <p className="text-xs font-bold text-blue-700">คำอธิบายรางวัล</p>
+          <p className="mt-1 line-clamp-3 text-sm leading-6 text-slate-600">
+            {rewardDescription || 'ไม่มีคำอธิบายรางวัล'}
+          </p>
         </div>
 
         <div className="mt-auto pt-5">
