@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { KeyRound } from "lucide-react";
+import { CheckCircle2, KeyRound, XCircle } from "lucide-react";
 import toast from "react-hot-toast";
 import { authService } from "@/services/auth.service";
 import PasswordVisibilityButton from "@/components/forms/PasswordVisibilityButton";
@@ -21,6 +21,28 @@ export default function SettingsAccount() {
     password: false,
     confirmPassword: false,
   });
+  const passwordRequirements = [
+    {
+      key: "length",
+      label: "มีความยาวอย่างน้อย 8 ตัวอักษร",
+      passed: passwords.password.length >= 8,
+    },
+    {
+      key: "letter",
+      label: "มีตัวอักษรภาษาอังกฤษอย่างน้อย 1 ตัว",
+      passed: /[A-Za-z]/.test(passwords.password),
+    },
+    {
+      key: "number",
+      label: "มีตัวเลขอย่างน้อย 1 ตัว",
+      passed: /[0-9]/.test(passwords.password),
+    },
+    {
+      key: "allowed-characters",
+      label: "ใช้ได้เฉพาะ A-Z, a-z และ 0-9",
+      passed: passwords.password.length > 0 && /^[A-Za-z0-9]+$/.test(passwords.password),
+    },
+  ];
   const handleVerifyCurrentPassword = async () => {
     setPasswordError(null);
     setIsVerifyingPassword(true);
@@ -164,6 +186,7 @@ export default function SettingsAccount() {
               disabled={!isCurrentPasswordVerified}
               value={passwords.password}
               minLength={8}
+              maxLength={128}
               pattern="[A-Za-z0-9]+"
               title="อย่างน้อย 8 ตัวอักษร โดยใช้ตัวอักษรภาษาอังกฤษและตัวเลข"
               onChange={(e) => {
@@ -182,9 +205,23 @@ export default function SettingsAccount() {
               onToggle={() => setVisiblePasswords(current => ({ ...current, password: !current.password }))}
             />
             </div>
-            <p className="text-xs text-slate-400 mt-2">
-              ใช้ตัวอักษรภาษาอังกฤษและตัวเลข อย่างน้อยอย่างละ 1 ตัว
-            </p>
+            <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs">
+              <p className="font-medium text-slate-700">เงื่อนไขการตั้งรหัสผ่าน</p>
+              <ul className="mt-2 space-y-1.5" aria-live="polite">
+                {passwordRequirements.map((requirement) => {
+                  const RequirementIcon = requirement.passed ? CheckCircle2 : XCircle;
+                  return (
+                    <li
+                      key={requirement.key}
+                      className={`flex items-center gap-2 font-medium transition-colors ${requirement.passed ? "text-emerald-600" : "text-red-500"}`}
+                    >
+                      <RequirementIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      <span>{requirement.label}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
           </div>
           <div>
             <label className="block text-sm font-semibold text-slate-600 mb-2">
@@ -195,6 +232,7 @@ export default function SettingsAccount() {
               type={visiblePasswords.confirmPassword ? "text" : "password"}
               disabled={!isCurrentPasswordVerified}
               value={passwords.confirmPassword}
+              maxLength={128}
               onChange={(e) => {
                 setPasswords((prev) => ({
                   ...prev,
