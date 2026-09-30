@@ -700,11 +700,7 @@ function ProfileContent() {
 
             <div className="w-full flex-1 pb-2">
               <h1
-                className="text-3xl font-extrabold text-black"
-                style={{
-                  color:
-                    theme.nameColor || "#000000",
-                }}
+                className={`text-3xl font-extrabold ${headingClass}`}
               >
                 {displayName}
               </h1>
@@ -879,12 +875,7 @@ function ProfileContent() {
             <h3 className={`font-bold mb-2 ${headingClass}`}>
               เกี่ยวกับฉัน (Bio)
             </h3>
-            <p
-              className="leading-relaxed max-w-3xl"
-              style={{
-                color: theme.textColor || (isDarkHero ? "#cbd5e1" : "#475569"),
-              }}
-            >
+            <p className={`leading-relaxed max-w-3xl ${mutedTextClass}`}>
               {displayBio}
             </p>
           </div>
