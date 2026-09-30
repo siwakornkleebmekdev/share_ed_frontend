@@ -118,6 +118,7 @@ export const profileService = {
                   id: inv.item.id,
                   type: inv.item.item_type,
                   name: inv.item.item_name,
+                  description: inv.item.description || inv.item.metadata?.description || "",
                   previewUrl: inv.item.image_url,
                 },
                 completedAt: inv.unlocked_at,
@@ -337,6 +338,7 @@ function mapMilestoneToAchievement(m) {
           id: rewardItemId,
           type: reward.item_type || reward.type,
           name: reward.item_name || reward.name,
+          description: reward.description || reward.item_description || reward.metadata?.description || "",
           previewUrl: reward.image_url || reward.previewUrl,
         }
       : null,

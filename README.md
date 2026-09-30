@@ -1,9 +1,13 @@
+<p align="right">
+  <strong>English</strong> | <a href="README.th.md">ไทย</a>
+</p>
+
 <div align="center">
   <img src="public/sharelogo.png" alt="SHARE-ED logo" width="140" />
 
   # SHARE-ED
 
-  **พื้นที่แบ่งปันความรู้ สื่อการเรียน และประสบการณ์สำหรับผู้เรียนทุกระดับ**
+  **A knowledge-sharing platform for learners at every level**
 
   [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](package.json)
   [![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)](package.json)
@@ -11,31 +15,31 @@
   [![Zustand](https://img.shields.io/badge/State-Zustand-433E38)](src/store)
 </div>
 
-SHARE-ED คือเว็บแอปพลิเคชันชุมชนการเรียนรู้สำหรับเผยแพร่ ค้นหา และแลกเปลี่ยนสื่อการศึกษา ผู้ใช้สามารถสร้างโพสต์พร้อมรูปภาพหรือ PDF ติดตามผู้สร้างเนื้อหา โต้ตอบกับโพสต์ และสะสมความสำเร็จได้ภายในแพลตฟอร์มเดียว
+SHARE-ED is a learning community web application for publishing, discovering, and exchanging educational resources. Users can create posts with images or PDF files, follow creators, interact with content, and unlock achievements in one platform.
 
-## สารบัญ
+## Table of Contents
 
-- [ภาพตัวอย่างโปรเจกต์](#ภาพตัวอย่างโปรเจกต์)
-- [SHARE-ED ทำอะไรได้บ้าง](#share-ed-ทำอะไรได้บ้าง)
-- [เริ่มต้นใช้งาน](#เริ่มต้นใช้งาน)
-- [โครงสร้างโปรเจกต์](#โครงสร้างโปรเจกต์)
+- [Project Preview](#project-preview)
+- [What Can SHARE-ED Do?](#what-can-share-ed-do)
+- [Getting Started](#getting-started)
+- [Project Structure](#project-structure)
 - [Tech Stack](#tech-stack)
 - [Contributors](#contributors)
 - [Commit Distribution](#commit-distribution)
 - [License](#license)
 
-## ภาพตัวอย่างโปรเจกต์
+## Project Preview
 
-### หน้า Home
+### Home Page
 
 <p align="center">
-  <img src="public/screenshots/home-page.png" alt="หน้า Home ของ SHARE-ED" width="100%" />
+  <img src="public/screenshots/home-page.png" alt="SHARE-ED home page" width="100%" />
 </p>
 
-### หน้า Login
+### Login Page
 
 <p align="center">
-  <img src="public/screenshots/login-page.png" alt="หน้า Login ของ SHARE-ED" width="100%" />
+  <img src="public/screenshots/login-page.png" alt="SHARE-ED login page" width="100%" />
 </p>
 
 ### Responsive Preview
@@ -47,54 +51,54 @@ SHARE-ED คือเว็บแอปพลิเคชันชุมชน�
   </tr>
   <tr>
     <td align="center">
-      <img src="public/screenshots/home-mobile-fixed.png" alt="หน้า Home ของ SHARE-ED บนมือถือ" width="100%" />
+      <img src="public/screenshots/home-mobile-fixed.png" alt="SHARE-ED home page on mobile" width="100%" />
     </td>
     <td align="center">
-      <img src="public/screenshots/login-mobile.png" alt="หน้า Login ของ SHARE-ED บนมือถือ" width="100%" />
+      <img src="public/screenshots/login-mobile.png" alt="SHARE-ED login page on mobile" width="100%" />
     </td>
   </tr>
 </table>
 
-## SHARE-ED ทำอะไรได้บ้าง
+## What Can SHARE-ED Do?
 
-### ระบบสมาชิกและโปรไฟล์
+### Accounts and Profiles
 
-- สมัครสมาชิก เข้าสู่ระบบ ยืนยันอีเมล และรีเซ็ตรหัสผ่านผ่าน Supabase Auth
-- แก้ไขข้อมูลส่วนตัว รูปโปรไฟล์ ธีมพื้นหลัง และกรอบตกแต่ง
-- เพิ่มวิดเจ็ตลิงก์ภายนอกลงในหน้าโปรไฟล์
-- ติดตามผู้ใช้อื่นและดูรายชื่อผู้ติดตาม
+- Register, sign in, verify email addresses, and reset passwords with Supabase Auth
+- Edit personal information, profile pictures, background themes, and profile frames
+- Add external-link widgets to user profiles
+- Follow other users and view follower lists
 
-### ระบบเนื้อหา
+### Content
 
-- สร้าง แก้ไข และบันทึกโพสต์เป็นฉบับร่าง
-- เขียนเนื้อหาด้วย Rich Text Editor
-- แนบหน้าปก รูปภาพ และไฟล์ PDF
-- ค้นหาและกรองโพสต์ตามระดับการศึกษา หมวดหมู่ และแท็ก
-- ดูโพสต์ล่าสุดในหน้า Home และโพสต์ยอดนิยมในหน้า Trending
+- Create, edit, publish, and save posts as drafts
+- Write content with a rich-text editor
+- Attach cover images, additional images, and PDF files
+- Search and filter posts by education level, category, and tag
+- Browse recent posts on Home and popular posts on Trending
 
-### Social และ Realtime
+### Social and Realtime
 
-- กดถูกใจ บันทึกโพสต์ และแสดงความคิดเห็น
-- รายงานเนื้อหาที่ไม่เหมาะสม
-- รับการแจ้งเตือนผ่าน Socket.IO แบบ realtime
-- ติดตามความสำเร็จ รับรางวัล และเลือกใช้กรอบโปรไฟล์
+- Like, bookmark, and comment on posts
+- Report inappropriate content
+- Receive realtime notifications through Socket.IO
+- Track achievements, claim rewards, and equip profile frames
 
-### ระบบผู้ดูแล
+### Administration
 
-- จัดการบัญชีและสิทธิ์ของผู้ใช้งาน
-- ตรวจสอบรายงาน ระงับ กู้คืน หรือลบโพสต์
-- จัดการ Achievement, milestone และรายการรางวัล
+- Manage user accounts and access roles
+- Review reports and suspend, restore, or remove posts
+- Manage achievements, milestones, and rewards
 
-## เริ่มต้นใช้งาน
+## Getting Started
 
-### สิ่งที่ต้องมี
+### Prerequisites
 
-- [Node.js](https://nodejs.org/) `^20.19.0` หรือ `>=22.12.0`
+- [Node.js](https://nodejs.org/) `^20.19.0` or `>=22.12.0`
 - npm
-- SHARE-ED Backend API
-- โปรเจกต์ Supabase สำหรับ Authentication
+- A running SHARE-ED Backend API
+- A Supabase project for authentication
 
-### 1. ติดตั้ง Dependencies
+### 1. Install Dependencies
 
 ```bash
 git clone https://github.com/siwakornkleebmekdev/share_ed_frontend.git
@@ -102,9 +106,9 @@ cd share_ed_frontend
 npm install
 ```
 
-### 2. ตั้งค่า Environment Variables
+### 2. Configure Environment Variables
 
-สร้างไฟล์ `.env.local` ภายในโฟลเดอร์ `share_ed_frontend`:
+Create `.env.local` inside `share_ed_frontend`:
 
 ```dotenv
 VITE_API_BASE_URL=http://localhost:5000/api/v1
@@ -113,77 +117,77 @@ VITE_SUPABASE_ANON_KEY=YOUR_ANON_KEY
 VITE_DIRECT_UPLOAD_ENABLED=true
 ```
 
-| Variable | รายละเอียด |
+| Variable | Description |
 |---|---|
-| `VITE_API_BASE_URL` | Base URL ของ Backend REST API |
-| `VITE_SUPABASE_URL` | URL ของโปรเจกต์ Supabase |
-| `VITE_SUPABASE_ANON_KEY` | Public anonymous key ของ Supabase |
-| `VITE_DIRECT_UPLOAD_ENABLED` | เปิดการอัปโหลดไฟล์ตรงไปยัง Storage provider |
+| `VITE_API_BASE_URL` | Base URL of the Backend REST API |
+| `VITE_SUPABASE_URL` | Supabase project URL |
+| `VITE_SUPABASE_ANON_KEY` | Public anonymous key for Supabase |
+| `VITE_DIRECT_UPLOAD_ENABLED` | Enables direct uploads to the configured storage provider |
 
-### 3. เปิด Development Server
+### 3. Start the Development Server
 
 ```bash
 npm run dev
 ```
 
-เปิดเว็บไซต์ที่ `http://localhost:5173`
+Open `http://localhost:5173` in your browser.
 
-### คำสั่งที่ใช้บ่อย
+### Common Commands
 
-| คำสั่ง | รายละเอียด |
+| Command | Description |
 |---|---|
-| `npm run dev` | เปิด Vite development server |
-| `npm run build` | สร้าง production build ใน `dist/` |
-| `npm run lint` | ตรวจโค้ดด้วย Oxlint |
-| `npm run preview` | ทดลอง production build ในเครื่อง |
+| `npm run dev` | Starts the Vite development server |
+| `npm run build` | Creates a production build in `dist/` |
+| `npm run lint` | Checks the codebase with Oxlint |
+| `npm run preview` | Serves the production build locally |
 
-### รันด้วย Docker
+### Run with Docker
 
-คัดลอกไฟล์ environment ตัวอย่างและกำหนดค่าของโปรเจกต์ก่อน build:
+Copy the example environment file and configure the project before building:
 
 ```bash
 cp .env.example .env
 docker compose up --build -d
 ```
 
-สำหรับ PowerShell ใช้ `Copy-Item .env.example .env` แทนคำสั่ง `cp`
+On PowerShell, use `Copy-Item .env.example .env` instead of `cp`.
 
-เปิดเว็บไซต์ที่ `http://localhost:5173` และหยุดระบบด้วย:
+Open `http://localhost:5173`. Stop the container with:
 
 ```bash
 docker compose down
 ```
 
-หาก port `5173` ถูกใช้งานอยู่ สามารถกำหนด `FRONTEND_PORT` ในไฟล์ `.env` เป็น port อื่นได้
+If port `5173` is already in use, set `FRONTEND_PORT` to another port in `.env`.
 
-## โครงสร้างโปรเจกต์
+## Project Structure
 
 ```text
 share_ed_frontend/
-├── public/                       # Static assets และโลโก้
+├── public/                       # Static assets and branding
 ├── src/
-│   ├── assets/                   # รูปภาพและสื่อของ UI
+│   ├── assets/                   # Images and UI media
 │   ├── components/               # Reusable UI components
-│   │   ├── admin/                # Components สำหรับผู้ดูแลระบบ
-│   │   ├── posts/                # Editor และ upload workspace
-│   │   ├── profile/              # Components หน้าโปรไฟล์
-│   │   └── settings/             # Components หน้าตั้งค่า
-│   ├── constants/                # ค่าคงที่ของแอป
+│   │   ├── admin/                # Administration components
+│   │   ├── posts/                # Editor and upload workspace
+│   │   ├── profile/              # Profile components
+│   │   └── settings/             # Settings components
+│   ├── constants/                # Application constants
 │   ├── hooks/                    # Custom React hooks
-│   ├── layouts/                  # Main, Settings และ Admin layouts
+│   ├── layouts/                  # Main, Settings, and Admin layouts
 │   ├── pages/                    # Route-level pages
-│   │   ├── admin/                # หน้าจัดการระบบ
-│   │   └── settings/             # หน้าตั้งค่าผู้ใช้
+│   │   ├── admin/                # Administration pages
+│   │   └── settings/             # User settings pages
 │   ├── services/                 # API service layer
 │   ├── store/                    # Zustand stores
-│   ├── utils/                    # API, Socket, Storage และ helpers
-│   ├── App.jsx                   # Routes และ route guards
-│   ├── App.css                   # App-level styles
+│   ├── utils/                    # API, Socket, Storage, and helpers
+│   ├── App.jsx                   # Routes and route guards
+│   ├── App.css                   # Application-level styles
 │   ├── index.css                 # Global styles
 │   └── main.jsx                  # Application entry point
 ├── tests/                        # Frontend tests
 ├── index.html                    # HTML entry point
-├── package.json                  # Scripts และ dependencies
+├── package.json                  # Scripts and dependencies
 ├── tailwind.config.js            # Tailwind configuration
 ├── vercel.json                   # Vercel deployment configuration
 └── vite.config.js                # Vite configuration
@@ -193,12 +197,12 @@ share_ed_frontend/
 
 <p align="center">
   <img
-    src="https://skillicons.dev/icons?i=html,css,js,react,vite,tailwind,docker,git,github,vscode,vercel,npm&amp;theme=light&amp;perline=6"
-    alt="HTML, CSS, JavaScript, React, Vite, Tailwind CSS, Docker, Git, GitHub, Visual Studio Code, Vercel and npm"
+    src="https://skillicons.dev/icons?i=html,css,js,react,vite,tailwind,docker,git,github,githubactions,vscode,vercel,npm&amp;theme=light&amp;perline=7"
+    alt="HTML, CSS, JavaScript, React, Vite, Tailwind CSS, Docker, Git, GitHub, GitHub Actions, Visual Studio Code, Vercel and npm"
   />
 </p>
 
-| กลุ่ม | Technology |
+| Category | Technology |
 |---|---|
 | Core | React 19, React DOM 19, Vite 8 |
 | Routing | React Router 8 |
@@ -210,7 +214,7 @@ share_ed_frontend/
 | Editor | React Quill New |
 | Notifications | React Hot Toast, SweetAlert2 |
 | Code Quality | Oxlint |
-| Deployment | Vercel และ Docker Compose configuration |
+| Deployment | Vercel and Docker Compose configuration |
 
 ## Contributors
 
@@ -245,21 +249,21 @@ share_ed_frontend/
 
 ## Commit Distribution
 
-สถิติจาก Git history ของ Frontend ณ วันที่ 1 ตุลาคม 2026 โดยรวมชื่อและอีเมลที่เป็นบุคคลเดียวกัน
+Statistics from the Frontend Git history as of October 1, 2026. Multiple names and email addresses belonging to the same contributor are grouped together.
 
-| Contributor | Commits | สัดส่วน |
+| Contributor | Commits | Share |
 |---|---:|---:|
 | `siwakornkleebmekdev` / Siwakorn | **153** | 53.1% |
 | `kasuya21` / Thunva | **76** | 26.4% |
 | `Kittipong001` / Kittipong | **36** | 12.5% |
 | `eyejangg` | **23** | 8.0% |
-| **รวม** | **288** | **100%** |
+| **Total** | **288** | **100%** |
 
-> จำนวน commit อาจเปลี่ยนแปลงเมื่อมีการ merge, rebase หรือเพิ่ม commit ใหม่
+> Commit counts may change after new commits, merges, or rebases.
 
 ## License
 
-ขณะนี้ repository ยังไม่ได้ระบุ license สำหรับการนำโค้ดไปใช้ซ้ำหรือเผยแพร่ต่อ กรุณาติดต่อทีมพัฒนาก่อนนำไปใช้งานภายนอก
+This repository currently does not specify a license for reusing or redistributing the source code. Please contact the development team before using it outside this project.
 
 <div align="center">
   Made with 💙 by the SHARE-ED team

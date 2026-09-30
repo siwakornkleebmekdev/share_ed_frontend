@@ -45,15 +45,21 @@ export const MILESTONE_TYPES = [
   },
   {
     key: "LIKES_GIVEN",
-    label: "กดไลก์โพสต์ (Likes Given)",
-    shortLabel: "กดไลก์โพสต์",
-    achievementDescription: "จำนวนโพสต์ที่กดไลก์",
-    unit: "ไลก์",
-    description: "ระบบจะนับจำนวนโพสต์ที่สมาชิกกดไลก์อยู่ในปัจจุบัน",
+    label: "👍 กดถูกใจโพสต์ (Likes Given)",
+    shortLabel: "กดถูกใจโพสต์",
+    achievementDescription: "จำนวนโพสต์ที่กดถูกใจ",
+    unit: "ถูกใจ",
+    description: "ระบบจะนับจำนวนโพสต์ที่สมาชิกกดถูกใจอยู่ในปัจจุบัน",
     placeholder: "เช่น 20",
     color: "bg-pink-50 text-pink-700 border-pink-200",
   },
 ];
+
+const HIDDEN_ADMIN_MILESTONE_TYPES = new Set(["POSTS_CREATED", "COMMENTS_CREATED"]);
+
+export const ADMIN_MILESTONE_TYPES = MILESTONE_TYPES.filter(
+  (type) => !HIDDEN_ADMIN_MILESTONE_TYPES.has(type.key),
+);
 
 export const MILESTONE_TYPE_ALIASES = {
   LIKES_RECEIVED: "POST_LIKES",

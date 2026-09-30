@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import {
-  MILESTONE_TYPES,
+  ADMIN_MILESTONE_TYPES,
   MILESTONE_TYPE_MAP,
   getMilestoneTypeInfo,
 } from "@/services/achievement.service";
@@ -165,7 +165,7 @@ export default function AchievementFormModal({ isOpen, onClose, onConfirm }) {
                 onChange={(e) => setSelectedTypeKey(e.target.value)}
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary text-slate-800 font-semibold cursor-pointer"
               >
-                {MILESTONE_TYPES.map((t) => (
+                {ADMIN_MILESTONE_TYPES.map((t) => (
                   <option key={t.key} value={t.key}>
                     {t.label}
                   </option>
