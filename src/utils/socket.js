@@ -1,9 +1,9 @@
 import { io } from 'socket.io-client';
 import { supabase } from './supabase.js';
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || (import.meta.env.VITE_API_BASE_URL
+const SOCKET_URL = import.meta.env.VITE_API_BASE_URL
   ? import.meta.env.VITE_API_BASE_URL.replace(/\/api\/v1\/?$/, '')
-  : 'https://share-ed-backend-6jer.onrender.com');
+  : 'https://share-ed-backend-6jer.onrender.com';
 let socketInstance = null;
 let owner = null;
 const eventSubscribers = new Map();

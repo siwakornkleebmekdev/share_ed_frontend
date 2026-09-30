@@ -123,9 +123,9 @@ export default function Home() {
               แพลตฟอร์มการเรียนรู้รูปแบบใหม่
             </div>
 
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold text-slate-900 tracking-tight mb-6 leading-[1.08] animate-in fade-in slide-in-from-bottom-8 duration-700 delay-150">
-              ยินดีต้อนรับสู่ <br className="hidden lg:block" />
-              <span className="text-primary">SHARE-ED</span>
+            <h1 className="text-4xl min-[400px]:text-5xl sm:text-6xl lg:text-7xl font-extrabold text-slate-900 tracking-tight mb-6 leading-[1.08] animate-in fade-in slide-in-from-bottom-8 duration-700 delay-150">
+              ยินดีต้อนรับสู่ <br />
+              <span className="inline-block text-primary">SHARE-ED</span>
             </h1>
 
             <p className="mt-4 text-lg sm:text-xl text-slate-600 mb-8 leading-relaxed max-w-xl animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300">
