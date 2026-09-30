@@ -172,7 +172,9 @@ export default function Home() {
                   </div>
                   <div className="flex justify-between items-center pt-4 border-t border-slate-100">
                     <div className="flex items-center gap-3 text-sm text-slate-500 font-semibold">
-                      <span className="flex items-center gap-1 hover:text-primary transition-colors"><Heart className="h-4 w-4" /> {post.likes}</span>
+                      <span className={`flex items-center gap-1 transition-colors ${post.isLiked ? 'text-rose-500' : 'hover:text-rose-500'}`}>
+                        <Heart className={`h-4 w-4 ${post.isLiked ? 'fill-rose-500' : ''}`} /> {post.likes}
+                      </span>
                       <span className="flex items-center gap-1 hover:text-primary transition-colors"><Eye className="h-4 w-4" /> {post.views}</span>
                     </div>
                     <span className="text-xs text-slate-400 font-semibold">
