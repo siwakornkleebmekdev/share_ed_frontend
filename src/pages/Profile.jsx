@@ -933,7 +933,7 @@ function ProfileContent() {
                     ))
                   ) : (
                     <div
-                      className={`col-span-full py-10 text-center ${subTextClass}`}
+                      className={`col-span-full py-10 text-center font-semibold ${headingClass}`}
                     >
                       {isOtherUser
                         ? "ผู้ใช้งานนี้ยังไม่มีโพสต์ที่เผยแพร่"
