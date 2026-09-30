@@ -10,7 +10,7 @@ const baseImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
 const editorFormats = [
   'header', 'bold', 'italic', 'underline', 'strike',
   'color', 'background', 'list', 'indent', 'align',
-  'blockquote', 'link', 'image', 'width'
+  'blockquote', 'link', 'image'
 ];
 const Quill = ReactQuill.Quill;
 const BaseImage = Quill.import('formats/image');
@@ -220,8 +220,8 @@ export default function ContentEditor({ value, onChange, error, onUploadingChang
     };
     const finish = () => {
       document.body.style.userSelect = previousUserSelect;
-      // Width is a supported Image format in Quill.  Saving it through the
-      // editor (rather than only changing the DOM) keeps it after React rerenders.
+      // Width is handled by the registered Image blot as an image attribute.
+      // Saving it through the editor keeps it after React rerenders.
       if (Number.isInteger(imageIndex)) {
         quill.formatText(imageIndex, 1, 'width', String(finalWidth), 'user');
       } else {
