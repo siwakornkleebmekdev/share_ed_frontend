@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { Mail, Lock, User, BookOpen, Loader2, MailCheck, RefreshCw } from 'lucide-react';
+import { Mail, Lock, User, BookOpen, Loader2, MailCheck, RefreshCw, CheckCircle2, XCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { authService } from '@/services/auth.service';
 import useAuthStore from '@/store/authStore';
@@ -48,6 +48,28 @@ export default function Register() {
 
   const { isAuthenticated, user, login: loginAction } = useAuthStore();
   const navigate = useNavigate();
+  const passwordRequirements = [
+    {
+      key: 'length',
+      label: 'มีความยาวอย่างน้อย 8 ตัวอักษร',
+      passed: password.length >= 8,
+    },
+    {
+      key: 'letter',
+      label: 'มีตัวอักษรภาษาอังกฤษอย่างน้อย 1 ตัว',
+      passed: /[A-Za-z]/.test(password),
+    },
+    {
+      key: 'number',
+      label: 'มีตัวเลขอย่างน้อย 1 ตัว',
+      passed: /[0-9]/.test(password),
+    },
+    {
+      key: 'allowed-characters',
+      label: 'ใช้ได้เฉพาะ A-Z, a-z และ 0-9',
+      passed: password.length > 0 && /^[A-Za-z0-9]+$/.test(password),
+    },
+  ];
 
   useEffect(() => {
     const isProfileComplete = user?.education_level || user?.user_metadata?.education_level;
@@ -480,6 +502,7 @@ export default function Register() {
                 <input
                   type={visiblePasswords.password ? 'text' : 'password'}
                   pattern="[A-Za-z0-9]+"
+                  maxLength={128}
                   title="ใช้ได้เฉพาะตัวอักษรภาษาอังกฤษและตัวเลขเท่านั้น"
                   value={password}
                   onChange={(e) => {
@@ -499,11 +522,19 @@ export default function Register() {
               </div>
               <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
                 <p className="font-medium text-slate-700">เงื่อนไขการตั้งรหัสผ่าน</p>
-                <ul className="mt-1 list-disc space-y-0.5 pl-4">
-                  <li>มีความยาวอย่างน้อย 8 ตัวอักษร</li>
-                  <li>มีตัวอักษรภาษาอังกฤษอย่างน้อย 1 ตัว</li>
-                  <li>มีตัวเลขอย่างน้อย 1 ตัว</li>
-                  <li>ใช้ได้เฉพาะ A-Z, a-z และ 0-9</li>
+                <ul className="mt-2 space-y-1.5" aria-live="polite">
+                  {passwordRequirements.map((requirement) => {
+                    const RequirementIcon = requirement.passed ? CheckCircle2 : XCircle;
+                    return (
+                      <li
+                        key={requirement.key}
+                        className={`flex items-center gap-2 font-medium transition-colors ${requirement.passed ? 'text-emerald-600' : 'text-red-500'}`}
+                      >
+                        <RequirementIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                        <span>{requirement.label}</span>
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
               {fieldErrors.password && (
@@ -520,6 +551,7 @@ export default function Register() {
                 <input
                   type={visiblePasswords.confirmPassword ? 'text' : 'password'}
                   pattern="[A-Za-z0-9]+"
+                  maxLength={128}
                   title="ใช้ได้เฉพาะตัวอักษรภาษาอังกฤษและตัวเลขเท่านั้น"
                   value={confirmPassword}
                   onChange={(e) => {
