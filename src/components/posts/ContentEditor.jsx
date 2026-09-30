@@ -10,7 +10,7 @@ const baseImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
 const editorFormats = [
   'header', 'bold', 'italic', 'underline', 'strike',
   'color', 'background', 'list', 'indent', 'align',
-  'blockquote', 'link', 'image', 'width',
+  'blockquote', 'link', 'image', 'width'
 ];
 const Quill = ReactQuill.Quill;
 const BaseImage = Quill.import('formats/image');
