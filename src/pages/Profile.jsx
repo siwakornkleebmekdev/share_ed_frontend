@@ -356,6 +356,20 @@ function ProfileContent() {
     setCurrentPage((page) => Math.min(page, totalPages));
   }, [totalPages]);
 
+  useEffect(() => {
+    const removeDeletedPost = (event) => {
+      const deletedId = String(event.detail?.postId || '');
+      if (!deletedId) return;
+      const excludeDeleted = (posts) => posts.filter((post) => String(post.id) !== deletedId);
+      setMyPosts(excludeDeleted);
+      setDrafts(excludeDeleted);
+      setBookmarks(excludeDeleted);
+      bookmarkedIdsRef.current.delete(deletedId);
+    };
+    window.addEventListener('share-ed:post-removed', removeDeletedPost);
+    return () => window.removeEventListener('share-ed:post-removed', removeDeletedPost);
+  }, []);
+
   // ดึงข้อมูลโปรไฟล์ (แยกเคส: ตัวเอง vs คนอื่น)
   useEffect(() => {
     const scope = createProfileRequestScope();
