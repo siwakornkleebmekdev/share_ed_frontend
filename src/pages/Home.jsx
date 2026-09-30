@@ -23,8 +23,8 @@ export default function Home() {
     event.stopPropagation();
 
     if (!isAuthenticated) {
-      toast.error('กรุณาสมัครสมาชิกเพื่อกดถูกใจ');
-      navigate('/register');
+      toast.error('กรุณาเข้าสู่ระบบเพื่อกดถูกใจ');
+      navigate('/login');
       return;
     }
 
