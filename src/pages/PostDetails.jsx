@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router';
-import { FileText, Download, Heart, Share2, Tag, ChevronLeft, ChevronRight, Calendar, Eye, EyeOff, Bookmark, X, Edit3, Trash2, Send, MessageSquare, AlignLeft, ImageIcon, Flag } from 'lucide-react';
+import { FileText, Download, Heart, Tag, ChevronLeft, ChevronRight, Calendar, Eye, EyeOff, Bookmark, X, Edit3, Trash2, Send, MessageSquare, AlignLeft, ImageIcon, Flag } from 'lucide-react';
 import { postService } from '@/services/post.service';
 import { profileService } from '@/services/profile.service';
 import { moderationService } from '@/services/moderation.service';
@@ -337,7 +337,7 @@ export default function PostDetails() {
 
   const authorRole = authorProfile?.role === 'ADMIN'
     ? 'แอดมิน'
-    : 'Contributor';
+    : 'เจ้าของโพสต์';
 
   const authorFrameProfile = {
     ...post?.author,
@@ -1003,9 +1003,6 @@ export default function PostDetails() {
               title="บันทึก"
             >
               <Bookmark className={`h-5 w-5 ${isBookmarked ? 'fill-amber-500' : ''}`} />
-            </button>
-            <button className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors shadow-sm">
-              <Share2 className="h-5 w-5" /> แชร์โพสต์
             </button>
           </div>
         </div>

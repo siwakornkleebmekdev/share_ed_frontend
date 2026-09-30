@@ -83,6 +83,16 @@ export default function Explore() {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    const removeDeletedPost = (event) => {
+      const deletedId = String(event.detail?.postId || '');
+      if (!deletedId) return;
+      setPosts((current) => current.filter((post) => String(post.id) !== deletedId));
+    };
+    window.addEventListener('share-ed:post-removed', removeDeletedPost);
+    return () => window.removeEventListener('share-ed:post-removed', removeDeletedPost);
+  }, []);
+
   const toggleLevel = (level) => {
     setSelectedLevels(prev => 
       prev.includes(level) ? prev.filter(l => l !== level) : [...prev, level]

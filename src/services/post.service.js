@@ -456,6 +456,9 @@ export const postService = {
   deletePost: async (id) => {
     try {
       const response = await api.delete(`/posts/${id}`);
+      window.dispatchEvent(new CustomEvent('share-ed:post-removed', {
+        detail: { postId: String(id) },
+      }));
       return response.data;
     } catch (error) {
       console.error(`Error deleting post ${id}:`, error);
@@ -654,7 +657,12 @@ export function formatPostData(post) {
     view_count: Number(post.view_count) || 0,
     views: formatNumber(post.view_count),
     likes: post._count?.likes || post.likes_count || (Array.isArray(post.likes) ? post.likes.length : (typeof post.likes === 'number' ? post.likes : 0)),
-    isLiked: Boolean(post.is_liked || post.isLiked || post.has_liked),
+    isLiked: Boolean(
+      post.is_liked ||
+      post.isLiked ||
+      post.has_liked ||
+      (Array.isArray(post.likes) && post.likes.length > 0)
+    ),
     isBookmarked: Boolean(post.is_bookmarked || post.isBookmarked || post.has_bookmarked),
     image: post.cover_image || 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=1280&q=90',
     author: authorUsername,

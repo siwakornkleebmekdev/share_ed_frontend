@@ -113,9 +113,9 @@ export default function PostConsole() {
 
   const handleAction = async (post, action) => {
     const copy = {
-      APPROVE: ["ยืนยันว่าโพสต์นี้ปลอดภัย?", "รายงานทั้งหมดจะถูกล้างและโพสต์จะกลับมาเผยแพร่", "อนุมัติและปิดรายงาน", "อนุมัติโพสต์แล้ว", "#16a34a"],
+      APPROVE: ["ยืนยันว่าโพสต์นี้ปลอดภัย?", "รายงานทั้งหมดจะถูกล้างและโพสต์จะกลับมาเผยแพร่", "อนุมัติให้แสดง", "อนุมัติโพสต์แล้ว", "#16a34a"],
       SUSPEND: ["ระงับโพสต์นี้ชั่วคราว?", "ผู้ใช้งานทั่วไปจะไม่สามารถเข้าถึงโพสต์ระหว่างรอตรวจสอบต่อได้", "ระงับโพสต์", "ระงับโพสต์แล้ว", "#d97706"],
-      DELETE: ["ลบโพสต์นี้โดยตรง?", "โพสต์และไฟล์ทั้งหมดจะถูกลบทันทีอย่างถาวรและไม่สามารถกู้คืนได้", "ลบโพสต์โดยตรง", "ลบโพสต์ถาวรแล้ว", "#e11d48"],
+      DELETE: ["ลบโพสต์นี้โดยตรง?", "โพสต์และไฟล์ทั้งหมดจะถูกลบทันทีอย่างถาวรและไม่สามารถกู้คืนได้", "ลบโพสต์โดยถาวร", "ลบโพสต์ถาวรแล้ว", "#e11d48"],
     }[action];
     const confirmation = await Swal.fire({
       icon: "warning", title: copy[0], text: copy[1], showCancelButton: true,
@@ -224,8 +224,8 @@ export default function PostConsole() {
                     {post.content && <details className="mt-4 rounded-xl bg-slate-50 px-4 py-3"><summary className="cursor-pointer text-sm font-bold text-slate-700">ดูเนื้อหาโพสต์ในหน้าตรวจสอบ</summary><div className="post-details-content mt-3 max-h-72 overflow-y-auto border-t border-slate-200 pt-3 text-sm leading-7 text-slate-600" dangerouslySetInnerHTML={{ __html: sanitizePostContent(post.content) }} /></details>}
                     <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
                       {status === "ACTIVE" && <button type="button" onClick={() => handleAction(post, "SUSPEND")} disabled={isReviewing} className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-bold text-amber-700 hover:bg-amber-100 transition-colors disabled:opacity-50 cursor-pointer">ระงับชั่วคราว</button>}
-                      <button type="button" onClick={() => handleAction(post, "APPROVE")} disabled={isReviewing} className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-bold text-emerald-700 hover:bg-emerald-100 transition-colors disabled:opacity-50 cursor-pointer">อนุมัติและปิดรายงาน</button>
-                      <button type="button" onClick={() => handleAction(post, "DELETE")} disabled={isReviewing} className="inline-flex items-center justify-center gap-2 rounded-xl bg-rose-600 hover:bg-rose-700 px-4 py-2.5 text-sm font-bold text-white transition-colors disabled:opacity-50 cursor-pointer"><Trash2 className="h-4 w-4" /> ลบโพสต์โดยตรง</button>
+                      <button type="button" onClick={() => handleAction(post, "APPROVE")} disabled={isReviewing} className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-bold text-emerald-700 hover:bg-emerald-100 transition-colors disabled:opacity-50 cursor-pointer">อนุมัติให้แสดง</button>
+                      <button type="button" onClick={() => handleAction(post, "DELETE")} disabled={isReviewing} className="inline-flex items-center justify-center gap-2 rounded-xl bg-rose-600 hover:bg-rose-700 px-4 py-2.5 text-sm font-bold text-white transition-colors disabled:opacity-50 cursor-pointer"><Trash2 className="h-4 w-4" /> ลบโพสต์โดยถาวร</button>
                     </div>
                   </div>
                 </div>
