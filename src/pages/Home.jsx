@@ -1,17 +1,67 @@
 import { useState, useEffect } from 'react';
 import { ArrowRight, BookOpen, Clock, Heart, Eye, TrendingUp, ChevronRight } from 'lucide-react';
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
+import toast from 'react-hot-toast';
 import Categories from '@/components/Categories';
 import { postService } from '@/services/post.service';
 import heroImage from '@/assets/home-hero.webp';
 import Pagination from '@/components/Pagination';
+import useAuthStore from '@/store/authStore';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('ALL');
   const [currentPage, setCurrentPage] = useState(1);
   const [posts, setPosts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [likingPostIds, setLikingPostIds] = useState(() => new Set());
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const navigate = useNavigate();
   const postsPerPage = 8;
+
+  const handleLike = async (event, post) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!isAuthenticated) {
+      toast.error('กรุณาสมัครสมาชิกเพื่อกดถูกใจ');
+      navigate('/register');
+      return;
+    }
+
+    const postId = String(post.id);
+    if (likingPostIds.has(postId)) return;
+
+    setLikingPostIds((current) => new Set(current).add(postId));
+    try {
+      const response = await postService.likePost(post.id);
+      const data = response?.data || response;
+      const nextIsLiked = data?.isLiked ?? data?.is_liked ?? data?.liked ?? !post.isLiked;
+
+      setPosts((currentPosts) => currentPosts.map((currentPost) => {
+        if (String(currentPost.id) !== postId) return currentPost;
+
+        const currentLikes = Number(currentPost.likes) || 0;
+        const likes = typeof data?.likesCount === 'number'
+          ? data.likesCount
+          : typeof data?.likes_count === 'number'
+            ? data.likes_count
+            : nextIsLiked
+              ? currentLikes + 1
+              : Math.max(0, currentLikes - 1);
+
+        return { ...currentPost, isLiked: Boolean(nextIsLiked), likes };
+      }));
+    } catch (error) {
+      console.error('Error liking post on Home:', error);
+      toast.error('เกิดข้อผิดพลาดในการกดถูกใจ');
+    } finally {
+      setLikingPostIds((current) => {
+        const next = new Set(current);
+        next.delete(postId);
+        return next;
+      });
+    }
+  };
 
   const filteredPosts = activeTab === 'ALL'
     ? posts
@@ -172,9 +222,16 @@ export default function Home() {
                   </div>
                   <div className="flex justify-between items-center pt-4 border-t border-slate-100">
                     <div className="flex items-center gap-3 text-sm text-slate-500 font-semibold">
-                      <span className={`flex items-center gap-1 transition-colors ${post.isLiked ? 'text-rose-500' : 'hover:text-rose-500'}`}>
+                      <button
+                        type="button"
+                        onClick={(event) => handleLike(event, post)}
+                        disabled={likingPostIds.has(String(post.id))}
+                        aria-label={post.isLiked ? `ยกเลิกถูกใจ ${post.title}` : `ถูกใจ ${post.title}`}
+                        aria-pressed={Boolean(post.isLiked)}
+                        className={`flex items-center gap-1 transition-colors disabled:cursor-wait disabled:opacity-60 ${post.isLiked ? 'text-rose-500' : 'hover:text-rose-500'}`}
+                      >
                         <Heart className={`h-4 w-4 ${post.isLiked ? 'fill-rose-500' : ''}`} /> {post.likes}
-                      </span>
+                      </button>
                       <span className="flex items-center gap-1 hover:text-primary transition-colors"><Eye className="h-4 w-4" /> {post.views}</span>
                     </div>
                     <span className="text-xs text-slate-400 font-semibold">
