@@ -213,7 +213,7 @@ export default function Notifications() {
                         }`}
                       >
                         {/* Icon */}
-                        <div className={`p-3 rounded-full w-fit flex-shrink-0 ${getBgColor(notif.type)} ${
+                        <div className={`flex h-12 w-12 shrink-0 self-start items-center justify-center rounded-full ${getBgColor(notif.type)} ${
                           !notif.isRead ? 'shadow-sm ring-1 ring-slate-100' : ''
                         }`}>
                           {getNotificationIcon(notif.type)}
