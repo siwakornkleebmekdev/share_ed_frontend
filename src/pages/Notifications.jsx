@@ -221,15 +221,15 @@ export default function Notifications() {
 
                         {/* Text content */}
                         <div className="flex-1 min-w-0 text-left">
-                          <div className="flex items-start justify-between gap-4">
-                            <h3 className={`text-base ${!notif.isRead ? 'font-bold text-slate-900' : 'font-semibold text-slate-700'}`}>
+                          <div className="flex min-w-0 flex-col items-start gap-1 sm:flex-row sm:justify-between sm:gap-4">
+                            <h3 className={`min-w-0 text-base [overflow-wrap:anywhere] ${!notif.isRead ? 'font-bold text-slate-900' : 'font-semibold text-slate-700'}`}>
                               {notif.title}
                             </h3>
-                            <span className="text-xs font-medium text-slate-400 whitespace-nowrap pt-0.5">
+                            <span className="shrink-0 whitespace-nowrap pt-0.5 text-xs font-medium text-slate-400">
                               {formatRelativeTime(notif.createdAt)}
                             </span>
                           </div>
-                          <p className={`mt-1 text-sm leading-relaxed ${!notif.isRead ? 'text-slate-700' : 'text-slate-500'}`}>
+                          <p className={`mt-1 text-sm leading-relaxed [overflow-wrap:anywhere] ${!notif.isRead ? 'text-slate-700' : 'text-slate-500'}`}>
                             {notif.message}
                           </p>
                           {notif.link && (

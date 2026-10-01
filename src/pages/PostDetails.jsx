@@ -713,21 +713,21 @@ export default function PostDetails() {
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 leading-tight mb-4">{post.title}</h1>
 
             <div className="flex flex-wrap items-center justify-between gap-4 py-4 border-y border-slate-100">
-              <div className="flex items-center gap-3">
+              <div className="flex w-full min-w-0 items-center gap-3 sm:w-auto sm:flex-1">
                 <Link to={postAuthorId ? `/profile/${encodeURIComponent(postAuthorId)}` : '#'} className="relative h-14 w-14 shrink-0 block group cursor-pointer" aria-label={`ดูโปรไฟล์ของ ${authorUsername}`}>
                   <AvatarWithFrame avatarSrc={authorAvatar} frameSrc={authorFrameUrl} avatarAlt={authorUsername} sizeClass="h-14 w-14" className="bg-slate-100" onAvatarError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(authorUsername || 'User')}&background=1e293b&color=38bdf8`; }} />
                 </Link>
-                <div>
-                  <Link to={postAuthorId ? `/profile/${encodeURIComponent(postAuthorId)}` : '#'} className="font-bold text-slate-900 hover:text-primary transition-colors block">
+                <div className="min-w-0">
+                  <Link to={postAuthorId ? `/profile/${encodeURIComponent(postAuthorId)}` : '#'} className="block font-bold text-slate-900 transition-colors [overflow-wrap:anywhere] hover:text-primary">
                     {authorUsername}
                   </Link>
                   <p className="text-xs font-medium text-slate-500">{authorRole}</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-6 text-sm font-medium text-slate-500">
-                <span className="flex items-center gap-1.5"><Calendar className="h-4 w-4" /> {post.createdAt}</span>
-                <span className="flex items-center gap-1.5"><Eye className="h-4 w-4" /> {post.views} ครั้ง</span>
+              <div className="flex w-full flex-wrap items-center gap-x-6 gap-y-2 text-sm font-medium text-slate-500 sm:w-auto sm:shrink-0">
+                <span className="flex items-center gap-1.5 whitespace-nowrap"><Calendar className="h-4 w-4" /> {post.createdAt}</span>
+                <span className="flex items-center gap-1.5 whitespace-nowrap"><Eye className="h-4 w-4" /> {post.views} ครั้ง</span>
               </div>
             </div>
           </div>
@@ -780,14 +780,14 @@ export default function PostDetails() {
               <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2 mb-4">
                 <FileText className="h-5 w-5 text-primary" /> ไฟล์เอกสาร PDF
               </h3>
-              <div className="p-6 bg-slate-50 border border-slate-200 rounded-2xl">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-6">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex w-full min-w-0 flex-1 items-center gap-3 sm:w-auto">
                     <div className="p-3 bg-red-100 text-rose-600 rounded-xl shrink-0">
                       <FileText className="h-6 w-6" />
                     </div>
-                    <div className="min-w-0">
-                      <h3 className="text-base font-bold text-slate-900 truncate">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="line-clamp-2 text-base font-bold text-slate-900 [overflow-wrap:anywhere]" title={post.pdf.name || 'เอกสารแนบ'}>
                         {post.pdf.name || 'เอกสารแนบ'}
                       </h3>
                       <p className="text-xs text-slate-500 font-medium">
@@ -796,20 +796,20 @@ export default function PostDetails() {
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto shrink-0">
+                  <div className="flex w-full min-w-0 flex-col gap-2 min-[480px]:flex-row sm:w-auto sm:shrink-0">
                     <button
                       type="button"
                       onClick={handleTogglePdfPreview}
                       disabled={isPdfLoading}
-                      className="flex-1 sm:flex-none px-4 py-2.5 bg-white text-slate-700 border border-slate-200 rounded-xl font-bold shadow-sm hover:bg-slate-100 transition-all flex items-center justify-center gap-2 text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex min-h-11 w-full min-w-0 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 min-[480px]:w-auto min-[480px]:flex-1 sm:flex-none"
                     >
                       {isPdfLoading ? 'กำลังขอสิทธิ์เข้าถึง...' : showPdfPreview ? (
                         <>
-                          <EyeOff className="h-4 w-4 text-slate-500" /> ซ่อนตัวอย่าง
+                          <EyeOff className="h-4 w-4 text-slate-500" /> <span className="whitespace-nowrap">ซ่อนตัวอย่าง</span>
                         </>
                       ) : (
                         <>
-                          <Eye className="h-4 w-4 text-primary" /> ดูตัวอย่างเอกสาร
+                          <Eye className="h-4 w-4 text-primary" /> <span className="whitespace-nowrap">ดูตัวอย่างเอกสาร</span>
                         </>
                       )}
                     </button>
@@ -818,9 +818,9 @@ export default function PostDetails() {
                       type="button"
                       onClick={handleDownloadPdf}
                       disabled={isPdfLoading}
-                      className="flex-1 sm:flex-none px-4 py-2.5 bg-primary text-white rounded-xl font-bold shadow-sm hover:bg-blue-600 transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex min-h-11 w-full min-w-0 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-all hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50 min-[480px]:w-auto min-[480px]:flex-1 sm:flex-none"
                     >
-                      <Download className="h-4 w-4" /> ดาวน์โหลด
+                      <Download className="h-4 w-4" /> <span className="whitespace-nowrap">ดาวน์โหลด</span>
                     </button>
                   </div>
                 </div>
@@ -859,17 +859,17 @@ export default function PostDetails() {
             </h3>
 
             {/* Comment Form */}
-            <form onSubmit={handleSubmitComment} className="flex gap-4 items-start mb-8">
+            <form onSubmit={handleSubmitComment} className="mb-8 flex min-w-0 items-start gap-3 sm:gap-4">
               <img
                 src={user?.avatar_url || user?.profile_image || user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.username || 'User')}&background=1e293b&color=38bdf8`}
                 alt={user?.username || 'User'}
-                className="w-10 h-10 rounded-full border border-slate-200 object-cover"
+                className="h-10 w-10 shrink-0 rounded-full border border-slate-200 object-cover"
                 onError={(e) => {
                   e.target.onerror = null;
                   e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.username || 'User')}&background=1e293b&color=38bdf8`;
                 }}
               />
-              <div className="flex-1">
+              <div className="min-w-0 flex-1">
                 <textarea
                   value={newCommentText}
                   onChange={(e) => setNewCommentText(e.target.value)}
@@ -882,10 +882,10 @@ export default function PostDetails() {
                   <button
                     type="submit"
                     disabled={isSubmittingComment || !isAuthenticated}
-                    className={`px-5 py-2.5 rounded-xl font-bold text-white transition-all flex items-center gap-2 text-sm shadow-sm ${!isAuthenticated ? 'bg-slate-300 cursor-not-allowed' : 'bg-primary hover:bg-blue-600 hover:shadow'}`}
+                    className={`flex min-h-11 max-w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-all sm:px-5 ${!isAuthenticated ? 'bg-slate-300 cursor-not-allowed' : 'bg-primary hover:bg-blue-600 hover:shadow'}`}
                   >
                     <Send className="h-4 w-4" />
-                    {isSubmittingComment ? 'กำลังส่ง...' : 'ส่งความคิดเห็น'}
+                    <span>{isSubmittingComment ? 'กำลังส่ง...' : 'ส่งความคิดเห็น'}</span>
                   </button>
                 </div>
               </div>
@@ -899,7 +899,7 @@ export default function PostDetails() {
                 </div>
               ) : (
                 visibleComments.map((comment) => (
-                  <div key={comment.id} className="flex gap-4 items-start pb-6 border-b border-slate-50 last:border-b-0 last:pb-0 group">
+                  <div key={comment.id} className="group flex min-w-0 items-start gap-3 border-b border-slate-50 pb-6 last:border-b-0 last:pb-0 sm:gap-4">
                     <img
                       src={comment.user?.avatar_url || comment.user?.avatar || comment.user?.profile_image || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.user?.username || 'User')}&background=1e293b&color=38bdf8`}
                       alt={comment.user?.username || 'User'}
@@ -909,16 +909,21 @@ export default function PostDetails() {
                         e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.user?.username || 'User')}&background=1e293b&color=38bdf8`;
                       }}
                     />
-                    <div className="flex-1 bg-slate-50/50 hover:bg-slate-50 rounded-2xl p-4 transition-colors">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-bold text-slate-900 text-sm">{comment.user?.username || 'ผู้ใช้งาน'}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-slate-400 font-medium">{comment.createdAt}</span>
+                    <div className="min-w-0 flex-1 rounded-2xl bg-slate-50/50 p-3 transition-colors hover:bg-slate-50 sm:p-4">
+                      <div className="mb-2 flex min-w-0 flex-col items-start gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+                        <span
+                          className="block w-full min-w-0 truncate whitespace-nowrap text-sm font-bold text-slate-900 sm:w-auto sm:flex-1"
+                          title={comment.user?.username || 'ผู้ใช้งาน'}
+                        >
+                          {comment.user?.username || 'ผู้ใช้งาน'}
+                        </span>
+                        <div className="flex w-full shrink-0 items-center justify-between gap-2 sm:w-auto sm:justify-start">
+                          <span className="whitespace-nowrap text-xs font-medium text-slate-400">{comment.createdAt}</span>
                           {(isAuthenticated && currentUserId && (String(comment.user?.id) === String(currentUserId) || String(comment.user_id) === String(currentUserId) || isAdmin)) && (
                             <button
                               type="button"
                               onClick={() => handleDeleteComment(comment.id)}
-                              className="text-slate-400 hover:text-rose-500 p-1 rounded-lg hover:bg-rose-50 transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
+                              className="cursor-pointer rounded-lg p-1 text-slate-400 opacity-100 transition-colors hover:bg-rose-50 hover:text-rose-500 focus:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                               title="ลบความคิดเห็น"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
@@ -926,7 +931,7 @@ export default function PostDetails() {
                           )}
                         </div>
                       </div>
-                      <p className="text-slate-600 text-sm whitespace-pre-line leading-relaxed">{comment.content}</p>
+                      <p className="whitespace-pre-line text-sm leading-relaxed text-slate-600 [overflow-wrap:anywhere]">{comment.content}</p>
                     </div>
                   </div>
                 ))
@@ -943,7 +948,7 @@ export default function PostDetails() {
                     type="button"
                     onClick={() => setCommentPage(page => Math.max(1, page - 1))}
                     disabled={commentPage === 1}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 shadow-sm transition-colors hover:border-primary/30 hover:bg-blue-50 hover:text-primary disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-slate-200 disabled:hover:bg-white disabled:hover:text-slate-600"
+                    className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-600 shadow-sm transition-colors hover:border-primary/30 hover:bg-blue-50 hover:text-primary disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-slate-200 disabled:hover:bg-white disabled:hover:text-slate-600 sm:px-4"
                     aria-label="ไปยังหน้าความคิดเห็นก่อนหน้า"
                   >
                     <ChevronLeft className="h-4 w-4" />
@@ -970,7 +975,7 @@ export default function PostDetails() {
                     type="button"
                     onClick={() => setCommentPage(page => Math.min(commentPageCount, page + 1))}
                     disabled={commentPage === commentPageCount}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 shadow-sm transition-colors hover:border-primary/30 hover:bg-blue-50 hover:text-primary disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-slate-200 disabled:hover:bg-white disabled:hover:text-slate-600"
+                    className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-600 shadow-sm transition-colors hover:border-primary/30 hover:bg-blue-50 hover:text-primary disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-slate-200 disabled:hover:bg-white disabled:hover:text-slate-600 sm:px-4"
                     aria-label="ไปยังหน้าความคิดเห็นถัดไป"
                   >
                     ถัดไป
@@ -984,22 +989,25 @@ export default function PostDetails() {
         </div>
 
         {/* Action Footer */}
-        <div className="bg-slate-50 border-t border-slate-100 p-6 sm:px-10 sm:py-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3 w-full sm:w-auto">
+        <div className="flex items-center justify-between gap-4 border-t border-slate-100 bg-slate-50 p-6 sm:px-10 sm:py-6">
+          <div className="flex min-w-0 items-center gap-3">
             <button
               onClick={handleLike}
               disabled={isLiking}
-              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold transition-colors shadow-sm border ${isLiked ? 'bg-rose-50 text-rose-500 border-rose-100' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'} ${isLiking ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`flex h-12 w-24 shrink-0 items-center justify-center gap-2 rounded-xl border font-bold shadow-sm transition-colors ${isLiked ? 'bg-rose-50 text-rose-500 border-rose-100' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'} ${isLiking ? 'opacity-50 cursor-not-allowed' : ''}`}
+              title={isLiked ? 'ยกเลิกถูกใจ' : 'ถูกใจ'}
+              aria-label={isLiked ? 'ยกเลิกถูกใจโพสต์นี้' : 'ถูกใจโพสต์นี้'}
             >
-              <Heart className={`h-5 w-5 ${isLiked ? 'fill-rose-500' : ''}`} /> {post ? post.likes : 0}
+              <Heart className={`h-5 w-5 ${isLiked ? 'fill-rose-500' : ''}`} />
+              <span>{post ? post.likes : 0}</span>
             </button>
           </div>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="flex shrink-0 items-center gap-3">
             <button
               onClick={handleBookmark}
               disabled={isBookmarking}
-              className={`flex items-center justify-center p-3 rounded-xl font-bold transition-colors shadow-sm border ${isBookmarked ? 'bg-amber-50 text-amber-500 border-amber-100' : 'bg-white text-slate-400 border-slate-200 hover:bg-slate-100'} ${isBookmarking ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`flex h-12 w-24 shrink-0 items-center justify-center rounded-xl border font-bold shadow-sm transition-colors ${isBookmarked ? 'bg-amber-50 text-amber-500 border-amber-100' : 'bg-white text-slate-400 border-slate-200 hover:bg-slate-100'} ${isBookmarking ? 'opacity-50 cursor-not-allowed' : ''}`}
               title="บันทึก"
             >
               <Bookmark className={`h-5 w-5 ${isBookmarked ? 'fill-amber-500' : ''}`} />

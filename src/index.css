@@ -48,9 +48,27 @@ input[type="password"]::-ms-clear {
   h3,
   p,
   a,
-  button,
-  label {
+  label,
+  li,
+  dd,
+  dt {
     overflow-wrap: anywhere;
+  }
+
+  /* Keep control labels readable. `overflow-wrap: anywhere` breaks Thai
+     words at arbitrary characters and produced labels such as
+     "ดาวน์โห / ลด" on narrow buttons. Individual responsive layouts are
+     responsible for giving controls enough room instead. */
+  button,
+  [role='button'] {
+    overflow-wrap: normal;
+    word-break: normal;
+    text-wrap: balance;
+  }
+
+  button > svg,
+  [role='button'] > svg {
+    flex-shrink: 0;
   }
 
   :focus-visible {
