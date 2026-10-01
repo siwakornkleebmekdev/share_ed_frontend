@@ -17,6 +17,24 @@ const getTagName = (tag) => {
   return tag?.tag?.tag_name || tag?.tag_name || tag?.name || '';
 };
 
+const parseSearchQuery = (value) => {
+  const normalizedQuery = normalizeSearchText(value);
+  const tagTerms = [];
+  const textQuery = normalizedQuery
+    .replace(/(^|\s)#([^\s#]+)/g, (_, leadingSpace, tagName) => {
+      tagTerms.push(tagName.replace(/^#+/, ''));
+      return leadingSpace || ' ';
+    })
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return {
+    raw: normalizedQuery,
+    text: textQuery,
+    tags: [...new Set(tagTerms.filter(Boolean))],
+  };
+};
+
 export default function Explore() {
   const [posts, setPosts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -135,20 +153,25 @@ export default function Explore() {
       .slice(0, 12)
   }, [posts]);
 
+  const parsedSearchQuery = useMemo(() => parseSearchQuery(searchQuery), [searchQuery]);
+
   const filteredPosts = posts.filter(post => {
-    const q = normalizeSearchText(searchQuery);
-    const tagQuery = q.replace(/^#+/, '') || q;
     const postTags = [...(Array.isArray(post.tags) ? post.tags : []), ...(Array.isArray(post.hashtags) ? post.hashtags : [])]
       .map(getTagName)
       .map(tag => normalizeSearchText(tag).replace(/^#+/, ''))
       .filter(Boolean);
 
-    const matchSearch = !q ||
-      normalizeSearchText(post.title).includes(q) ||
-      normalizeSearchText(post.subject).includes(q) ||
-      normalizeSearchText(post.description).includes(q) ||
-      normalizeSearchText(post.author).includes(q) ||
-      postTags.some(tag => tag.includes(tagQuery));
+    const textQuery = parsedSearchQuery.tags.length > 0 ? parsedSearchQuery.text : parsedSearchQuery.raw;
+    const matchKeyword = !textQuery ||
+      normalizeSearchText(post.title).includes(textQuery) ||
+      normalizeSearchText(post.subject).includes(textQuery) ||
+      normalizeSearchText(post.description).includes(textQuery) ||
+      normalizeSearchText(post.author).includes(textQuery) ||
+      postTags.some(tag => tag.includes(textQuery));
+    const matchSearchTags = parsedSearchQuery.tags.length === 0 || parsedSearchQuery.tags.every(searchTag =>
+      postTags.some(postTag => postTag.includes(searchTag))
+    );
+    const matchSearch = !parsedSearchQuery.raw || (matchKeyword && matchSearchTags);
 
     const matchLevel = selectedLevels.length === 0 || selectedLevels.includes(post.level);
     const matchSubject = selectedSubjects.length === 0 || 
