@@ -79,6 +79,7 @@ function PostDetailsSkeleton() {
 }
 
 const COMMENTS_PER_PAGE = 5;
+const PROFILE_ACCESS_ROLES = new Set(['MEMBER', 'MODERATOR', 'ADMIN']);
 const REPORT_REASONS = [
   'เนื้อหาไม่เหมาะสม',
   'สแปม',
@@ -323,8 +324,9 @@ export default function PostDetails() {
     String(currentUserId) === String(postAuthorId)
   );
   const isSuspendedPost = String(post?.postStatus || post?.post_status).toUpperCase() === 'UNACTIVED';
-  const role = String(user?.role || '').toUpperCase();
+  const role = String(user?.role || (isAuthenticated ? 'MEMBER' : '')).toUpperCase();
   const isAdmin = role === 'ADMIN';
+  const canViewCommentProfiles = isAuthenticated && PROFILE_ACCESS_ROLES.has(role);
   const canDeletePost = Boolean(isAuthor || isAdmin);
 
   const authorUsername = isAuthor
@@ -898,43 +900,75 @@ export default function PostDetails() {
                   ยังไม่มีความคิดเห็น มาร่วมเป็นคนแรกที่แบ่งปันความคิดเห็นกัน!
                 </div>
               ) : (
-                visibleComments.map((comment) => (
-                  <div key={comment.id} className="group flex min-w-0 items-start gap-3 border-b border-slate-50 pb-6 last:border-b-0 last:pb-0 sm:gap-4">
+                visibleComments.map((comment) => {
+                  const commentAuthorId = comment.user?.id || comment.user_id;
+                  const commentAuthorName = comment.user?.username || 'ผู้ใช้งาน';
+                  const canOpenCommentProfile = Boolean(canViewCommentProfiles && commentAuthorId);
+                  const commentProfilePath = canOpenCommentProfile
+                    ? `/profile/${encodeURIComponent(commentAuthorId)}`
+                    : null;
+                  const avatar = (
                     <img
-                      src={comment.user?.avatar_url || comment.user?.avatar || comment.user?.profile_image || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.user?.username || 'User')}&background=1e293b&color=38bdf8`}
-                      alt={comment.user?.username || 'User'}
-                      className="w-10 h-10 rounded-full border border-slate-100 flex-shrink-0 object-cover"
+                      src={comment.user?.avatar_url || comment.user?.avatar || comment.user?.profile_image || `https://ui-avatars.com/api/?name=${encodeURIComponent(commentAuthorName)}&background=1e293b&color=38bdf8`}
+                      alt={commentAuthorName}
+                      className="h-10 w-10 rounded-full border border-slate-100 object-cover"
                       onError={(e) => {
                         e.target.onerror = null;
-                        e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.user?.username || 'User')}&background=1e293b&color=38bdf8`;
+                        e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(commentAuthorName)}&background=1e293b&color=38bdf8`;
                       }}
                     />
-                    <div className="min-w-0 flex-1 rounded-2xl bg-slate-50/50 p-3 transition-colors hover:bg-slate-50 sm:p-4">
-                      <div className="mb-2 flex min-w-0 flex-col items-start gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
-                        <span
-                          className="block w-full min-w-0 truncate whitespace-nowrap text-sm font-bold text-slate-900 sm:w-auto sm:flex-1"
-                          title={comment.user?.username || 'ผู้ใช้งาน'}
+                  );
+
+                  return (
+                    <div key={comment.id} className="group flex min-w-0 items-start gap-3 border-b border-slate-50 pb-6 last:border-b-0 last:pb-0 sm:gap-4">
+                      {canOpenCommentProfile ? (
+                        <Link
+                          to={commentProfilePath}
+                          className="shrink-0 rounded-full transition-opacity hover:opacity-80"
+                          aria-label={`ดูโปรไฟล์ของ ${commentAuthorName}`}
                         >
-                          {comment.user?.username || 'ผู้ใช้งาน'}
-                        </span>
-                        <div className="flex w-full shrink-0 items-center justify-between gap-2 sm:w-auto sm:justify-start">
-                          <span className="whitespace-nowrap text-xs font-medium text-slate-400">{comment.createdAt}</span>
-                          {(isAuthenticated && currentUserId && (String(comment.user?.id) === String(currentUserId) || String(comment.user_id) === String(currentUserId) || isAdmin)) && (
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteComment(comment.id)}
-                              className="cursor-pointer rounded-lg p-1 text-slate-400 opacity-100 transition-colors hover:bg-rose-50 hover:text-rose-500 focus:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
-                              title="ลบความคิดเห็น"
+                          {avatar}
+                        </Link>
+                      ) : (
+                        <div className="shrink-0">{avatar}</div>
+                      )}
+                      <div className="min-w-0 flex-1 rounded-2xl bg-slate-50/50 p-3 transition-colors hover:bg-slate-50 sm:p-4">
+                        <div className="mb-2 flex min-w-0 flex-col items-start gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+                          {canOpenCommentProfile ? (
+                            <Link
+                              to={commentProfilePath}
+                              className="block w-full min-w-0 truncate whitespace-nowrap text-sm font-bold text-slate-900 transition-colors hover:text-primary sm:w-auto sm:flex-1"
+                              title={commentAuthorName}
                             >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
+                              {commentAuthorName}
+                            </Link>
+                          ) : (
+                            <span
+                              className="block w-full min-w-0 truncate whitespace-nowrap text-sm font-bold text-slate-900 sm:w-auto sm:flex-1"
+                              title={commentAuthorName}
+                            >
+                              {commentAuthorName}
+                            </span>
                           )}
+                          <div className="flex w-full shrink-0 items-center justify-between gap-2 sm:w-auto sm:justify-start">
+                            <span className="whitespace-nowrap text-xs font-medium text-slate-400">{comment.createdAt}</span>
+                            {(isAuthenticated && currentUserId && (String(comment.user?.id) === String(currentUserId) || String(comment.user_id) === String(currentUserId) || isAdmin)) && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteComment(comment.id)}
+                                className="cursor-pointer rounded-lg p-1 text-slate-400 opacity-100 transition-colors hover:bg-rose-50 hover:text-rose-500 focus:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                                title="ลบความคิดเห็น"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                          </div>
                         </div>
+                        <p className="whitespace-pre-line text-sm leading-relaxed text-slate-600 [overflow-wrap:anywhere]">{comment.content}</p>
                       </div>
-                      <p className="whitespace-pre-line text-sm leading-relaxed text-slate-600 [overflow-wrap:anywhere]">{comment.content}</p>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
 
