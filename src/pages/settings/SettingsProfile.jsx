@@ -176,11 +176,12 @@ export default function SettingsProfile() {
     const nextUserId = String(user.id || user.user_id || "");
     const isSameUser = usernameEditRef.current.userId === nextUserId;
     const preserveEditedUsername = isSameUser && usernameEditRef.current.isDirty;
+    const savedUsername = user.username || user.display_name || user.name || "";
 
     setFormData((currentFormData) => ({
       username: preserveEditedUsername
         ? currentFormData.username
-        : user.username || user.display_name || user.name || "",
+        : savedUsername,
       bio: user.bio || "",
       education_level: user.education_level || "HIGH_SCHOOL",
       // Preserve appearance settings while standardizing avatar shape.
@@ -189,6 +190,9 @@ export default function SettingsProfile() {
 
     if (!isSameUser) {
       usernameEditRef.current = { userId: nextUserId, isDirty: false };
+    }
+    if (!preserveEditedUsername) {
+      setUsernameError(savedUsername.length > MAX_USERNAME_LENGTH ? USERNAME_LENGTH_ERROR : "");
     }
   }, [user]);
 
@@ -593,7 +597,8 @@ export default function SettingsProfile() {
                   value={formData.username}
                   onChange={(e) => {
                     const nextUsername = e.target.value;
-                    if (nextUsername.length > MAX_USERNAME_LENGTH) {
+                    const currentLength = (formData.username || "").length;
+                    if (nextUsername.length > MAX_USERNAME_LENGTH && nextUsername.length >= currentLength) {
                       setUsernameError(USERNAME_LENGTH_ERROR);
                       return;
                     }
@@ -602,7 +607,7 @@ export default function SettingsProfile() {
                       ...currentFormData,
                       username: nextUsername,
                     }));
-                    setUsernameError("");
+                    setUsernameError(nextUsername.length > MAX_USERNAME_LENGTH ? USERNAME_LENGTH_ERROR : "");
                   }}
                   aria-invalid={Boolean(usernameError)}
                   aria-describedby={usernameError ? "settings-username-error" : undefined}
