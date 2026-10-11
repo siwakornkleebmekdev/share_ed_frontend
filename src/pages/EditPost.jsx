@@ -397,12 +397,12 @@ export default function EditPost() {
         return;
       }
 
-      if (tagName.length > 10) {
+      const tag = `#${tagName}`;
+      if (tag.length > 10) {
         error = 'แท็กต้องมีความยาวไม่เกิน 10 ตัวอักษร';
         return;
       }
 
-      const tag = `#${tagName}`;
       if (!newTags.includes(tag)) {
         if (newTags.length >= 3) {
           error = 'ไม่สามารถเพิ่มเกิน 3 อัน';
@@ -424,7 +424,8 @@ export default function EditPost() {
     }
 
     const cleanVal = value.replace(/^#/, '');
-    if (cleanVal.length > 10) {
+    if (`#${cleanVal}`.length > 10) {
+      setHashtagInput(value);
       setHashtagError('แท็กต้องมีความยาวไม่เกิน 10 ตัวอักษร');
       return;
     }
@@ -458,6 +459,8 @@ export default function EditPost() {
       setHashtagError('');
     } else if (hashtags.length >= 3) {
       setHashtagError('ไม่สามารถเพิ่มเกิน 3 อัน');
+    } else if (`#${tag.replace(/^#/, '')}`.length > 10) {
+      setHashtagError('แท็กต้องมีความยาวไม่เกิน 10 ตัวอักษร');
     } else {
       setHashtags([...hashtags, tag]);
       setHashtagError('');
