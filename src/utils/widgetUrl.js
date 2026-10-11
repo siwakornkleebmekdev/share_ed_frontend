@@ -1,4 +1,6 @@
 // รายชื่อโดเมนที่อนุญาตของแต่ละแพลตฟอร์ม ใช้กับฟอร์ม บันทึก และแสดงผลร่วมกัน
+const MAX_WIDGET_URL_LENGTH = 2048;
+
 const PLATFORM_DOMAINS = {
   facebook: ["facebook.com", "fb.com"],
   instagram: ["instagram.com"],
@@ -16,6 +18,7 @@ export function getWidgetUrlError(platformId, value) {
 
   const raw = value?.trim() || "";
   if (!raw) return "กรุณาใส่ลิงก์";
+  if (raw.length > MAX_WIDGET_URL_LENGTH) return "ลิงก์ต้องมีความยาวไม่เกิน 2,048 ตัวอักษร";
   if (/\s/.test(raw)) return "ลิงก์ต้องไม่มีช่องว่าง";
 
   let parsed;

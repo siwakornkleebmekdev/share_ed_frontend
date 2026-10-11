@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useAuthStore from '@/store/authStore';
-import { supabase } from '@/utils/supabase';
 import { profileService } from '@/services/profile.service';
 import { WIDGET_PLATFORMS, createWidget, getPlatformConfig } from './widgetConstants';
 import { DEFAULT_THEME } from './themeConstants';
@@ -14,51 +13,66 @@ export default function SettingsWidgets() {
   const { user, login } = useAuthStore();
   const [widgets, setWidgets] = useState([]);
   const [modalPlatformId, setModalPlatformId] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
-    setWidgets(user.user_metadata?.widgets || []);
-  }, [user]);
+    if (!user?.id) return;
+    let active = true;
+    profileService.getMyWidgets()
+      .then(async (saved) => {
+        if (saved === null && Array.isArray(user.user_metadata?.widgets)) {
+          const legacy = user.user_metadata.widgets
+            .filter((widget) => typeof widget?.url === 'string' && !getWidgetUrlError(widget?.platformId, widget.url))
+            .map((widget) => createWidget(widget.platformId, widget));
+          const unique = [...new Map(legacy.map((widget) => [widget.platformId, widget])).values()];
+          if (unique.length) saved = await profileService.updateMyWidgets(unique);
+        }
+        if (active) setWidgets(Array.isArray(saved) ? saved : []);
+      })
+      .catch((error) => {
+        console.error('Error loading widgets:', error);
+        if (active) toast.error('โหลดวิดเจ็ตไม่สำเร็จ กรุณาลองใหม่');
+      })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [user?.id, user?.user_metadata?.widgets]);
 
   const cardTheme = { ...DEFAULT_THEME, ...(user?.user_metadata?.theme_settings || {}) };
 
   const persist = async (nextWidgets, successMessage) => {
+    if (saving) return false;
+    setSaving(true);
     try {
-      // Save directly to Supabase auth metadata since backend doesn't support widgets column yet
-      const { error } = await supabase.auth.updateUser({
-        data: { widgets: nextWidgets }
-      });
-      
-      if (error) throw error;
-
-      setWidgets(nextWidgets);
-      login({ ...user, user_metadata: { ...user.user_metadata, widgets: nextWidgets } });
+      const saved = await profileService.updateMyWidgets(nextWidgets);
+      setWidgets(saved);
+      login({ ...useAuthStore.getState().user, widgets: saved, user_metadata: { ...useAuthStore.getState().user?.user_metadata, widgets: saved } });
       toast.success(successMessage);
+      return true;
     } catch (error) {
       console.error('Error saving widgets:', error);
-      
-      // Fallback update local state anyway
-      setWidgets(nextWidgets);
-      login({ ...user, user_metadata: { ...user.user_metadata, widgets: nextWidgets } });
-      toast.success(successMessage + " (โหมดจำลอง)");
+      toast.error(error.response?.data?.message || 'บันทึกวิดเจ็ตไม่สำเร็จ กรุณาลองใหม่');
+      return false;
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleSaveWidget = (platformId, { url, options }) => {
+  const handleSaveWidget = async (platformId, { url, options }) => {
     // ตรวจอีกครั้งก่อนส่งไปเก็บในข้อมูลผู้ใช้ เผื่อมีทางเรียกบันทึกนอกฟอร์ม
     const urlError = getWidgetUrlError(platformId, url);
     if (urlError) {
       toast.error(urlError);
-      return;
+      return false;
     }
     const next = widgets.some((w) => w.platformId === platformId)
       ? widgets.map((w) => (w.platformId === platformId ? { ...w, url, options } : w))
       : [...widgets, createWidget(platformId, { url, options })];
-    persist(next, 'บันทึกวิดเจ็ตแล้ว');
+    return persist(next, 'บันทึกวิดเจ็ตแล้ว');
   };
 
   const handleDeleteWidget = (platformId) => {
-    persist(widgets.filter((w) => w.platformId !== platformId), 'ลบวิดเจ็ตแล้ว');
+    void persist(widgets.filter((w) => w.platformId !== platformId), 'ลบวิดเจ็ตแล้ว');
   };
 
   const activePlatformConfig = getPlatformConfig(modalPlatformId);
@@ -82,6 +96,7 @@ export default function SettingsWidgets() {
                 key={platform.id}
                 type="button"
                 onClick={() => setModalPlatformId(platform.id)}
+                disabled={loading || saving}
                 className="flex flex-1 items-center justify-center gap-2 rounded-full py-2.5 pl-3 pr-4 text-sm font-bold text-white shadow-sm transition-opacity hover:opacity-90 sm:flex-none"
                 style={{ backgroundColor: platform.brandColor }}
                 title={exists ? `แก้ไข ${platform.label}` : `เพิ่ม ${platform.label}`}
@@ -95,7 +110,9 @@ export default function SettingsWidgets() {
 
       <div className="space-y-3">
         <p className="text-sm font-semibold text-slate-600">วิดเจ็ตที่เพิ่มแล้ว</p>
-        {widgets.length === 0 ? (
+        {loading ? (
+          <p className="text-sm text-slate-400 bg-white rounded-3xl border border-slate-100 py-10 text-center">กำลังโหลดวิดเจ็ต...</p>
+        ) : widgets.length === 0 ? (
           <p className="text-sm text-slate-400 bg-white rounded-3xl border border-slate-100 py-10 text-center">
             ยังไม่มีวิดเจ็ต — เลือกแพลตฟอร์มด้านบนเพื่อเริ่มเพิ่ม
           </p>
@@ -111,7 +128,7 @@ export default function SettingsWidgets() {
                     <button onClick={() => setModalPlatformId(widget.platformId)} className="p-1.5 rounded-lg bg-white/90 text-slate-600 hover:text-primary shadow-sm">
                       <Pencil className="h-3.5 w-3.5" />
                     </button>
-                    <button onClick={() => handleDeleteWidget(widget.platformId)} className="p-1.5 rounded-lg bg-white/90 text-slate-600 hover:text-red-500 shadow-sm">
+                    <button disabled={saving} onClick={() => handleDeleteWidget(widget.platformId)} className="p-1.5 rounded-lg bg-white/90 text-slate-600 hover:text-red-500 shadow-sm">
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </div>
@@ -129,6 +146,7 @@ export default function SettingsWidgets() {
         initialData={editingWidget}
         cardTheme={cardTheme}
         onConfirm={handleSaveWidget}
+        saving={saving}
       />
     </div>
   );

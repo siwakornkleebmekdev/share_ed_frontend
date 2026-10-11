@@ -5,7 +5,7 @@ import { getWidgetUrlError } from '@/utils/widgetUrl';
 import WidgetCard from '@/components/settings/WidgetCard';
 
 // หน้าต่างเพิ่มหรือแก้ไขวิดเจ็ตของทั้ง 4 แพลตฟอร์ม ใช้ฟอร์มและตัวอย่างร่วมกัน
-export default function WidgetModal({ isOpen, onClose, platformConfig, initialData, cardTheme, onConfirm }) {
+export default function WidgetModal({ isOpen, onClose, platformConfig, initialData, cardTheme, onConfirm, saving = false }) {
   const [url, setUrl] = useState('');
   const [options, setOptions] = useState(DEFAULT_WIDGET_OPTIONS);
 
@@ -42,8 +42,13 @@ export default function WidgetModal({ isOpen, onClose, platformConfig, initialDa
     </label>
   );
 
+  const handleConfirm = async () => {
+    const saved = await onConfirm(platformConfig.id, { url: url.trim(), options });
+    if (saved) onClose();
+  };
+
   return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm" onClick={() => { if (!saving) onClose(); }}>
       <div
         className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
@@ -60,7 +65,7 @@ export default function WidgetModal({ isOpen, onClose, platformConfig, initialDa
               <p className="text-xs text-slate-400">วางลิงก์ แล้วดูตัวอย่างทางขวา</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors">
+          <button disabled={saving} onClick={onClose} className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -71,6 +76,7 @@ export default function WidgetModal({ isOpen, onClose, platformConfig, initialDa
               <label className="block text-sm font-semibold text-slate-600 mb-2">ลิงก์</label>
               <input
                 type="text"
+                maxLength={2048}
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 placeholder={platformConfig.urlPlaceholder}
@@ -93,11 +99,11 @@ export default function WidgetModal({ isOpen, onClose, platformConfig, initialDa
         <div className="px-6 py-4 border-t border-slate-100 shrink-0">
           <button
             type="button"
-            disabled={!url.trim() || !!urlError}
-            onClick={() => { onConfirm(platformConfig.id, { url: url.trim(), options }); onClose(); }}
+            disabled={saving || !url.trim() || !!urlError}
+            onClick={handleConfirm}
             className="w-full px-6 py-2.5 rounded-xl font-bold text-sm text-white bg-primary hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-all"
           >
-            {isEdit ? 'บันทึกการเปลี่ยนแปลง' : '+ เพิ่มวิดเจ็ต'}
+            {saving ? 'กำลังบันทึก...' : isEdit ? 'บันทึกการเปลี่ยนแปลง' : '+ เพิ่มวิดเจ็ต'}
           </button>
         </div>
       </div>

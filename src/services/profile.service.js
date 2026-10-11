@@ -2,6 +2,14 @@ import api from "../utils/api";
 import { supabase } from "../utils/supabase";
 
 export const profileService = {
+  getMyWidgets: async () => {
+    const response = await api.get("/users/me/widgets");
+    return response.data.data;
+  },
+  updateMyWidgets: async (widgets) => {
+    const response = await api.put("/users/me/widgets", { widgets });
+    return response.data.data;
+  },
   // Fetch the owner's posts and drafts once; bookmark data can arrive separately.
   getMyPostCollections: async () => {
     const response = await api.get("/posts/user/my-posts");
@@ -126,7 +134,7 @@ export const profileService = {
             }
           }
         });
-      } catch (invErr) {
+      } catch {
         // การดึงข้อมูล Inventory เป็นแบบทางเลือก (หากล้มเหลวยังใช้งานภารกิจหลักได้)
       }
 
@@ -249,7 +257,7 @@ export const profileService = {
             formatPosts(response.data.data.filter((p) => p.post_status === "ACTIVE")),
           );
         }
-      } catch (_) {}
+      } catch {}
 
       // สำรอง: ดึงโพสต์ที่เผยแพร่แล้วและกรองตาม Author ID
       const response = await api.get("/posts", { requiresAuth: false });
